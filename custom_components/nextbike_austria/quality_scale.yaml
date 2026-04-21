@@ -7,7 +7,15 @@ rules:
     status: done
   brands:
     status: done
-    comment: Icons shipped in custom_components/nextbike_austria/brand/ (icon.png 256x256, icon@2x.png 512x512). HA 2026.3+ reads this locally; the home-assistant/brands repo no longer accepts custom-integration PRs.
+    comment: |
+      Brand assets live at custom_components/nextbike_austria/brand/:
+      icon.png (256x256) and icon@2x.png (512x512), white bicycle
+      silhouette on an Austrian flag red (#ED2939) rounded square.
+      Austrian red rather than nextbike's trademarked brand red — keeps
+      the integration identity distinct from the operator's own
+      branding. HA 2026.3+ reads this folder locally (brands-proxy API);
+      the home-assistant/brands repo no longer accepts custom-integration
+      PRs.
   common-modules:
     status: done
   config-flow:
