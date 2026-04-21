@@ -104,9 +104,16 @@ class _BikesAvailableSensor(_BaseStationSensor):
         here (also on the dedicated docks sensor) so the bundled card
         can paint the full station view from a single fingerprint entity
         — no sibling-sensor lookup through the entity registry.
+
+        E-bike battery stats are only present when the options flow has
+        ``track_e_bike_range`` enabled AND upstream reported
+        ``current_range_meters`` for at least one e-bike at this station
+        in the last ~30 minutes. Keys are omitted otherwise rather than
+        published as ``None`` — templates can check with
+        ``if 'e_bike_avg_battery_pct' in states.xxx.attributes``.
         """
         data = self.coordinator.data or {}
-        return {
+        attrs: dict[str, Any] = {
             ATTR_ATTRIBUTION: ATTRIBUTION,
             "station_id": self.coordinator.station_id,
             "system_id": self.coordinator.system_id,
@@ -122,6 +129,35 @@ class _BikesAvailableSensor(_BaseStationSensor):
             "vehicle_types_available": data.get("vehicle_types_available"),
             "rental_uri": (data.get("rental_uris") or {}).get("web"),
         }
+        # Battery stats are merged under `_e_bike_*` prefixes by the
+        # coordinator; re-expose them as friendly attribute names. Only
+        # surface keys whose source values actually exist — keeps the
+        # attrs payload clean for templates that do `if 'x' in attrs`.
+        if "_e_bike_range_samples" in data:
+            attrs["e_bike_avg_battery_pct"] = data.get("_e_bike_avg_battery_pct")
+            attrs["e_bike_min_battery_pct"] = data.get("_e_bike_min_battery_pct")
+            attrs["e_bike_max_battery_pct"] = data.get("_e_bike_max_battery_pct")
+            attrs["e_bike_range_samples"] = data.get("_e_bike_range_samples")
+            if "_e_bike_battery_list" in data:
+                attrs["e_bike_battery_list"] = data["_e_bike_battery_list"]
+        # Reserved bikes: physically at the station but held by another
+        # user. Upstream excludes them from `num_bikes_available`, so
+        # the card renders them as extra locked slots.
+        if "_bikes_reserved" in data:
+            attrs["bikes_reserved"] = data["_bikes_reserved"]
+            attrs["bikes_reserved_types"] = data["_bikes_reserved_types"]
+        # Disabled bikes: physically at the station but out of service.
+        # Also excluded from `num_bikes_available`, rendered as wrench
+        # slots.
+        if "_bikes_disabled" in data:
+            attrs["bikes_disabled"] = data["_bikes_disabled"]
+            attrs["bikes_disabled_types"] = data["_bikes_disabled_types"]
+        # `vehicle_type_names` is carried whenever tracking is on, so
+        # the card can build tooltips even before the first battery
+        # sample lands.
+        if "_vehicle_type_names" in data:
+            attrs["vehicle_type_names"] = data["_vehicle_type_names"]
+        return attrs
 
 
 class _DocksAvailableSensor(_BaseStationSensor):
