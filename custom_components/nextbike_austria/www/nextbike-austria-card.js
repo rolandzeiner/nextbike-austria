@@ -1,12 +1,12 @@
 /**
- * Nextbike Austria Card v0.2.0
+ * Nextbike Austria Card v0.2.1
  * Custom Lovelace card for nextbike station dashboards.
  * https://github.com/rolandzeiner/nextbike-austria
  */
 
 // Must match CARD_VERSION in custom_components/nextbike_austria/const.py
 // byte-for-byte — drift causes an infinite reload-banner loop.
-const CARD_VERSION = "0.2.0";
+const CARD_VERSION = "0.2.1";
 
 // System-specific brand tints for the header accent. Pulled from each
 // operator's public brand guides; fallbacks to theme primary otherwise.
@@ -624,6 +624,15 @@ class NextbikeAustriaCard extends HTMLElement {
   _activeTab = 0;
   _tickTimer = null;
 
+  constructor() {
+    super();
+    // Shadow DOM scopes our CSS — without it, every class name (.station,
+    // .stop-name, .chip, .tab, .editor, .section-header, …) leaks into
+    // the global page scope and collides with sibling custom cards
+    // rendered into light DOM.
+    this.attachShadow({ mode: "open" });
+  }
+
   setConfig(config) {
     if (config === null || typeof config !== "object" || Array.isArray(config)) {
       throw new Error("nextbike-austria-card: config must be an object");
@@ -761,7 +770,7 @@ class NextbikeAustriaCard extends HTMLElement {
       ? ""
       : `<div class="attr">${_esc(attribution)}</div>`;
 
-    this.innerHTML = `
+    this.shadowRoot.innerHTML =`
       <ha-card>
         <style>${CARD_STYLE}</style>
         <div class="wrap">
@@ -772,10 +781,10 @@ class NextbikeAustriaCard extends HTMLElement {
       </ha-card>
     `;
 
-    const reloadBtn = this.querySelector(".banner button");
+    const reloadBtn = this.shadowRoot.querySelector(".banner button");
     if (reloadBtn) reloadBtn.addEventListener("click", () => window.location.reload());
 
-    this.querySelectorAll(".tab[data-tab]").forEach((btn) => {
+    this.shadowRoot.querySelectorAll(".tab[data-tab]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const i = parseInt(btn.dataset.tab, 10);
         if (Number.isFinite(i) && i !== this._activeTab) {
@@ -1350,6 +1359,11 @@ class NextbikeAustriaCardEditor extends HTMLElement {
   _config = {};
   _hass = null;
 
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+  }
+
   setConfig(config) {
     this._config = _normaliseConfig(config);
     this._render();
@@ -1379,9 +1393,13 @@ class NextbikeAustriaCardEditor extends HTMLElement {
   }
 
   _fire() {
+    // bubbles + composed required so the event crosses our shadow boundary
+    // and reaches the dashboard's card editor listener.
     this.dispatchEvent(
       new CustomEvent("config-changed", {
         detail: { config: { ...this._config } },
+        bubbles: true,
+        composed: true,
       }),
     );
   }
@@ -1466,7 +1484,7 @@ class NextbikeAustriaCardEditor extends HTMLElement {
       `;
     })();
 
-    this.innerHTML = `
+    this.shadowRoot.innerHTML =`
       <div class="editor">
         <style>${EDITOR_STYLE}</style>
 
@@ -1502,15 +1520,15 @@ class NextbikeAustriaCardEditor extends HTMLElement {
   }
 
   _attachListeners() {
-    this.querySelectorAll('[data-action="toggle-station"]').forEach((chip) => {
+    this.shadowRoot.querySelectorAll('[data-action="toggle-station"]').forEach((chip) => {
       chip.addEventListener("click", () =>
         this._toggleStation(chip.dataset.entity),
       );
     });
-    this.querySelectorAll("button[data-layout]").forEach((btn) => {
+    this.shadowRoot.querySelectorAll("button[data-layout]").forEach((btn) => {
       btn.addEventListener("click", () => this._setLayout(btn.dataset.layout));
     });
-    this.querySelectorAll("ha-switch[data-field]").forEach((sw) => {
+    this.shadowRoot.querySelectorAll("ha-switch[data-field]").forEach((sw) => {
       sw.addEventListener("change", (e) => {
         const field = e.target.dataset.field;
         this._setBool(field, e.target.checked);
