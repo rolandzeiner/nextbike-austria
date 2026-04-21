@@ -15,13 +15,14 @@ from homeassistant.const import __version__ as _HA_VERSION
 DOMAIN: Final = "nextbike_austria"
 
 # Integration version — must match manifest.json "version" field.
-INTEGRATION_VERSION: Final = "0.1.0"
+INTEGRATION_VERSION: Final = "0.2.0"
 
 # Config entry keys
 CONF_SYSTEM_ID: Final = "system_id"
 CONF_STATION_ID: Final = "station_id"
 CONF_STATION_NAME: Final = "station_name"
 CONF_SEARCH_QUERY: Final = "search_query"
+CONF_TRACK_E_BIKE_RANGE: Final = "track_e_bike_range"
 
 # Attribution for data shipped to entities. Nextbike's GBFS
 # `system_information.license_id` is CC0-1.0, so there is no legal
@@ -41,7 +42,7 @@ USER_AGENT: Final = f"HomeAssistant/{_HA_VERSION} {DOMAIN}/{INTEGRATION_VERSION}
 # A mismatch triggers HA's reload-banner loop (banner prompts reload,
 # reload re-serves the same stale JS, banner reappears). Bump both in
 # the same commit.
-CARD_VERSION: Final = "0.1.6"
+CARD_VERSION: Final = "0.2.0"
 CARD_URL: Final = "/nextbike_austria/nextbike-austria-card.js"
 CARD_FILENAME: Final = "nextbike-austria-card.js"
 
@@ -54,6 +55,15 @@ CARD_FILENAME: Final = "nextbike-austria-card.js"
 DEFAULT_SCAN_INTERVAL: Final = 60  # seconds
 MIN_POLL_SECONDS: Final = 60       # never below the feed's TTL
 MAX_POLL_SECONDS: Final = 900      # 15 min — bikes move fast enough that stale data is useless
+
+# Battery-range fetch cadence. `free_bike_status.json` is ~1.3 MB for Wien.
+# Parked e-bikes charge and discharge slowly — a 30-min window is
+# granular enough for any realistic "is there a charged bike at my
+# home station?" automation, and halves the bandwidth cost vs. 15 or
+# 20 min. Approx ~63 MB/day / ~1.9 GB/month per opted-in Austrian
+# system. Only fetched when at least one tracked entry has
+# `track_e_bike_range` enabled in its options.
+BATTERY_FETCH_TTL_SECONDS: Final = 1800
 
 # GBFS endpoint base. Each Austrian system (see AUSTRIAN_SYSTEMS below)
 # publishes at `{GBFS_BASE}/{system_id}/{lang}/{feed}.json`.

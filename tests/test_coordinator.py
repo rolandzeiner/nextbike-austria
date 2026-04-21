@@ -338,6 +338,296 @@ async def test_shared_client_raises_for_unknown_system(hass: HomeAssistant) -> N
         _get_shared_client(hass, "nextbike_bogus")
 
 
+async def test_battery_fetch_aggregates_per_station(hass: HomeAssistant) -> None:
+    """free_bike_status → per-station avg/min/max/samples + sorted per-bike list."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+    # Vehicle types are only needed for the id→name map used in tooltips;
+    # battery % now comes straight from `current_fuel_percent`, so
+    # `max_range_meters` is no longer read.
+    client._vehicle_types = {  # type: ignore[assignment]
+        "183": {
+            "vehicle_type_id": "183",
+            "propulsion_type": "electric_assist",
+            "name": "E-Bike",
+        },
+        "192": {
+            "vehicle_type_id": "192",
+            "propulsion_type": "human",
+            "name": "Classic Bike",
+        },
+    }
+
+    async def fake_fetch(feed: str) -> dict[str, Any]:
+        assert feed == "free_bike_status"
+        return {
+            "data": {
+                "bikes": [
+                    # Station A: two e-bikes at 50% and 100%
+                    {"station_id": "A", "vehicle_type_id": "183", "current_fuel_percent": 0.5},
+                    {"station_id": "A", "vehicle_type_id": "183", "current_fuel_percent": 1.0},
+                    # Station A: one classic bike without fuel info — ignored
+                    {"station_id": "A", "vehicle_type_id": "192"},
+                    # Station B: one e-bike at 25%
+                    {"station_id": "B", "vehicle_type_id": "183", "current_fuel_percent": 0.25},
+                    # Bike without station_id — skipped
+                    {"vehicle_type_id": "183", "current_fuel_percent": 0.4},
+                ]
+            }
+        }
+
+    with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
+        await client.async_fetch_battery()
+
+    a = client.battery_stats("A")
+    b = client.battery_stats("B")
+    assert a is not None
+    assert a["samples"] == 2
+    assert a["avg_pct"] == pytest.approx(75.0)
+    assert a["min_pct"] == pytest.approx(50.0)
+    assert a["max_pct"] == pytest.approx(100.0)
+    # Sorted descending — max charge first.
+    assert [e["pct"] for e in a["per_bike"]] == [100.0, 50.0]
+    # Type name resolved from vehicle_types.
+    assert all(e["type"] == "E-Bike" for e in a["per_bike"])
+    assert b is not None
+    assert b["samples"] == 1
+    assert b["avg_pct"] == pytest.approx(25.0)
+    assert b["per_bike"] == [{"pct": 25.0, "type": "E-Bike"}]
+
+    # vehicle_type_names map exposes id→name for classic + e-bike types.
+    names = client.vehicle_type_names()
+    assert names["183"] == "E-Bike"
+    assert names["192"] == "Classic Bike"
+
+
+async def test_battery_fetch_tracks_disabled_bikes(hass: HomeAssistant) -> None:
+    """Disabled bikes surface as disabled_count + types, regardless of reserved flag."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+    client._vehicle_types = {  # type: ignore[assignment]
+        "183": {"vehicle_type_id": "183", "propulsion_type": "electric_assist", "name": "E-Bike"},
+        "192": {"vehicle_type_id": "192", "propulsion_type": "human", "name": "Classic Bike"},
+    }
+
+    async def fake_fetch(feed: str) -> dict[str, Any]:
+        return {
+            "data": {
+                "bikes": [
+                    # Station A: one disabled classic, one disabled e-bike,
+                    # and a third disabled+reserved bike — the disabled
+                    # flag wins, it counts as disabled only.
+                    {"station_id": "A", "vehicle_type_id": "192", "is_disabled": True},
+                    {"station_id": "A", "vehicle_type_id": "183", "is_disabled": True},
+                    {"station_id": "A", "vehicle_type_id": "192", "is_reserved": True, "is_disabled": True},
+                    # Station B: a reserved bike (counts as reserved, not disabled)
+                    {"station_id": "B", "vehicle_type_id": "192", "is_reserved": True, "is_disabled": False},
+                    # Disabled floating bike (no station_id) — skipped
+                    {"vehicle_type_id": "192", "is_disabled": True},
+                ]
+            }
+        }
+
+    with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
+        await client.async_fetch_battery()
+
+    a = client.battery_stats("A")
+    b = client.battery_stats("B")
+    assert a is not None
+    assert a["disabled_count"] == 3
+    assert sorted(a["disabled_types"]) == ["Classic Bike", "Classic Bike", "E-Bike"]
+    # Disabled wins over reserved — no reserved bucket on station A.
+    assert "reserved_count" not in a
+    assert b is not None
+    assert b["reserved_count"] == 1
+    assert "disabled_count" not in b
+
+
+async def test_battery_fetch_tracks_reserved_bikes(hass: HomeAssistant) -> None:
+    """Reserved (and not disabled) bikes surface as reserved_count + types."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+    client._vehicle_types = {  # type: ignore[assignment]
+        "183": {"vehicle_type_id": "183", "propulsion_type": "electric_assist", "name": "E-Bike"},
+        "192": {"vehicle_type_id": "192", "propulsion_type": "human", "name": "Classic Bike"},
+    }
+
+    async def fake_fetch(feed: str) -> dict[str, Any]:
+        return {
+            "data": {
+                "bikes": [
+                    # Station A: one reserved classic + one reserved e-bike
+                    {"station_id": "A", "vehicle_type_id": "192", "is_reserved": True, "is_disabled": False},
+                    {"station_id": "A", "vehicle_type_id": "183", "is_reserved": True, "is_disabled": False},
+                    # Station A: a reserved AND disabled bike is skipped
+                    {"station_id": "A", "vehicle_type_id": "192", "is_reserved": True, "is_disabled": True},
+                    # Station B: just an available bike (not reserved)
+                    {"station_id": "B", "vehicle_type_id": "192", "is_reserved": False, "is_disabled": False},
+                    # Reserved floating bike (no station_id) — skipped
+                    {"vehicle_type_id": "183", "is_reserved": True, "is_disabled": False},
+                ]
+            }
+        }
+
+    with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
+        await client.async_fetch_battery()
+
+    a = client.battery_stats("A")
+    b = client.battery_stats("B")
+    assert a is not None
+    assert a["reserved_count"] == 2
+    assert sorted(a["reserved_types"]) == ["Classic Bike", "E-Bike"]
+    # Reserved-only stations carry no battery keys.
+    assert "samples" not in a
+    # Station with no reserved and no battery samples isn't recorded.
+    assert b is None
+
+
+async def test_battery_fetch_respects_ttl(hass: HomeAssistant) -> None:
+    """Within the 30-min TTL window, a second call doesn't re-fetch."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+    client._vehicle_types = {  # type: ignore[assignment]
+        "183": {"vehicle_type_id": "183", "propulsion_type": "electric_assist", "name": "E-Bike"},
+    }
+    calls = 0
+
+    async def fake_fetch(feed: str) -> dict[str, Any]:
+        nonlocal calls
+        calls += 1
+        return {
+            "data": {
+                "bikes": [
+                    {"station_id": "A", "vehicle_type_id": "183", "current_fuel_percent": 0.5},
+                ]
+            }
+        }
+
+    with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
+        await client.async_fetch_battery()
+        await client.async_fetch_battery()  # within TTL — should collapse
+
+    assert calls == 1
+
+
+async def test_coordinator_skips_battery_when_opt_off(hass: HomeAssistant) -> None:
+    """With track_e_bike_range off, the coordinator doesn't hit the battery feed."""
+    entry = _make_entry()
+    entry.add_to_hass(hass)
+
+    fake = _FakeClient()
+    fake.set_stations({"68577989": _station_snapshot()})
+    fake.battery_calls = 0  # type: ignore[attr-defined]
+
+    async def mock_fetch_battery(*args: Any, **kwargs: Any) -> None:
+        fake.battery_calls += 1  # type: ignore[attr-defined]
+
+    fake.async_fetch_battery = mock_fetch_battery  # type: ignore[attr-defined]
+
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=fake,
+    ):
+        coordinator = NextbikeStationCoordinator(hass, entry)
+        await coordinator.async_refresh()
+
+    assert fake.battery_calls == 0  # type: ignore[attr-defined]
+
+
+async def test_coordinator_merges_battery_when_opt_on(hass: HomeAssistant) -> None:
+    """With track_e_bike_range on, the coordinator merges battery stats."""
+    from custom_components.nextbike_austria.const import CONF_TRACK_E_BIKE_RANGE
+
+    entry = _make_entry({CONF_TRACK_E_BIKE_RANGE: True})
+    entry.add_to_hass(hass)
+
+    fake = _FakeClient()
+    fake.set_stations({"68577989": _station_snapshot()})
+
+    async def mock_fetch_battery(*args: Any, **kwargs: Any) -> None:
+        return None
+
+    per_bike_list = [
+        {"pct": 95.0, "type": "E-Bike"},
+        {"pct": 76.3, "type": "E-Bike"},
+        {"pct": 60.0, "type": "E-Bike"},
+        {"pct": 40.0, "type": "E-Bike"},
+    ]
+
+    def fake_battery_stats(station_id: str) -> dict[str, Any] | None:
+        if station_id == "68577989":
+            return {
+                "avg_pct": 76.3,
+                "min_pct": 40.0,
+                "max_pct": 95.0,
+                "samples": 4,
+                "per_bike": per_bike_list,
+            }
+        return None
+
+    def fake_vehicle_type_names() -> dict[str, str]:
+        return {"183": "E-Bike", "192": "Classic Bike"}
+
+    fake.async_fetch_battery = mock_fetch_battery  # type: ignore[attr-defined]
+    fake.battery_stats = fake_battery_stats  # type: ignore[attr-defined]
+    fake.vehicle_type_names = fake_vehicle_type_names  # type: ignore[attr-defined]
+
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=fake,
+    ):
+        coordinator = NextbikeStationCoordinator(hass, entry)
+        await coordinator.async_refresh()
+
+    assert coordinator.data is not None
+    assert coordinator.data["_e_bike_avg_battery_pct"] == 76.3
+    assert coordinator.data["_e_bike_min_battery_pct"] == 40.0
+    assert coordinator.data["_e_bike_max_battery_pct"] == 95.0
+    assert coordinator.data["_e_bike_range_samples"] == 4
+    assert coordinator.data["_e_bike_battery_list"] == per_bike_list
+    assert coordinator.data["_vehicle_type_names"] == {"183": "E-Bike", "192": "Classic Bike"}
+
+
+async def test_coordinator_merges_reserved_when_opt_on(hass: HomeAssistant) -> None:
+    """Reserved-only stats also flow into coordinator.data (no battery needed)."""
+    from custom_components.nextbike_austria.const import CONF_TRACK_E_BIKE_RANGE
+
+    entry = _make_entry({CONF_TRACK_E_BIKE_RANGE: True})
+    entry.add_to_hass(hass)
+
+    fake = _FakeClient()
+    fake.set_stations({"68577989": _station_snapshot()})
+
+    async def mock_fetch_battery(*args: Any, **kwargs: Any) -> None:
+        return None
+
+    def fake_battery_stats(station_id: str) -> dict[str, Any] | None:
+        if station_id == "68577989":
+            # A station that has reserved bikes but no battery samples —
+            # the merge path must still surface the reserved keys.
+            return {
+                "reserved_count": 2,
+                "reserved_types": ["Classic Bike", "E-Bike"],
+            }
+        return None
+
+    def fake_vehicle_type_names() -> dict[str, str]:
+        return {"183": "E-Bike", "192": "Classic Bike"}
+
+    fake.async_fetch_battery = mock_fetch_battery  # type: ignore[attr-defined]
+    fake.battery_stats = fake_battery_stats  # type: ignore[attr-defined]
+    fake.vehicle_type_names = fake_vehicle_type_names  # type: ignore[attr-defined]
+
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=fake,
+    ):
+        coordinator = NextbikeStationCoordinator(hass, entry)
+        await coordinator.async_refresh()
+
+    assert coordinator.data is not None
+    assert coordinator.data["_bikes_reserved"] == 2
+    assert coordinator.data["_bikes_reserved_types"] == ["Classic Bike", "E-Bike"]
+    # Battery keys are absent when only reserved info was reported.
+    assert "_e_bike_avg_battery_pct" not in coordinator.data
+
+
 async def test_shared_client_ttl_collapses_fetches(hass: HomeAssistant) -> None:
     """Two calls inside the TTL window hit the network once."""
     client = SharedSystemClient(hass, "nextbike_wr")

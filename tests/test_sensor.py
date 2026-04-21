@@ -140,6 +140,123 @@ async def test_options_update_reloads_entry(hass: HomeAssistant) -> None:
     assert refreshed.options == {"scan_interval": 300}
 
 
+async def test_battery_attributes_surface_when_coordinator_provides_them(
+    hass: HomeAssistant,
+) -> None:
+    """Battery aggregates flow from coordinator.data into sensor attrs."""
+    station = _station_with_capacity()
+    # Simulate what the coordinator attaches when track_e_bike_range is on
+    # and the shared client reported samples.
+    station["_e_bike_avg_battery_pct"] = 76.3
+    station["_e_bike_min_battery_pct"] = 40.0
+    station["_e_bike_max_battery_pct"] = 95.0
+    station["_e_bike_range_samples"] = 4
+    station["_e_bike_battery_list"] = [
+        {"pct": 95.0, "type": "E-Bike"},
+        {"pct": 76.3, "type": "E-Bike"},
+        {"pct": 60.0, "type": "E-Bike"},
+        {"pct": 40.0, "type": "E-Bike"},
+    ]
+    station["_vehicle_type_names"] = {"183": "E-Bike", "192": "Classic Bike"}
+
+    entry = _make_entry("68586882", "Hauptbahnhof S U", "nextbike_wr")
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=_FakeClient(station),
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    bikes = hass.states.get("sensor.hauptbahnhof_s_u_bikes_available")
+    assert bikes is not None
+    attrs = bikes.attributes
+    assert attrs.get("e_bike_avg_battery_pct") == 76.3
+    assert attrs.get("e_bike_min_battery_pct") == 40.0
+    assert attrs.get("e_bike_max_battery_pct") == 95.0
+    assert attrs.get("e_bike_range_samples") == 4
+    battery_list = attrs.get("e_bike_battery_list") or []
+    assert len(battery_list) == 4
+    assert battery_list[0]["pct"] == 95.0
+    assert attrs.get("vehicle_type_names") == {"183": "E-Bike", "192": "Classic Bike"}
+
+
+async def test_battery_attributes_absent_when_not_tracked(
+    hass: HomeAssistant,
+) -> None:
+    """Without battery samples, the e_bike_* + reserved keys are omitted."""
+    station = _station_with_capacity()
+    entry = _make_entry("68586882", "Hauptbahnhof S U", "nextbike_wr")
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=_FakeClient(station),
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    bikes = hass.states.get("sensor.hauptbahnhof_s_u_bikes_available")
+    assert bikes is not None
+    assert "e_bike_avg_battery_pct" not in bikes.attributes
+    assert "e_bike_range_samples" not in bikes.attributes
+    assert "bikes_reserved" not in bikes.attributes
+    assert "bikes_disabled" not in bikes.attributes
+
+
+async def test_reserved_attributes_surface_when_coordinator_provides_them(
+    hass: HomeAssistant,
+) -> None:
+    """Reserved-bike info flows from coordinator.data into sensor attrs."""
+    station = _station_with_capacity()
+    # Simulate what the coordinator attaches when tracking is on AND
+    # the shared client reports at least one reserved bike. Battery
+    # stats are independent — a station can have reserved bikes
+    # without any current_fuel_percent samples.
+    station["_bikes_reserved"] = 2
+    station["_bikes_reserved_types"] = ["Classic Bike", "E-Bike"]
+
+    entry = _make_entry("68586882", "Hauptbahnhof S U", "nextbike_wr")
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=_FakeClient(station),
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    bikes = hass.states.get("sensor.hauptbahnhof_s_u_bikes_available")
+    assert bikes is not None
+    assert bikes.attributes.get("bikes_reserved") == 2
+    assert bikes.attributes.get("bikes_reserved_types") == ["Classic Bike", "E-Bike"]
+
+
+async def test_disabled_attributes_surface_when_coordinator_provides_them(
+    hass: HomeAssistant,
+) -> None:
+    """Disabled-bike info flows from coordinator.data into sensor attrs."""
+    station = _station_with_capacity()
+    station["_bikes_disabled"] = 1
+    station["_bikes_disabled_types"] = ["Classic Bike"]
+
+    entry = _make_entry("68586882", "Hauptbahnhof S U", "nextbike_wr")
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=_FakeClient(station),
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    bikes = hass.states.get("sensor.hauptbahnhof_s_u_bikes_available")
+    assert bikes is not None
+    assert bikes.attributes.get("bikes_disabled") == 1
+    assert bikes.attributes.get("bikes_disabled_types") == ["Classic Bike"]
+
+
 async def test_docks_unavailable_when_capacity_unpublished(
     hass: HomeAssistant,
 ) -> None:

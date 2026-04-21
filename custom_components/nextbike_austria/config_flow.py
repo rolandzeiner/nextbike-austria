@@ -48,6 +48,7 @@ from .const import (
     CONF_STATION_ID,
     CONF_STATION_NAME,
     CONF_SYSTEM_ID,
+    CONF_TRACK_E_BIKE_RANGE,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     MAX_POLL_SECONDS,
@@ -331,7 +332,7 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class NextbikeAustriaOptionsFlow(OptionsFlow):
-    """Options flow: scan interval only.
+    """Options flow: scan interval + optional e-bike battery tracking.
 
     Station / system changes go through `async_step_reconfigure` in the
     main flow so the entry's unique_id stays stable and entities are
@@ -348,12 +349,18 @@ class NextbikeAustriaOptionsFlow(OptionsFlow):
                 user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
             )
             return self.async_create_entry(
-                data={CONF_SCAN_INTERVAL: interval}
+                data={
+                    CONF_SCAN_INTERVAL: interval,
+                    CONF_TRACK_E_BIKE_RANGE: bool(
+                        user_input.get(CONF_TRACK_E_BIKE_RANGE, False)
+                    ),
+                }
             )
 
         default_interval = int(
             config.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         )
+        default_track = bool(config.get(CONF_TRACK_E_BIKE_RANGE, False))
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
@@ -368,7 +375,10 @@ class NextbikeAustriaOptionsFlow(OptionsFlow):
                             unit_of_measurement="s",
                             mode=NumberSelectorMode.BOX,
                         )
-                    )
+                    ),
+                    vol.Required(
+                        CONF_TRACK_E_BIKE_RANGE, default=default_track
+                    ): bool,
                 }
             ),
         )

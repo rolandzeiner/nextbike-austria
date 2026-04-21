@@ -2,7 +2,7 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 [![HA min version](https://img.shields.io/badge/Home%20Assistant-%3E%3D2025.1-blue.svg)](https://www.home-assistant.io/)
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/rolandzeiner/nextbike-austria/releases)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/rolandzeiner/nextbike-austria/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![vibe-coded](https://img.shields.io/badge/vibe-coded-ff69b4?logo=musicbrainz&logoColor=white)](https://en.wikipedia.org/wiki/Vibe_coding)
 
@@ -35,6 +35,7 @@ If your city uses nextbike under a different `system_id`, open an issue — addi
 - **Multi-step config flow**: pick system → type station name → pick matching station from the dropdown. Live catalogue fetch during setup verifies the feed is reachable.
 - **Reconfigure flow** to switch to a different station at the same system without losing the entry; **options flow** to change polling interval.
 - **Shared per-system polling**: if you track 10 Vienna stations, only one HTTP request fetches the feed every 60 s — each entry reads its station out of the shared snapshot.
+- **Optional e-bike battery + reservation tracking** (new in 0.2.0): enable *Track e-bike battery state* per entry to additionally fetch the `free_bike_status` feed every 30 min. Surfaces per-station battery aggregates (avg / min / max %), a sorted per-bike battery list, reserved-bike counts, and out-of-service (disabled) bike counts. Off by default — the extra feed is ~1.3 MB per fetch (see [Data Updates](#data-updates)).
 - **Rich attributes** on the `Bikes available` sensor: `station_id`, `system_id`, `capacity`, `latitude`, `longitude`, `is_installed`, `is_renting`, `is_returning`, `last_reported`, `vehicle_types_available` breakdown, and a direct `rental_uri` deep-link into the nextbike app.
 - **Station-gone repair flow**: if the operator retires a station mid-operation, a Repairs notification surfaces and auto-clears when the station reappears or the entry is removed.
 - **Diagnostics download** with attribution, coordinator state, redacted coordinates, full station snapshot. Coordinates are stripped before download.
@@ -92,6 +93,19 @@ Every `Bikes available` sensor carries:
 | `vehicle_types_available` | list[dict] | Per-type count breakdown: `[{"vehicle_type_id": "183", "count": 17}, …]`. |
 | `rental_uri` | string | Web deep-link (`https://nxtb.it/p/{id}`) that opens the nextbike app to this station. |
 
+When **Track e-bike battery state** is enabled on an entry, the `Bikes available` sensor also carries (keys are omitted when the source is unavailable — templates can gate on `if 'x' in attrs`):
+
+| Attribute | Type | Example / notes |
+|---|---|---|
+| `e_bike_avg_battery_pct` / `min` / `max` | float | Per-station battery % aggregated from e-bikes reporting `current_fuel_percent`. Upstream coverage is ~8.6% — stations with zero reporting bikes omit these keys. |
+| `e_bike_range_samples` | int | How many bikes at this station contributed a sample. |
+| `e_bike_battery_list` | list[dict] | Sorted max→min: `[{"pct": 95.0, "type": "E-Bike"}, …]`. Drives per-slot battery fill in the bundled card. |
+| `bikes_reserved` | int | Bikes physically at the station but held by another user. Only present when >0. |
+| `bikes_reserved_types` | list[str] | Vehicle-type name per reserved bike (parallel to count). |
+| `bikes_disabled` | int | Bikes physically at the station but out of service (flat tire, broken lock …). Only present when >0. |
+| `bikes_disabled_types` | list[str] | Vehicle-type name per disabled bike. |
+| `vehicle_type_names` | dict | `{vehicle_type_id: display_name}` — used by the card for slot tooltips. Always present when tracking is on. |
+
 The `Docks available` sensor additionally exposes `is_virtual_station` and `capacity` so you can tell a geofence from a rack station when building dashboards.
 
 ## Data Updates
@@ -99,6 +113,7 @@ The `Docks available` sensor additionally exposes `is_virtual_station` and `capa
 - Poll interval defaults to **60 s** (the value the GBFS feed advertises in `ttl`). Faster polling returns the same cached body, so the integration caps the form at 60 s on the floor and 900 s on the ceiling.
 - **Per-system shared fetch**: one HTTP request per system per poll, regardless of how many stations in that system are tracked. Implemented as a memoized client in `hass.data[DOMAIN]["systems"]` with a TTL lock that collapses concurrent calls.
 - `vehicle_types.json` is fetched once at startup (nearly static) and only refreshed when empty; it's what drives the e-bike detection heuristic.
+- **Battery / reservation tracking** (opt-in): with *Track e-bike battery state* enabled on at least one entry, the shared client additionally fetches `free_bike_status.json` every **30 min** (independent of the station poll interval). The feed is ~1.3 MB for Wien — approximately **63 MB/day / 1.9 GB/month** per opted-in Austrian system. Leave off if your bandwidth is capped.
 - All payloads are parsed with `json.loads(..., strict=False)` because nextbike occasionally emits raw control characters in `vehicle_types` descriptions — a tolerated quirk rather than a broken feed.
 
 ## Use Cases
@@ -149,7 +164,7 @@ card:
 - **Station IDs are stable but `bike_id`s rotate** (privacy rotation by nextbike). Don't write automations keyed on individual bike identifiers — they won't persist across ticks.
 - **Virtual stations** (`is_virtual_station: true`) are geofences without physical docks. The `Docks available` sensor reads 0 on these by design; use the `Bikes available` sensor instead.
 - **`num_bikes_available` can exceed `capacity`** when bikes are crammed at full stations (observed at Hoher Markt with 29/25). Don't template on `capacity - bikes` as a synonym for "docks free".
-- **`free_bike_status` (floating-bike coordinates) is not fetched** by default. Payload is ~1.3 MB for Vienna and we optimize for the per-station dashboard use case. Open an issue if you need this surface.
+- **Per-bike detail is opt-in.** `free_bike_status.json` (battery levels via `current_fuel_percent`, per-bike `is_reserved` / `is_disabled` flags) is ~1.3 MB per system and skipped entirely unless *Track e-bike battery state* is enabled on at least one entry. Only ~8.6% of e-bikes report a battery sample upstream — a station may opt in and still see no battery data until at least one of its bikes reports.
 
 ## Troubleshooting
 
