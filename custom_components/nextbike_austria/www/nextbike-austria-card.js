@@ -925,11 +925,14 @@ class NextbikeAustriaCard extends HTMLElement {
     const bikeWord = bikes === 1 ? this._t("bike") : this._t("bikes");
     const pills = [];
     if (this._config.show_ebikes && Number.isFinite(ebikes) && ebikes > 0) {
-      // Per-slot battery fill in the rack carries charge detail per
-      // bike, so the pill stays lean — just the count.
+      // Amber matches the diagonal "e-bike" stripe inside the rack
+      // slot — same visual vocabulary for the "there are e-bikes here"
+      // signal, regardless of whether per-bike charge data is known.
+      // Text uses the theme text colour so the count stays readable
+      // on both light and dark themes; the amber tint carries identity.
       pills.push(
-        `<span class="pill" style="background:color-mix(in srgb, ${accent} 16%, transparent);color:${accent};">
-           <ha-icon icon="mdi:lightning-bolt"></ha-icon>${ebikes} ${_esc(this._t("ebikes"))}
+        `<span class="pill" style="background:color-mix(in srgb, #ffd740 28%, transparent);color:var(--primary-text-color);">
+           <ha-icon icon="mdi:lightning-bolt" style="color:#c28a00;"></ha-icon>${ebikes} ${_esc(this._t("ebikes"))}
          </span>`,
       );
     }
