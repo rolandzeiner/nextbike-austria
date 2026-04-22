@@ -41,10 +41,14 @@
     "step": {
       "init": {
         "title": "Nextbike Austria – Optionen",
-        "description": "Das Aktualisierungsintervall steuert den Abfragezyklus pro Station (mindestens 60 Sek.).\n\n**E-Bike-Batteriestand tracken** lädt zusätzlich alle 30 Minuten einen ~1,3 MB großen Feed — ca. **63 MB pro Tag / 1,9 GB pro Monat** pro aktiviertem System. Bei begrenztem Datenvolumen besser deaktivieren.",
+        "description": "Abfrage und optionales E-Bike-Batterietracking konfigurieren.",
         "data": {
           "scan_interval": "Aktualisierungsintervall (Sekunden)",
           "track_e_bike_range": "E-Bike-Batteriestand tracken"
+        },
+        "data_description": {
+          "scan_interval": "Abfragezyklus pro Station (mindestens 60 Sek.).",
+          "track_e_bike_range": "Lädt zusätzlich alle 30 Minuten einen ~1,3 MB großen Feed — ca. 63 MB pro Tag / 1,9 GB pro Monat pro aktiviertem System. Bei begrenzten Datenvolumen besser deaktiviert lassen."
         }
       }
     }
