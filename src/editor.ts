@@ -83,6 +83,12 @@ export class NextbikeAustriaCardEditor extends LitElement {
     const selected = this._config.entities || [];
     const selectedIds = new Set(selected.map((s) => s.entity));
     const layout = this._config.layout === "tabs" ? "tabs" : "stacked";
+    // show_rack defaults to on; legend + battery only make sense when the
+    // rack is rendered (card already gates both inside _renderRack), so
+    // the editor hides the sub-toggles in lockstep to remove visual dead
+    // space. Config values for the hidden toggles are preserved so turning
+    // show_rack back on restores the user's prior sub-settings.
+    const rackOn = this._config.show_rack !== false;
 
     return html`
       <div class="editor">
@@ -118,9 +124,15 @@ export class NextbikeAustriaCardEditor extends LitElement {
             </div>
           </div>
           ${this._renderToggle("show_rack")}
-          ${this._renderToggle("show_legend")}
+          ${rackOn
+            ? html`
+                <div class="sub-toggles">
+                  ${this._renderToggle("show_legend")}
+                  ${this._renderToggle("show_battery")}
+                </div>
+              `
+            : nothing}
           ${this._renderToggle("show_ebikes")}
-          ${this._renderToggle("show_battery")}
           ${this._renderToggle("show_docks")}
           ${this._renderToggle("show_flags")}
           ${this._renderToggle("show_timestamp")}
