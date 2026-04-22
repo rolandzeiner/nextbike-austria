@@ -39,7 +39,21 @@ If your city uses nextbike under a different `system_id`, open an issue — addi
 - **Rich attributes** on the `Bikes available` sensor: `station_id`, `system_id`, `capacity`, `latitude`, `longitude`, `is_installed`, `is_renting`, `is_returning`, `last_reported`, `vehicle_types_available` breakdown, and a direct `rental_uri` deep-link into the nextbike app.
 - **Station-gone repair flow**: if the operator retires a station mid-operation, a Repairs notification surfaces and auto-clears when the station reappears or the entry is removed.
 - **Diagnostics download** with attribution, coordinator state, redacted coordinates, full station snapshot. Coordinates are stripped before download.
-- **Platinum quality scale** engineering: `mypy --strict`, `ruff`, 97% test coverage, typed ConfigEntry alias, translation-keyed exceptions.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="screenshots/card.webp" height="320" alt="Lovelace card" /></td>
+    <td align="center"><img src="screenshots/card-config.webp" height="320" alt="Card editor" /></td>
+    <td align="center"><img src="screenshots/config-flow.webp" height="320" alt="Config flow" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Lovelace card</em></td>
+    <td align="center"><em>Card editor</em></td>
+    <td align="center"><em>Config flow</em></td>
+  </tr>
+</table>
 
 ## Requirements
 
