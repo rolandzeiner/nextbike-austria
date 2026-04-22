@@ -1,0 +1,14 @@
+{
+  "domain": "nextbike_austria",
+  "name": "Nextbike Austria",
+  "after_dependencies": ["frontend", "http", "lovelace"],
+  "codeowners": ["@rolandzeiner"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/rolandzeiner/nextbike-austria",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/rolandzeiner/nextbike-austria/issues",
+  "requirements": [],
+  "version": "0.3.0"
+}

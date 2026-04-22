@@ -1,0 +1,82 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Nextbike Austria",
+        "description": "Wähle das nextbike-betriebene Fahrradverleih­system, das du verfolgen möchtest.",
+        "data": {
+          "system_id": "System"
+        }
+      },
+      "search_station": {
+        "title": "Station suchen",
+        "description": "Gib einen Teil des Stationsnamens in {system_name} ein (z. B. „Oper“, „Bahnhof“).",
+        "data": {
+          "search_query": "Stationsname"
+        }
+      },
+      "select_station": {
+        "title": "Station auswählen",
+        "description": "Treffer für „{query}“ in {system_name}. Wähle eine Station und setze das Aktualisierungsintervall.",
+        "data": {
+          "station_id": "Station",
+          "scan_interval": "Aktualisierungsintervall (Sekunden)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Die nextbike-GBFS-Schnittstelle ist nicht erreichbar. Bitte Internetverbindung prüfen und erneut versuchen.",
+      "invalid_system": "Unbekanntes nextbike-System.",
+      "query_too_short": "Bitte mindestens 2 Zeichen eingeben.",
+      "no_matches": "Keine Stationen gefunden — bitte mit einem anderen Suchbegriff erneut versuchen.",
+      "invalid_station": "Die Station ist nicht mehr im Feed. Bitte eine andere Station wählen."
+    },
+    "abort": {
+      "already_configured": "Diese Station wird bereits verfolgt.",
+      "reconfigure_successful": "Neukonfiguration erfolgreich.",
+      "unique_id_mismatch": "Die gewählte Station passt nicht zu dieser ID. Bitte den Eintrag löschen und die neue Station hinzufügen."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Nextbike Austria – Optionen",
+        "description": "Das Aktualisierungsintervall steuert den Abfragezyklus pro Station (mindestens 60 Sek.).\n\n**E-Bike-Batteriestand tracken** lädt zusätzlich alle 30 Minuten einen ~1,3 MB großen Feed — ca. **63 MB pro Tag / 1,9 GB pro Monat** pro aktiviertem System. Bei begrenztem Datenvolumen besser deaktivieren.",
+        "data": {
+          "scan_interval": "Aktualisierungsintervall (Sekunden)",
+          "track_e_bike_range": "E-Bike-Batteriestand tracken"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "bikes_available": { "name": "Räder verfügbar" },
+      "docks_available": { "name": "Freie Plätze" },
+      "ebikes_available": { "name": "E-Bikes verfügbar" }
+    }
+  },
+  "exceptions": {
+    "api_timeout": {
+      "message": "Nextbike-GBFS-API antwortet nicht (Timeout nach {seconds}s)"
+    },
+    "api_http_error": {
+      "message": "Nextbike-GBFS-API liefert HTTP {status}: {reason}"
+    },
+    "api_connection_error": {
+      "message": "Nextbike-GBFS-API Verbindungsfehler: {error_type}: {error}"
+    },
+    "api_invalid_response": {
+      "message": "Nextbike-GBFS-API liefert unerwartete Antwort (Status {status}): {error}"
+    },
+    "station_gone": {
+      "message": "Station {station_id} ist nicht mehr im GBFS-Feed von {system_id} enthalten."
+    }
+  },
+  "issues": {
+    "station_gone": {
+      "title": "Nextbike Austria — Station nicht mehr gefunden",
+      "description": "Die Station **{station_id}** wird vom nextbike-System {system_id} nicht mehr veröffentlicht (betrifft **{entry_title}**). Der Betreiber hat die Station möglicherweise stillgelegt. Entweder taucht sie wieder auf, oder du entfernst diesen Eintrag und wählst eine andere Station."
+    }
+  }
+}

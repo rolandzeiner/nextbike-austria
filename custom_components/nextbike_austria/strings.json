@@ -1,0 +1,82 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Nextbike Austria",
+        "description": "Pick which nextbike-operated bike-share system to track.",
+        "data": {
+          "system_id": "System"
+        }
+      },
+      "search_station": {
+        "title": "Find a station",
+        "description": "Type part of the station name in {system_name} (e.g. \"Oper\", \"Bahnhof\").",
+        "data": {
+          "search_query": "Station name"
+        }
+      },
+      "select_station": {
+        "title": "Select station",
+        "description": "Matches for \"{query}\" in {system_name}. Pick one and set the poll interval.",
+        "data": {
+          "station_id": "Station",
+          "scan_interval": "Update interval (seconds)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the nextbike GBFS API. Check your internet connection and try again.",
+      "invalid_system": "Unknown nextbike system.",
+      "query_too_short": "Please enter at least 2 characters.",
+      "no_matches": "No stations match your search — try a shorter or different fragment.",
+      "invalid_station": "That station is no longer in the feed. Please pick another."
+    },
+    "abort": {
+      "already_configured": "This station is already being tracked.",
+      "reconfigure_successful": "Reconfigure completed successfully.",
+      "unique_id_mismatch": "The picked station does not match this entry's station id. Delete the entry and add the new station instead."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Nextbike Austria options",
+        "description": "Update interval controls the per-station polling cadence (60 s minimum).\n\n**Track e-bike battery state** additionally fetches a ~1.3 MB feed every 30 minutes — roughly **63 MB per day / 1.9 GB per month** per opted-in Austrian system. Leave off if your bandwidth is capped.",
+        "data": {
+          "scan_interval": "Update interval (seconds)",
+          "track_e_bike_range": "Track e-bike battery state"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "bikes_available": { "name": "Bikes available" },
+      "docks_available": { "name": "Docks available" },
+      "ebikes_available": { "name": "E-bikes available" }
+    }
+  },
+  "exceptions": {
+    "api_timeout": {
+      "message": "Nextbike GBFS API timed out after {seconds}s"
+    },
+    "api_http_error": {
+      "message": "Nextbike GBFS API returned HTTP {status}: {reason}"
+    },
+    "api_connection_error": {
+      "message": "Nextbike GBFS API connection error: {error_type}: {error}"
+    },
+    "api_invalid_response": {
+      "message": "Nextbike GBFS API returned an unexpected response (status {status}): {error}"
+    },
+    "station_gone": {
+      "message": "Station {station_id} is no longer published in the {system_id} GBFS feed."
+    }
+  },
+  "issues": {
+    "station_gone": {
+      "title": "Nextbike Austria — station missing",
+      "description": "Station **{station_id}** is no longer published by the {system_id} nextbike system tracked by **{entry_title}**. The operator may have retired it. Either the station will come back on its own, or you can remove this entry and pick a different station."
+    }
+  }
+}

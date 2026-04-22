@@ -1,0 +1,9 @@
+{
+  "entity": {
+    "sensor": {
+      "bikes_available": { "default": "mdi:bike" },
+      "docks_available": { "default": "mdi:parking" },
+      "ebikes_available": { "default": "mdi:bike-fast" }
+    }
+  }
+}
