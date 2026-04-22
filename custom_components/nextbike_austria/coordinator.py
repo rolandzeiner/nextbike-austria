@@ -19,7 +19,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from collections.abc import Callable
 from datetime import timedelta
 from typing import Any
 
@@ -27,7 +26,7 @@ import aiohttp
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_SCAN_INTERVAL
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -377,7 +376,6 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._station_id: str = str(data[CONF_STATION_ID])
         self._client = _get_shared_client(hass, self._system_id)
         self._issue_raised: bool = False
-        self._unsub: list[Callable[[], None]] = []
         # Opt-in per entry. When enabled, the coordinator also triggers
         # the shared client's separate battery-cache refresh (30 min TTL)
         # on each station poll and exposes per-station battery aggregates.
@@ -410,13 +408,6 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_setup(self) -> None:
         """Nothing to do until the first refresh runs."""
         return None
-
-    @callback
-    def async_teardown(self) -> None:
-        """Cancel listeners on unload."""
-        for unsub in self._unsub:
-            unsub()
-        self._unsub.clear()
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch fresh data via the shared client and extract our station."""
