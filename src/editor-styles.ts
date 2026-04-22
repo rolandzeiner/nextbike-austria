@@ -1,6 +1,6 @@
-import { css } from "lit";
+import { css, type CSSResultGroup } from "lit";
 
-export const editorStyles = css`
+export const editorStyles: CSSResultGroup = css`
   :host {
     display: block;
   }

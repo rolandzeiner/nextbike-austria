@@ -1,7 +1,22 @@
-import { LitElement, html, nothing } from "lit";
-import { CARD_VERSION, SYSTEM_ACCENT, SYSTEM_LABEL } from "./const.js";
-import { TRANSLATIONS, pickLang } from "./translations.js";
-import { cardStyles } from "./card-styles.js";
+import {
+  LitElement,
+  html,
+  nothing,
+  type TemplateResult,
+  type PropertyValues,
+  type CSSResultGroup,
+} from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+
+import { CARD_VERSION, SYSTEM_ACCENT, SYSTEM_LABEL } from "./const";
+import { t, pickLang } from "./localize/localize";
+import { cardStyles } from "./card-styles";
+import type {
+  HomeAssistant,
+  HassEntityAttributes,
+  NextbikeAustriaCardConfig,
+  NextbikeStationEntry,
+} from "./types";
 import {
   findNextbikeEntities,
   normaliseConfig,
@@ -11,37 +26,38 @@ import {
   batteryColor,
   relativeTime,
   cleanStationName,
-} from "./utils.js";
+} from "./utils";
 
+// Eagerly register the editor. With inlineDynamicImports=true the editor
+// code is in this bundle anyway — registering here guarantees the custom
+// element exists before HA calls getConfigElement().
+import "./editor";
+
+@customElement("nextbike-austria-card")
 export class NextbikeAustriaCard extends LitElement {
-  static properties = {
-    hass: { attribute: false },
-    _config: { state: true },
-    _activeTab: { state: true },
-    _versionMismatch: { state: true },
-    _tickKey: { state: true },
+  static styles: CSSResultGroup = cardStyles;
+
+  @property({ attribute: false }) public hass?: HomeAssistant;
+
+  @state() private _config: NextbikeAustriaCardConfig = {
+    type: "nextbike-austria-card",
+    entities: [],
   };
+  @state() private _activeTab = 0;
+  @state() private _versionMismatch: string | null = null;
+  @state() private _tickKey = 0;
 
-  static styles = cardStyles;
+  private _tickTimer: ReturnType<typeof setInterval> | null = null;
+  private _versionChecked = false;
 
-  constructor() {
-    super();
-    this._config = {};
-    this._activeTab = 0;
-    this._versionMismatch = null;
-    this._tickKey = 0;
-    this._tickTimer = null;
-    this._versionChecked = false;
-  }
-
-  setConfig(config) {
+  public setConfig(config: Partial<NextbikeAustriaCardConfig> | null | undefined): void {
     if (config === null || typeof config !== "object" || Array.isArray(config)) {
       throw new Error("nextbike-austria-card: config must be an object");
     }
     this._config = normaliseConfig(config);
   }
 
-  connectedCallback() {
+  public override connectedCallback(): void {
     super.connectedCallback();
     // Tick once a minute so the "updated N min ago" label stays honest
     // between coordinator polls. Bumping _tickKey is enough to trigger
@@ -53,7 +69,7 @@ export class NextbikeAustriaCard extends LitElement {
     }
   }
 
-  disconnectedCallback() {
+  public override disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this._tickTimer) {
       clearInterval(this._tickTimer);
@@ -61,17 +77,17 @@ export class NextbikeAustriaCard extends LitElement {
     }
   }
 
-  willUpdate(changed) {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has("hass") && this.hass && !this._versionChecked) {
       this._versionChecked = true;
-      this._checkCardVersion();
+      void this._checkCardVersion();
     }
   }
 
   // Performance gate — every entity state change in HA fires a hass
   // update. Without this, we re-render on every change anywhere in the
   // user's HA install. We only care when the entities we render moved.
-  shouldUpdate(changed) {
+  protected override shouldUpdate(changed: PropertyValues): boolean {
     if (!this._config) return false;
     if (
       changed.has("_config") ||
@@ -82,47 +98,55 @@ export class NextbikeAustriaCard extends LitElement {
       return true;
     }
     if (!changed.has("hass")) return false;
-    const oldHass = changed.get("hass");
+    const oldHass = changed.get("hass") as HomeAssistant | undefined;
     if (!oldHass) return true; // first hass — render
+    if (!this.hass) return false;
     const stations = this._resolveEntities(this.hass);
-    return stations.some((s) => oldHass.states[s.entity] !== this.hass.states[s.entity]);
+    return stations.some(
+      (s) => oldHass.states[s.entity] !== this.hass!.states[s.entity],
+    );
   }
 
-  getCardSize() {
+  public getCardSize(): number {
     const n = (this._config?.entities || []).length || 1;
     return Math.min(12, 3 + n * 3);
   }
 
-  static async getConfigElement() {
-    await import("./editor.js");
+  public static async getConfigElement(): Promise<HTMLElement> {
+    // Editor element is registered via the top-level `import "./editor"`
+    // above. No await needed here, but keep the async signature so HA
+    // treats the return as a Promise uniformly.
     return document.createElement("nextbike-austria-card-editor");
   }
 
-  static getStubConfig(hass) {
+  public static getStubConfig(
+    hass: HomeAssistant,
+  ): Partial<NextbikeAustriaCardConfig> {
     const entities = findNextbikeEntities(hass);
-    return { entities: entities.length ? [entities[0]] : [] };
+    return { entities: entities.length ? [{ entity: entities[0] }] : [] };
   }
 
-  async _checkCardVersion() {
+  private async _checkCardVersion(): Promise<void> {
     if (!this.hass?.callWS) return;
     try {
-      const result = await this.hass.callWS({
+      const result = await this.hass.callWS<{ version?: string }>({
         type: "nextbike_austria/card_version",
       });
       if (result?.version && result.version !== CARD_VERSION) {
         this._versionMismatch = result.version;
       }
-    } catch (_) {
+    } catch {
       /* backend may not support the command yet */
     }
   }
 
-  _t(key) {
-    const lang = pickLang(this.hass);
-    return TRANSLATIONS[lang][key] ?? TRANSLATIONS.en[key] ?? key;
+  private _t(key: string): string {
+    return t(this.hass, key);
   }
 
-  _resolveEntities(hass = this.hass) {
+  private _resolveEntities(
+    hass: HomeAssistant | undefined = this.hass,
+  ): NextbikeStationEntry[] {
     const picked = Array.isArray(this._config?.entities)
       ? this._config.entities.filter((s) => hass?.states[s.entity])
       : [];
@@ -131,7 +155,7 @@ export class NextbikeAustriaCard extends LitElement {
     return available.length ? [{ entity: available[0] }] : [];
   }
 
-  render() {
+  protected render(): TemplateResult | typeof nothing {
     if (!this.hass || !this._config) return nothing;
     const stations = this._resolveEntities();
     const useTabs = this._config.layout === "tabs" && stations.length >= 2;
@@ -139,11 +163,11 @@ export class NextbikeAustriaCard extends LitElement {
 
     const attribution =
       stations
-        .map((s) => this.hass.states[s.entity]?.attributes?.attribution)
-        .find((v) => typeof v === "string" && v.length > 0) ||
+        .map((s) => this.hass?.states[s.entity]?.attributes?.attribution)
+        .find((v): v is string => typeof v === "string" && v.length > 0) ||
       "Data: nextbike GmbH, CC0-1.0";
 
-    let body;
+    let body: TemplateResult | TemplateResult[];
     if (!stations.length) {
       body = this._renderEmpty();
     } else if (useTabs) {
@@ -165,7 +189,7 @@ export class NextbikeAustriaCard extends LitElement {
     `;
   }
 
-  _renderBanner() {
+  private _renderBanner(): TemplateResult {
     const msg = this._t("version_update").replace(
       "{v}",
       this._versionMismatch || "?",
@@ -180,17 +204,17 @@ export class NextbikeAustriaCard extends LitElement {
     `;
   }
 
-  _renderEmpty() {
+  private _renderEmpty(): TemplateResult {
     const available = findNextbikeEntities(this.hass);
     const key = available.length ? "no_entities_picked" : "no_entities_available";
     return html`<div class="empty-state">${this._t(key)}</div>`;
   }
 
-  _renderTabs(stations) {
+  private _renderTabs(stations: NextbikeStationEntry[]): TemplateResult {
     return html`
       <div class="tabs">
         ${stations.map((s, i) => {
-          const a = this.hass.states[s.entity]?.attributes || {};
+          const a = this.hass?.states[s.entity]?.attributes || {};
           const label = cleanStationName(a.friendly_name || s.entity);
           return html`
             <button
@@ -206,18 +230,18 @@ export class NextbikeAustriaCard extends LitElement {
     `;
   }
 
-  _setActiveTab(i) {
+  private _setActiveTab(i: number): void {
     if (Number.isFinite(i) && i !== this._activeTab) {
       this._activeTab = i;
     }
   }
 
-  _renderStation(stopCfg) {
-    const state = this.hass.states[stopCfg.entity];
+  private _renderStation(stopCfg: NextbikeStationEntry): TemplateResult {
+    const state = this.hass?.states[stopCfg.entity];
     if (!state) {
       return html`<div class="empty-state">${this._t("no_entities_picked")}</div>`;
     }
-    const a = state.attributes || {};
+    const a = state.attributes || ({} as HassEntityAttributes);
     const bikes = Number.isFinite(parseInt(state.state, 10))
       ? parseInt(state.state, 10)
       : 0;
@@ -322,9 +346,18 @@ export class NextbikeAustriaCard extends LitElement {
     `;
   }
 
-  _renderPills(ebikes, docks, capacity) {
-    const out = [];
-    if (this._config.show_ebikes && Number.isFinite(ebikes) && ebikes > 0) {
+  private _renderPills(
+    ebikes: number | null,
+    docks: number | null,
+    capacity: number | null,
+  ): TemplateResult[] {
+    const out: TemplateResult[] = [];
+    if (
+      this._config.show_ebikes &&
+      typeof ebikes === "number" &&
+      Number.isFinite(ebikes) &&
+      ebikes > 0
+    ) {
       // Amber matches the diagonal "e-bike" stripe inside the rack slot
       // — same visual vocabulary regardless of whether per-bike charge
       // data is known.
@@ -350,21 +383,36 @@ export class NextbikeAustriaCard extends LitElement {
     return out;
   }
 
-  _renderRack({
-    bikes,
-    ebikes,
-    capacity,
-    accent,
-    batteryPct,
-    batterySamples,
-    batteryList,
-    vehicleTypesAvailable,
-    vehicleTypeNames,
-    reservedCount,
-    reservedTypes,
-    disabledCount,
-    disabledTypes,
-  }) {
+  private _renderRack(args: {
+    bikes: number;
+    ebikes: number | null;
+    capacity: number;
+    accent: string;
+    batteryPct: number | null;
+    batterySamples: number;
+    batteryList: Array<{ type?: string; pct?: number }> | null;
+    vehicleTypesAvailable: Array<{ vehicle_type_id?: string; count?: number }>;
+    vehicleTypeNames: Record<string, string>;
+    reservedCount: number;
+    reservedTypes: string[];
+    disabledCount: number;
+    disabledTypes: string[];
+  }): TemplateResult {
+    const {
+      bikes,
+      ebikes,
+      capacity,
+      accent,
+      batteryPct,
+      batterySamples,
+      batteryList,
+      vehicleTypesAvailable,
+      vehicleTypeNames,
+      reservedCount,
+      reservedTypes,
+      disabledCount,
+      disabledTypes,
+    } = args;
     // One visual slot per dock, always. Overflow (bikes > capacity) is
     // carried by the "+N" note below the rack, not by extra slots.
     const totalSlots = capacity;
@@ -379,10 +427,10 @@ export class NextbikeAustriaCard extends LitElement {
       Number.isFinite(disabledCount) ? disabledCount : 0,
       Math.max(0, totalSlots - bikesVis - reservedVis),
     );
-    const hasEbikes = Number.isFinite(ebikes) && ebikes > 0;
-    const ebikesVis = hasEbikes ? Math.min(bikesVis, ebikes) : 0;
+    const hasEbikes = typeof ebikes === "number" && Number.isFinite(ebikes) && ebikes > 0;
+    const ebikesVis = hasEbikes ? Math.min(bikesVis, ebikes as number) : 0;
     const showBattery =
-      this._config.show_battery &&
+      !!this._config.show_battery &&
       typeof batteryPct === "number" &&
       batterySamples > 0;
     const perBike = showBattery && Array.isArray(batteryList) ? batteryList : [];
@@ -396,13 +444,13 @@ export class NextbikeAustriaCard extends LitElement {
     );
     let classicCursor = 0;
 
-    const slots = [];
+    const slots: TemplateResult[] = [];
     for (let i = 0; i < bikesVis; i++) {
       const isEbike = i < ebikesVis;
       if (isEbike) {
         const entry = perBike[i] || null;
         const typeName = entry?.type || ebikeFallbackType || this._t("legend_ebike");
-        if (entry && showBattery) {
+        if (entry && showBattery && typeof entry.pct === "number") {
           const pct = entry.pct;
           const color = batteryColor(pct);
           slots.push(html`
@@ -480,7 +528,7 @@ export class NextbikeAustriaCard extends LitElement {
             hasEbikes,
             hasOverflow,
             hasEmptyVisible,
-            battery: showBattery
+            battery: showBattery && typeof batteryPct === "number"
               ? { pct: batteryPct, color: batteryColor(batteryPct) }
               : null,
             hasReservedVisible,
@@ -490,16 +538,25 @@ export class NextbikeAustriaCard extends LitElement {
     `;
   }
 
-  _renderLegend({
-    accent,
-    hasEbikes,
-    hasOverflow,
-    hasEmptyVisible,
-    battery,
-    hasReservedVisible,
-    hasDisabledVisible,
-  }) {
-    const items = [
+  private _renderLegend(args: {
+    accent: string;
+    hasEbikes: boolean;
+    hasOverflow: boolean;
+    hasEmptyVisible: boolean;
+    battery: { pct: number; color: string } | null;
+    hasReservedVisible: boolean;
+    hasDisabledVisible: boolean;
+  }): TemplateResult {
+    const {
+      accent,
+      hasEbikes,
+      hasOverflow,
+      hasEmptyVisible,
+      battery,
+      hasReservedVisible,
+      hasDisabledVisible,
+    } = args;
+    const items: TemplateResult[] = [
       html`
         <span class="legend-item">
           <span class="legend-swatch" style=${`background:${accent}`}></span>
@@ -561,8 +618,8 @@ export class NextbikeAustriaCard extends LitElement {
     return html`<div class="legend">${items}</div>`;
   }
 
-  _renderFlags(a) {
-    const flags = [];
+  private _renderFlags(a: HassEntityAttributes): TemplateResult | typeof nothing {
+    const flags: TemplateResult[] = [];
     if (a.is_installed === false) {
       flags.push(html`
         <span class="flag err">
@@ -594,8 +651,11 @@ export class NextbikeAustriaCard extends LitElement {
     return flags.length ? html`<div class="flags">${flags}</div>` : nothing;
   }
 
-  _renderFooter(a, rentUri) {
-    const bits = [];
+  private _renderFooter(
+    a: HassEntityAttributes,
+    rentUri: string,
+  ): TemplateResult | typeof nothing {
+    const bits: TemplateResult[] = [];
     if (this._config.show_rent_button && rentUri) {
       bits.push(html`
         <a class="rent" href=${rentUri} target="_blank" rel="noopener noreferrer">
@@ -612,3 +672,8 @@ export class NextbikeAustriaCard extends LitElement {
     return bits.length ? html`<div class="footer">${bits}</div>` : nothing;
   }
 }
+
+// Keep the import visible to the tree-shaker — pickLang is called via
+// localize re-exports in other modules, but the editor also references
+// it directly. This noop satisfies TS's unused-import check.
+void pickLang;

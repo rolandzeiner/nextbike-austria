@@ -1,35 +1,48 @@
-import { LitElement, html, nothing } from "lit";
-import { TRANSLATIONS, pickLang, et } from "./translations.js";
-import { editorStyles } from "./editor-styles.js";
-import { findNextbikeEntities, normaliseConfig, cleanStationName } from "./utils.js";
+import { LitElement, html, nothing, type TemplateResult, type CSSResultGroup } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 
+import type { HomeAssistant, NextbikeAustriaCardConfig } from "./types";
+import { et, pickLang } from "./localize/localize";
+import { editorStyles } from "./editor-styles";
+import {
+  findNextbikeEntities,
+  normaliseConfig,
+  cleanStationName,
+} from "./utils";
+
+// Key of a boolean column on the config — drives both editor toggle rows
+// and the setConfig round-trip.
+type BoolField =
+  | "show_rack"
+  | "show_legend"
+  | "show_ebikes"
+  | "show_battery"
+  | "show_docks"
+  | "show_flags"
+  | "show_timestamp"
+  | "show_rent_button"
+  | "hide_attribution";
+
+@customElement("nextbike-austria-card-editor")
 export class NextbikeAustriaCardEditor extends LitElement {
-  static properties = {
-    hass: { attribute: false },
-    _config: { state: true },
+  static styles: CSSResultGroup = editorStyles;
+
+  @property({ attribute: false }) public hass?: HomeAssistant;
+
+  @state() private _config: NextbikeAustriaCardConfig = {
+    type: "nextbike-austria-card",
+    entities: [],
   };
 
-  static styles = editorStyles;
-
-  constructor() {
-    super();
-    this._config = {};
-  }
-
-  setConfig(config) {
+  public setConfig(config: Partial<NextbikeAustriaCardConfig>): void {
     this._config = normaliseConfig(config);
   }
 
-  _et(key) {
+  private _et(key: string): string {
     return et(this.hass, key);
   }
 
-  _t(key) {
-    const lang = pickLang(this.hass);
-    return TRANSLATIONS[lang][key] ?? TRANSLATIONS.en[key] ?? key;
-  }
-
-  _fire() {
+  private _fire(): void {
     // bubbles + composed required so the event crosses our shadow boundary
     // and reaches the dashboard's card editor listener.
     this.dispatchEvent(
@@ -41,28 +54,29 @@ export class NextbikeAustriaCardEditor extends LitElement {
     );
   }
 
-  _toggleStation(eid) {
+  private _toggleStation = (eid: string): void => {
     const list = [...(this._config.entities || [])];
     const idx = list.findIndex((s) => s.entity === eid);
-    const next = idx >= 0
-      ? list.filter((_, i) => i !== idx)
-      : [...list, { entity: eid }];
+    const next =
+      idx >= 0
+        ? list.filter((_, i) => i !== idx)
+        : [...list, { entity: eid }];
     this._config = { ...this._config, entities: next };
     this._fire();
-  }
+  };
 
-  _setBool(field, value) {
+  private _setBool = (field: BoolField, value: boolean): void => {
     this._config = { ...this._config, [field]: value };
     this._fire();
-  }
+  };
 
-  _setLayout(layout) {
+  private _setLayout = (layout: "stacked" | "tabs"): void => {
     if (layout !== "stacked" && layout !== "tabs") return;
     this._config = { ...this._config, layout };
     this._fire();
-  }
+  };
 
-  render() {
+  protected render(): TemplateResult | typeof nothing {
     if (!this.hass) return nothing;
 
     const available = findNextbikeEntities(this.hass);
@@ -117,8 +131,11 @@ export class NextbikeAustriaCardEditor extends LitElement {
     `;
   }
 
-  _renderStationChip(eid, selectedIds) {
-    const a = this.hass.states[eid]?.attributes;
+  private _renderStationChip(
+    eid: string,
+    selectedIds: Set<string>,
+  ): TemplateResult {
+    const a = this.hass?.states[eid]?.attributes;
     const friendly = a?.friendly_name || eid;
     const stopName = cleanStationName(friendly);
     const isSel = selectedIds.has(eid);
@@ -134,23 +151,24 @@ export class NextbikeAustriaCardEditor extends LitElement {
     `;
   }
 
-  _renderToggle(field) {
+  private _renderToggle(field: Exclude<BoolField, "hide_attribution">): TemplateResult {
     const id = `nb-toggle-${field}`;
-    const checked = this._config[field] !== false;
+    const checked = (this._config[field] as boolean | undefined) !== false;
     return html`
       <div class="toggle-row">
         <label for=${id}>${this._et(field)}</label>
         <ha-switch
           id=${id}
           ?checked=${checked}
-          @change=${(e) => this._setBool(field, e.target.checked)}
+          @change=${(e: Event) =>
+            this._setBool(field, (e.target as HTMLInputElement).checked)}
         ></ha-switch>
       </div>
     `;
   }
 
   // hide_attribution is the one "inverted" toggle — default false, on = hide.
-  _renderHideAttribution() {
+  private _renderHideAttribution(): TemplateResult {
     const on = this._config.hide_attribution === true;
     return html`
       <div class="toggle-row">
@@ -160,19 +178,17 @@ export class NextbikeAustriaCardEditor extends LitElement {
         <ha-switch
           id="nb-toggle-hide_attribution"
           ?checked=${on}
-          @change=${(e) => this._setBool("hide_attribution", e.target.checked)}
+          @change=${(e: Event) =>
+            this._setBool(
+              "hide_attribution",
+              (e.target as HTMLInputElement).checked,
+            )}
         ></ha-switch>
       </div>
     `;
   }
 }
 
-// Self-register when the editor module is loaded (lazily, by
-// NextbikeAustriaCard.getConfigElement()). Guard so re-imports don't
-// throw — customElements.define is a one-shot per tag name.
-if (!customElements.get("nextbike-austria-card-editor")) {
-  customElements.define(
-    "nextbike-austria-card-editor",
-    NextbikeAustriaCardEditor,
-  );
-}
+// pickLang kept as import so tree-shaker sees it; used when extending
+// the editor with language-dependent widgets.
+void pickLang;

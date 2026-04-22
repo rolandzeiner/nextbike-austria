@@ -99,6 +99,7 @@ dist/
 # package-lock.json should stay COMMITTED — do not add it here.
 # ---------------------------------------------------------------------------
 node_modules/
+.rollup.cache/
 .parcel-cache/
 .vite-cache/
 
@@ -108,3 +109,9 @@ node_modules/
 *.log
 pip-log.txt
 pip-delete-this-directory.txt
+
+# ---------------------------------------------------------------------------
+# Personal dev tooling — push/sync scripts that target a specific dev box.
+# Each contributor sets these up from the skill template; not shared.
+# ---------------------------------------------------------------------------
+scripts/

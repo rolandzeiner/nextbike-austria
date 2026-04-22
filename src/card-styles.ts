@@ -1,6 +1,6 @@
-import { css } from "lit";
+import { css, type CSSResultGroup } from "lit";
 
-export const cardStyles = css`
+export const cardStyles: CSSResultGroup = css`
   :host {
     display: block;
   }

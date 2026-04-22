@@ -42,7 +42,7 @@ USER_AGENT: Final = f"HomeAssistant/{_HA_VERSION} {DOMAIN}/{INTEGRATION_VERSION}
 # A mismatch triggers HA's reload-banner loop (banner prompts reload,
 # reload re-serves the same stale JS, banner reappears). Bump both in
 # the same commit.
-CARD_VERSION: Final = "0.3.0"
+CARD_VERSION: Final = "0.4.0-beta-1"
 CARD_URL: Final = "/nextbike_austria/nextbike-austria-card.js"
 CARD_FILENAME: Final = "nextbike-austria-card.js"
 
