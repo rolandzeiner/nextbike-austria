@@ -73,6 +73,17 @@ export const editorStyles: CSSResultGroup = css`
     color: var(--primary-text-color);
     cursor: pointer;
   }
+  /* Visual "these toggles depend on the row above" cue — left border and
+     indent mark the sub-toggles as children of show_rack. Container
+     disappears entirely when the parent is off; no ghost row. */
+  .sub-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-left: 12px;
+    border-left: 2px solid var(--divider-color, rgba(0,0,0,0.12));
+    margin-left: 4px;
+  }
   .layout-buttons {
     display: inline-flex;
     gap: 4px;

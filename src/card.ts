@@ -167,20 +167,24 @@ export class NextbikeAustriaCard extends LitElement {
         .find((v): v is string => typeof v === "string" && v.length > 0) ||
       "Data: nextbike GmbH, CC0-1.0";
 
-    let body: TemplateResult | TemplateResult[];
+    // Tabs live outside `.wrap` so they're flush with ha-card's edges
+    // and sit at the very top — matches the tankstellen card's layout
+    // without negative-margin hacks on `.tabs`.
+    let content: TemplateResult | TemplateResult[];
     if (!stations.length) {
-      body = this._renderEmpty();
+      content = this._renderEmpty();
     } else if (useTabs) {
-      body = html`${this._renderTabs(stations)}${this._renderStation(stations[this._activeTab])}`;
+      content = this._renderStation(stations[this._activeTab]);
     } else {
-      body = stations.map((s) => this._renderStation(s));
+      content = stations.map((s) => this._renderStation(s));
     }
 
     return html`
       <ha-card>
+        ${useTabs ? this._renderTabs(stations) : nothing}
         <div class="wrap">
           ${this._versionMismatch ? this._renderBanner() : nothing}
-          ${body}
+          ${content}
           ${this._config.hide_attribution
             ? nothing
             : html`<div class="attr">${attribution}</div>`}
