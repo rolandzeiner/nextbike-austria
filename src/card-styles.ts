@@ -30,9 +30,12 @@ export const cardStyles: CSSResultGroup = css`
     cursor: pointer;
   }
   .tabs {
+    /* .tabs is a direct child of ha-card (not inside .wrap), so it sits
+       flush with the card edges and at the very top by default — no
+       padding to escape. .wrap's top padding provides the breathing
+       room between the tab row and the first station below. */
     display: flex;
     border-bottom: 1px solid var(--divider-color, rgba(0, 0, 0, 0.08));
-    margin-bottom: 10px;
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -40,21 +43,34 @@ export const cardStyles: CSSResultGroup = css`
     display: none;
   }
   .tab {
-    flex: 0 0 auto;
-    padding: 8px 14px;
+    /* Fixed height removes any padding vs. border vs. line-height
+       interaction — flex centres the text inside a deterministic
+       44px box. Active indicator is a box-shadow (doesn't consume
+       layout height) so the text stays truly centred whether or not
+       the tab is active. */
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    padding: 0 8px;
     background: none;
     border: none;
-    border-bottom: 2px solid transparent;
+    box-shadow: inset 0 -2px 0 transparent;
     color: var(--secondary-text-color);
     font-size: 0.95em;
     font-weight: 500;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
     white-space: nowrap;
-    transition: color 0.15s, border-color 0.15s;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.15s, box-shadow 0.15s;
   }
   .tab.active {
     color: var(--primary-color);
-    border-bottom-color: var(--primary-color);
+    box-shadow: inset 0 -2px 0 var(--primary-color);
   }
   .tab:hover {
     color: var(--primary-text-color);

@@ -41,10 +41,14 @@
     "step": {
       "init": {
         "title": "Nextbike Austria options",
-        "description": "Update interval controls the per-station polling cadence (60 s minimum).\n\n**Track e-bike battery state** additionally fetches a ~1.3 MB feed every 30 minutes — roughly **63 MB per day / 1.9 GB per month** per opted-in Austrian system. Leave off if your bandwidth is capped.",
+        "description": "Configure polling and optional e-bike battery tracking.",
         "data": {
           "scan_interval": "Update interval (seconds)",
           "track_e_bike_range": "Track e-bike battery state"
+        },
+        "data_description": {
+          "scan_interval": "Per-station polling cadence (60 s minimum).",
+          "track_e_bike_range": "Fetches a ~1.3 MB feed every 30 minutes — roughly 63 MB per day / 1.9 GB per month per opted-in Austrian system. Leave off if your bandwidth is capped."
         }
       }
     }

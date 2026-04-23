@@ -151,10 +151,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigEnt
     # first fetch; it also raises ConfigEntryNotReady on fetch failure.
     await coordinator.async_config_entry_first_refresh()
 
-    # Register teardown only after first_refresh succeeded — avoids running
-    # teardown on a half-initialized coordinator if setup raised.
-    entry.async_on_unload(coordinator.async_teardown)
-
     entry.runtime_data = coordinator
 
     # Register a device explicitly so the Devices panel shows the entry
