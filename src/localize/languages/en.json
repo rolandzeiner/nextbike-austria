@@ -1,6 +1,8 @@
 {
   "no_entities_picked": "No station selected",
   "no_entities_available": "No nextbike sensors found",
+  "no_entities_unavailable": "Selected station is currently unavailable",
+  "rack_summary": "Bike rack: {available} of {capacity} bikes available",
   "offline": "offline",
   "no_rental": "no rental",
   "no_return": "no return",
