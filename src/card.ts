@@ -61,7 +61,10 @@ export class NextbikeAustriaCard extends LitElement {
     super.connectedCallback();
     // Tick once a minute so the "updated N min ago" label stays honest
     // between coordinator polls. Bumping _tickKey is enough to trigger
-    // a re-render via shouldUpdate.
+    // a re-render via shouldUpdate. This is a data refresh, not a
+    // visual animation, so WCAG 2.3.3 prefers-reduced-motion does not
+    // apply — the relative-time label must stay accurate regardless of
+    // the user's motion preference.
     if (!this._tickTimer) {
       this._tickTimer = setInterval(() => {
         this._tickKey++;
@@ -237,8 +240,14 @@ export class NextbikeAustriaCard extends LitElement {
       <div class="tabs" role="tablist">
         ${stations.map((s, i) => {
           const a = this.hass?.states[s.entity]?.attributes || {};
+          const hasFriendlyName = typeof a.friendly_name === "string" && a.friendly_name.length > 0;
           const label = cleanStationName(a.friendly_name || s.entity);
           const selected = i === this._activeTab;
+          // WCAG 3.1.2 Language of Parts: station names come from the
+          // nextbike API in German. Wrap in lang="de" so screen readers
+          // on non-German dashboards switch pronunciation. Fallback
+          // entity-ID strings (when friendly_name is missing) stay
+          // unwrapped since they're ASCII slugs.
           return html`
             <button
               type="button"
@@ -250,7 +259,7 @@ export class NextbikeAustriaCard extends LitElement {
               @keydown=${(ev: KeyboardEvent) =>
                 this._onTabKeydown(ev, i, stations.length)}
             >
-              ${label}
+              ${hasFriendlyName ? html`<span lang="de">${label}</span>` : label}
             </button>
           `;
         })}
@@ -344,6 +353,7 @@ export class NextbikeAustriaCard extends LitElement {
     const systemName =
       SYSTEM_LABEL[systemId] || systemId.replace(/^nextbike_/, "");
     const rentUri = typeof a.rental_uri === "string" ? a.rental_uri : "";
+    const hasFriendlyName = typeof a.friendly_name === "string" && a.friendly_name.length > 0;
     const title = cleanStationName(a.friendly_name || stopCfg.entity);
     const mapUrl =
       typeof a.latitude === "number" && typeof a.longitude === "number"
@@ -357,7 +367,9 @@ export class NextbikeAustriaCard extends LitElement {
         <header class="header">
           <div class="accent" aria-hidden="true" style=${`background:${accent}`}></div>
           <div style="min-width:0;flex:1;">
-            <h2 class="title">${title}</h2>
+            <h2 class="title">
+              ${hasFriendlyName ? html`<span lang="de">${title}</span>` : title}
+            </h2>
             <p class="subtitle">${systemName}</p>
           </div>
           ${mapUrl

@@ -6,7 +6,12 @@ export const cardStyles: CSSResultGroup = css`
     /* Card responds to its own column width, not the viewport — narrow
        dashboard columns trigger the compact layout even on wide
        screens. Slot size is driven from --nb-slot-size so a single
-       custom property can retune the whole rack density. */
+       custom property can retune the whole rack density.
+
+       Font sizes below are in rem (root-relative, 16px baseline) so the
+       user's browser/OS text-size preference reaches the card even when
+       the parent ha-card cascades its own inherited size. Padding,
+       margin, and gap stay in px. */
     container-type: inline-size;
     container-name: nbcard;
     --nb-slot-size: 16px;
@@ -64,13 +69,16 @@ export const cardStyles: CSSResultGroup = css`
     border: none;
     box-shadow: inset 0 -2px 0 transparent;
     color: var(--secondary-text-color);
-    font-size: 0.95em;
+    font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
+    /* nowrap + ellipsis is the graceful-degrade pattern for text-spacing
+       overrides (WCAG 1.4.12): label clips with "…" rather than pushing
+       the tab row into a multi-line layout that would hide other tabs. */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -112,18 +120,21 @@ export const cardStyles: CSSResultGroup = css`
     /* <h2> override: nuke UA heading margins + size so the card header
        stays visually identical to the previous <div>. Semantics only. */
     margin: 0;
-    font-size: 1.05em;
+    font-size: 0.95rem;
     font-weight: 600;
     line-height: 1.2;
     overflow: hidden;
     text-overflow: ellipsis;
+    /* Station names can be long; nowrap + ellipsis keeps the header row
+       a fixed height and is the graceful-degrade pattern for WCAG 1.4.12
+       text-spacing overrides. */
     white-space: nowrap;
     flex: 1;
   }
   .subtitle {
     /* <p> override: nuke UA paragraph margins. */
     margin: 0;
-    font-size: 0.78em;
+    font-size: 0.7rem;
     color: var(--secondary-text-color);
     font-weight: 400;
     letter-spacing: 0.2px;
@@ -134,7 +145,7 @@ export const cardStyles: CSSResultGroup = css`
     display: inline-flex;
     align-items: center;
     gap: 2px;
-    font-size: 0.78em;
+    font-size: 0.7rem;
     opacity: 0.7;
     transition: opacity 0.15s;
   }
@@ -152,20 +163,20 @@ export const cardStyles: CSSResultGroup = css`
     padding: 6px 0 2px;
   }
   .bikes-num {
-    font-size: 2.4em;
+    font-size: 2.1rem;
     font-weight: 700;
     line-height: 1;
     color: var(--primary-text-color);
     font-variant-numeric: tabular-nums;
   }
   .bikes-of {
-    font-size: 1em;
+    font-size: 0.875rem;
     color: var(--secondary-text-color);
     font-weight: 400;
   }
   .bikes-label {
     color: var(--secondary-text-color);
-    font-size: 0.95em;
+    font-size: 0.85rem;
     margin-left: -6px;
   }
   .pill {
@@ -174,7 +185,7 @@ export const cardStyles: CSSResultGroup = css`
     gap: 4px;
     padding: 3px 10px;
     border-radius: 12px;
-    font-size: 0.78em;
+    font-size: 0.7rem;
     font-weight: 600;
     background: color-mix(in srgb, var(--primary-color) 14%, transparent);
     color: var(--primary-color);
@@ -311,7 +322,7 @@ export const cardStyles: CSSResultGroup = css`
     --mdc-icon-size: 9px;
   }
   .rack-note {
-    font-size: 0.75em;
+    font-size: 0.65rem;
     line-height: 18px;
     color: var(--secondary-text-color);
     margin-left: 6px;
@@ -325,14 +336,16 @@ export const cardStyles: CSSResultGroup = css`
     gap: 10px 14px;
     margin: 0 0 6px;
     padding: 0 2px;
-    font-size: 0.72em;
+    font-size: 0.65rem;
     color: var(--secondary-text-color);
+    /* Translated legend labels can be long (DE "Außer Betrieb" etc.) —
+       allow wrapping so WCAG 1.4.12 text-spacing overrides don't clip. */
+    overflow-wrap: anywhere;
   }
   .legend-item {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    white-space: nowrap;
   }
   .legend dd {
     /* <dd> default has margin-inline-start: 40px — reset so the label
@@ -372,7 +385,7 @@ export const cardStyles: CSSResultGroup = css`
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    font-size: 0.82em;
+    font-size: 0.72rem;
     color: var(--secondary-text-color);
     margin-top: 4px;
   }
@@ -397,7 +410,7 @@ export const cardStyles: CSSResultGroup = css`
     flex-wrap: wrap;
     gap: 6px 10px;
     margin-top: 10px;
-    font-size: 0.78em;
+    font-size: 0.7rem;
     color: var(--secondary-text-color);
   }
   .footer a.rent {
@@ -416,7 +429,7 @@ export const cardStyles: CSSResultGroup = css`
   }
   .attr {
     margin-top: 8px;
-    font-size: 0.72em;
+    font-size: 0.65rem;
     color: var(--secondary-text-color);
     text-align: center;
     opacity: 0.7;
@@ -464,6 +477,17 @@ export const cardStyles: CSSResultGroup = css`
     outline: 2px solid var(--primary-color);
     outline-offset: 2px;
     border-radius: 6px;
+  }
+
+  /* Forced-colors (Windows High Contrast) fallback: var(--primary-color)
+     may resolve to a low-contrast system colour, so switch to the
+     CanvasText keyword which is guaranteed to contrast with Canvas. */
+  @media (forced-colors: active) {
+    .tab:focus-visible,
+    a:focus-visible,
+    button:focus-visible {
+      outline-color: CanvasText;
+    }
   }
 
   /* Accessibility: honour user motion preference. */
