@@ -112,6 +112,20 @@ export class NextbikeAustriaCard extends LitElement {
     return Math.min(12, 3 + n * 3);
   }
 
+  public getGridOptions(): {
+    columns: number | "full";
+    rows: number | "auto";
+    min_columns: number;
+    min_rows: number;
+  } {
+    return {
+      columns: 12,
+      rows: "auto",
+      min_columns: 6,
+      min_rows: 3,
+    };
+  }
+
   public static async getConfigElement(): Promise<HTMLElement> {
     // Editor element is registered via the top-level `import "./editor"`
     // above. No await needed here, but keep the async signature so HA
@@ -199,9 +213,13 @@ export class NextbikeAustriaCard extends LitElement {
       this._versionMismatch || "?",
     );
     return html`
-      <div class="banner">
+      <div class="banner" role="alert" aria-live="assertive">
         <span>${msg}</span>
-        <button type="button" @click=${() => window.location.reload()}>
+        <button
+          type="button"
+          aria-label=${this._t("version_reload")}
+          @click=${() => window.location.reload()}
+        >
           ${this._t("version_reload")}
         </button>
       </div>
@@ -216,15 +234,21 @@ export class NextbikeAustriaCard extends LitElement {
 
   private _renderTabs(stations: NextbikeStationEntry[]): TemplateResult {
     return html`
-      <div class="tabs">
+      <div class="tabs" role="tablist">
         ${stations.map((s, i) => {
           const a = this.hass?.states[s.entity]?.attributes || {};
           const label = cleanStationName(a.friendly_name || s.entity);
+          const selected = i === this._activeTab;
           return html`
             <button
               type="button"
-              class="tab ${i === this._activeTab ? "active" : ""}"
+              role="tab"
+              class="tab ${selected ? "active" : ""}"
+              aria-selected=${selected ? "true" : "false"}
+              tabindex=${selected ? "0" : "-1"}
               @click=${() => this._setActiveTab(i)}
+              @keydown=${(ev: KeyboardEvent) =>
+                this._onTabKeydown(ev, i, stations.length)}
             >
               ${label}
             </button>
@@ -240,10 +264,42 @@ export class NextbikeAustriaCard extends LitElement {
     }
   }
 
+  private _onTabKeydown(ev: KeyboardEvent, index: number, count: number): void {
+    let next = index;
+    switch (ev.key) {
+      case "ArrowRight":
+        next = (index + 1) % count;
+        break;
+      case "ArrowLeft":
+        next = (index - 1 + count) % count;
+        break;
+      case "Home":
+        next = 0;
+        break;
+      case "End":
+        next = count - 1;
+        break;
+      default:
+        return;
+    }
+    ev.preventDefault();
+    this._setActiveTab(next);
+    this.updateComplete.then(() => {
+      const tabs = this.shadowRoot?.querySelectorAll<HTMLButtonElement>(
+        '.tabs [role="tab"]',
+      );
+      tabs?.[next]?.focus();
+    });
+  }
+
   private _renderStation(stopCfg: NextbikeStationEntry): TemplateResult {
     const state = this.hass?.states[stopCfg.entity];
     if (!state) {
-      return html`<div class="empty-state">${this._t("no_entities_picked")}</div>`;
+      // User picked a station in the editor but its sensor doesn't
+      // exist (integration unloaded, entity renamed). Distinct from
+      // _renderEmpty's "nothing configured" case — use a specific
+      // message so the user knows what went wrong.
+      return html`<div class="empty-state">${this._t("no_entities_unavailable")}</div>`;
     }
     const a = state.attributes || ({} as HassEntityAttributes);
     const bikes = Number.isFinite(parseInt(state.state, 10))
@@ -297,12 +353,12 @@ export class NextbikeAustriaCard extends LitElement {
     const bikeWord = bikes === 1 ? this._t("bike") : this._t("bikes");
 
     return html`
-      <div class="station">
-        <div class="header">
-          <div class="accent" style=${`background:${accent}`}></div>
+      <section class="station" aria-label=${title}>
+        <header class="header">
+          <div class="accent" aria-hidden="true" style=${`background:${accent}`}></div>
           <div style="min-width:0;flex:1;">
-            <div class="title">${title}</div>
-            <div class="subtitle">${systemName}</div>
+            <h2 class="title">${title}</h2>
+            <p class="subtitle">${systemName}</p>
           </div>
           ${mapUrl
             ? html`
@@ -311,13 +367,14 @@ export class NextbikeAustriaCard extends LitElement {
                   href=${mapUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label=${`${this._t("open_map")}: ${title}`}
                   title=${this._t("open_map")}
                 >
-                  <ha-icon icon="mdi:map-marker"></ha-icon>${this._t("open_map")}
+                  <ha-icon icon="mdi:map-marker" aria-hidden="true"></ha-icon>${this._t("open_map")}
                 </a>
               `
             : nothing}
-        </div>
+        </header>
 
         <div class="primary">
           <span class="bikes-num">${bikes}</span>
@@ -346,7 +403,7 @@ export class NextbikeAustriaCard extends LitElement {
 
         ${this._config.show_flags ? this._renderFlags(a) : nothing}
         ${this._renderFooter(a, rentUri)}
-      </div>
+      </section>
     `;
   }
 
@@ -457,11 +514,14 @@ export class NextbikeAustriaCard extends LitElement {
         if (entry && showBattery && typeof entry.pct === "number") {
           const pct = entry.pct;
           const color = batteryColor(pct);
+          const label = `${typeName} · ${Math.round(pct)}%`;
           slots.push(html`
             <div
               class="slot filled ebike battery"
+              role="img"
+              aria-label=${label}
               style=${`--bat-pct:${pct}%;--bat-color:${color};`}
-              title=${`${typeName} · ${Math.round(pct)}%`}
+              title=${label}
             ></div>
           `);
         } else {
@@ -471,6 +531,8 @@ export class NextbikeAustriaCard extends LitElement {
           slots.push(html`
             <div
               class="slot filled ebike"
+              role="img"
+              aria-label=${tooltip}
               style=${`background:linear-gradient(135deg, ${accent} 0%, ${accent} 55%, #ffd740 55%, #ffd740 100%);`}
               title=${tooltip}
             ></div>
@@ -482,6 +544,8 @@ export class NextbikeAustriaCard extends LitElement {
         slots.push(html`
           <div
             class="slot filled"
+            role="img"
+            aria-label=${typeName}
             style=${`background:${accent};`}
             title=${typeName}
           ></div>
@@ -493,8 +557,13 @@ export class NextbikeAustriaCard extends LitElement {
       const typeName = reservedTypes?.[i];
       const tooltip = typeName ? `${typeName} · ${reservedLabel}` : reservedLabel;
       slots.push(html`
-        <div class="slot reserved" title=${tooltip}>
-          <ha-icon icon="mdi:lock"></ha-icon>
+        <div
+          class="slot reserved"
+          role="img"
+          aria-label=${tooltip}
+          title=${tooltip}
+        >
+          <ha-icon icon="mdi:lock" aria-hidden="true"></ha-icon>
         </div>
       `);
     }
@@ -503,14 +572,25 @@ export class NextbikeAustriaCard extends LitElement {
       const typeName = disabledTypes?.[i];
       const tooltip = typeName ? `${typeName} · ${disabledLabel}` : disabledLabel;
       slots.push(html`
-        <div class="slot disabled" title=${tooltip}>
-          <ha-icon icon="mdi:wrench"></ha-icon>
+        <div
+          class="slot disabled"
+          role="img"
+          aria-label=${tooltip}
+          title=${tooltip}
+        >
+          <ha-icon icon="mdi:wrench" aria-hidden="true"></ha-icon>
         </div>
       `);
     }
     for (let i = bikesVis + reservedVis + disabledVis; i < totalSlots; i++) {
+      const emptyLabel = this._t("legend_empty");
       slots.push(html`
-        <div class="slot empty" title=${this._t("legend_empty")}></div>
+        <div
+          class="slot empty"
+          role="img"
+          aria-label=${emptyLabel}
+          title=${emptyLabel}
+        ></div>
       `);
     }
 
@@ -519,11 +599,14 @@ export class NextbikeAustriaCard extends LitElement {
     const hasReservedVisible = reservedVis > 0;
     const hasDisabledVisible = disabledVis > 0;
 
+    const rackAriaLabel = this._t("rack_summary")
+      .replace("{available}", String(bikesVis))
+      .replace("{capacity}", String(capacity));
     return html`
-      <div class="rack">
+      <div class="rack" role="group" aria-label=${rackAriaLabel}>
         ${slots}
         ${hasOverflow
-          ? html`<span class="rack-note">+${bikes - capacity}</span>`
+          ? html`<span class="rack-note" aria-label=${`+${bikes - capacity}`}>+${bikes - capacity}</span>`
           : nothing}
       </div>
       ${this._config.show_legend
@@ -562,10 +645,10 @@ export class NextbikeAustriaCard extends LitElement {
     } = args;
     const items: TemplateResult[] = [
       html`
-        <span class="legend-item">
-          <span class="legend-swatch" style=${`background:${accent}`}></span>
-          ${this._t("legend_bike")}
-        </span>
+        <div class="legend-item">
+          <dt class="legend-swatch" style=${`background:${accent}`} aria-hidden="true"></dt>
+          <dd>${this._t("legend_bike")}</dd>
+        </div>
       `,
     ];
     if (hasEbikes) {
@@ -577,49 +660,49 @@ export class NextbikeAustriaCard extends LitElement {
         ? `background:linear-gradient(to top, #2ecc71 70%, color-mix(in srgb, #2ecc71 15%, transparent) 70%);outline:1px solid color-mix(in srgb, #2ecc71 60%, transparent);outline-offset:-1px;`
         : `background:linear-gradient(135deg, ${accent} 0%, ${accent} 55%, #ffd740 55%, #ffd740 100%);`;
       items.push(html`
-        <span class="legend-item">
-          <span class="legend-swatch" style=${swatchStyle}></span>
-          ${this._t("legend_ebike")}
-        </span>
+        <div class="legend-item">
+          <dt class="legend-swatch" style=${swatchStyle} aria-hidden="true"></dt>
+          <dd>${this._t("legend_ebike")}</dd>
+        </div>
       `);
     }
     if (hasReservedVisible) {
       items.push(html`
-        <span class="legend-item">
-          <span class="legend-swatch reserved">
+        <div class="legend-item">
+          <dt class="legend-swatch reserved" aria-hidden="true">
             <ha-icon icon="mdi:lock"></ha-icon>
-          </span>
-          ${this._t("legend_reserved")}
-        </span>
+          </dt>
+          <dd>${this._t("legend_reserved")}</dd>
+        </div>
       `);
     }
     if (hasDisabledVisible) {
       items.push(html`
-        <span class="legend-item">
-          <span class="legend-swatch disabled">
+        <div class="legend-item">
+          <dt class="legend-swatch disabled" aria-hidden="true">
             <ha-icon icon="mdi:wrench"></ha-icon>
-          </span>
-          ${this._t("legend_disabled")}
-        </span>
+          </dt>
+          <dd>${this._t("legend_disabled")}</dd>
+        </div>
       `);
     }
     if (hasEmptyVisible) {
       items.push(html`
-        <span class="legend-item">
-          <span class="legend-swatch empty"></span>
-          ${this._t("legend_empty")}
-        </span>
+        <div class="legend-item">
+          <dt class="legend-swatch empty" aria-hidden="true"></dt>
+          <dd>${this._t("legend_empty")}</dd>
+        </div>
       `);
     }
     if (hasOverflow) {
       items.push(html`
-        <span class="legend-item">
-          <span class="legend-overflow">+N</span>
-          ${this._t("legend_overflow")}
-        </span>
+        <div class="legend-item">
+          <dt class="legend-overflow" aria-hidden="true">+N</dt>
+          <dd>${this._t("legend_overflow")}</dd>
+        </div>
       `);
     }
-    return html`<div class="legend">${items}</div>`;
+    return html`<dl class="legend">${items}</dl>`;
   }
 
   private _renderFlags(a: HassEntityAttributes): TemplateResult | typeof nothing {

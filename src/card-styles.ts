@@ -3,6 +3,14 @@ import { css, type CSSResultGroup } from "lit";
 export const cardStyles: CSSResultGroup = css`
   :host {
     display: block;
+    /* Card responds to its own column width, not the viewport — narrow
+       dashboard columns trigger the compact layout even on wide
+       screens. Slot size is driven from --nb-slot-size so a single
+       custom property can retune the whole rack density. */
+    container-type: inline-size;
+    container-name: nbcard;
+    --nb-slot-size: 16px;
+    --nb-slot-height: 18px;
   }
   ha-card {
     overflow: hidden;
@@ -69,7 +77,12 @@ export const cardStyles: CSSResultGroup = css`
     transition: color 0.15s, box-shadow 0.15s;
   }
   .tab.active {
+    /* Three independent cues for the active tab so it reads as active
+       under any single-channel deficit (low vision, protanopia,
+       grayscale mode): distinct colour, bottom border, and heavier
+       weight. */
     color: var(--primary-color);
+    font-weight: 700;
     box-shadow: inset 0 -2px 0 var(--primary-color);
   }
   .tab:hover {
@@ -96,6 +109,9 @@ export const cardStyles: CSSResultGroup = css`
     background: var(--primary-color);
   }
   .title {
+    /* <h2> override: nuke UA heading margins + size so the card header
+       stays visually identical to the previous <div>. Semantics only. */
+    margin: 0;
     font-size: 1.05em;
     font-weight: 600;
     line-height: 1.2;
@@ -105,6 +121,8 @@ export const cardStyles: CSSResultGroup = css`
     flex: 1;
   }
   .subtitle {
+    /* <p> override: nuke UA paragraph margins. */
+    margin: 0;
     font-size: 0.78em;
     color: var(--secondary-text-color);
     font-weight: 400;
@@ -194,11 +212,11 @@ export const cardStyles: CSSResultGroup = css`
   }
   .slot {
     display: block;
-    width: 16px;
-    height: 18px;
+    width: var(--nb-slot-size);
+    height: var(--nb-slot-height);
     box-sizing: border-box;
     border-radius: 2px;
-    flex: 0 0 16px;
+    flex: 0 0 var(--nb-slot-size);
     line-height: 0;
     padding: 0;
     margin: 0;
@@ -300,6 +318,8 @@ export const cardStyles: CSSResultGroup = css`
     flex-shrink: 0;
   }
   .legend {
+    /* <dl> override: nuke UA dl margins so the legend stays tight.
+       Keeps the flex layout used when this was a <div>. */
     display: flex;
     flex-wrap: wrap;
     gap: 10px 14px;
@@ -313,6 +333,11 @@ export const cardStyles: CSSResultGroup = css`
     align-items: center;
     gap: 5px;
     white-space: nowrap;
+  }
+  .legend dd {
+    /* <dd> default has margin-inline-start: 40px — reset so the label
+       sits right next to its swatch. */
+    margin: 0;
   }
   .legend-swatch {
     display: inline-block;
@@ -333,6 +358,10 @@ export const cardStyles: CSSResultGroup = css`
     outline-offset: -1px;
   }
   .legend-overflow {
+    /* <dt> override: block-level by default; match the swatch inline
+       presentation so the legend flex row reads cleanly. */
+    display: inline-flex;
+    align-items: center;
     padding: 0 4px;
     border-radius: 3px;
     background: color-mix(in srgb, var(--secondary-text-color) 10%, transparent);
@@ -396,5 +425,56 @@ export const cardStyles: CSSResultGroup = css`
     padding: 20px 0;
     text-align: center;
     color: var(--secondary-text-color);
+  }
+
+  /* Narrow-card layout: shrink the rack density and wrap the pill row
+     below the bike count so 40+ docks still fit on a one-column phone
+     dashboard. Card columns wider than 440px get larger slots instead
+     — dashboards placing the card in a wide sidebar no longer look
+     pixel-tiny. */
+  @container nbcard (inline-size < 360px) {
+    :host {
+      --nb-slot-size: 14px;
+      --nb-slot-height: 16px;
+    }
+    .wrap {
+      padding: 10px 12px 8px;
+    }
+    .banner {
+      margin: -10px -12px 10px;
+    }
+    .primary {
+      flex-wrap: wrap;
+    }
+    .pill-row {
+      flex-basis: 100%;
+    }
+  }
+  @container nbcard (inline-size > 440px) {
+    :host {
+      --nb-slot-size: 20px;
+      --nb-slot-height: 22px;
+    }
+  }
+
+  /* Accessibility: visible focus ring for keyboard users. */
+  .tab:focus-visible,
+  a:focus-visible,
+  button:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* Accessibility: honour user motion preference. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 `;

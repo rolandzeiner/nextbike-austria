@@ -1,6 +1,8 @@
 {
   "no_entities_picked": "Keine Station ausgewählt",
   "no_entities_available": "Keine Nextbike-Sensoren gefunden",
+  "no_entities_unavailable": "Ausgewählte Station ist gerade nicht verfügbar",
+  "rack_summary": "Radständer: {available} von {capacity} Rädern verfügbar",
   "offline": "offline",
   "no_rental": "keine Ausleihe",
   "no_return": "keine Rückgabe",
