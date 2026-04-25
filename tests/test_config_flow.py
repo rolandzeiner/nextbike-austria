@@ -226,6 +226,27 @@ async def test_search_again_returns_to_search_step(hass: HomeAssistant) -> None:
     assert result["step_id"] == "search_station"
 
 
+class _CtxResp:
+    """Async-context-manager wrapper for fake aiohttp responses."""
+
+    def __init__(
+        self,
+        resp: Any | None = None,
+        *,
+        raise_on_enter: Exception | None = None,
+    ) -> None:
+        self._resp = resp
+        self._raise_on_enter = raise_on_enter
+
+    async def __aenter__(self) -> Any:
+        if self._raise_on_enter is not None:
+            raise self._raise_on_enter
+        return self._resp
+
+    async def __aexit__(self, *exc: Any) -> None:
+        return None
+
+
 async def test_fetch_stations_survives_client_error(
     hass: HomeAssistant,
 ) -> None:
@@ -235,8 +256,8 @@ async def test_fetch_stations_survives_client_error(
     from custom_components.nextbike_austria.config_flow import _fetch_stations
 
     class _FakeSession:
-        async def get(self, *args: Any, **kwargs: Any) -> Any:  # noqa: D401
-            raise _aiohttp.ClientError("boom")
+        def get(self, *args: Any, **kwargs: Any) -> _CtxResp:
+            return _CtxResp(raise_on_enter=_aiohttp.ClientError("boom"))
 
     with patch(
         "custom_components.nextbike_austria.config_flow.async_get_clientsession",
@@ -262,8 +283,8 @@ async def test_fetch_stations_survives_non_dict_body(
             return ["not", "a", "dict"]
 
     class _FakeSession:
-        async def get(self, *args: Any, **kwargs: Any) -> _FakeResp:
-            return _FakeResp()
+        def get(self, *args: Any, **kwargs: Any) -> _CtxResp:
+            return _CtxResp(_FakeResp())
 
     with patch(
         "custom_components.nextbike_austria.config_flow.async_get_clientsession",

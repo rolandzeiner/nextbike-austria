@@ -75,13 +75,13 @@ async def _fetch_stations(hass: HomeAssistant, system_id: str) -> list[dict[str,
     session = async_get_clientsession(hass)
     url = gbfs_feed_url(system_id, "station_information")
     try:
-        resp = await session.get(
+        async with session.get(
             url,
             headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
             timeout=_HTTP_TIMEOUT,
-        )
-        resp.raise_for_status()
-        body = await resp.json(content_type=None)
+        ) as resp:
+            resp.raise_for_status()
+            body = await resp.json(content_type=None)
     except (asyncio.TimeoutError, aiohttp.ClientError, ValueError) as err:
         _LOGGER.warning("Station-catalogue fetch failed for %s: %s", system_id, err)
         return []
