@@ -81,7 +81,7 @@ If your city uses nextbike under a different `system_id`, open an issue — addi
 3. Pick the nextbike system (city / region) from the list.
 4. Type part of a station name (minimum 2 characters) and submit. The integration probes the GBFS `station_information` feed to verify it's reachable and to fetch fresh matches.
 5. Pick the station from the dropdown. Labels show capacity when published (e.g. `"Hoher Markt (capacity 25)"`).
-6. Set the polling interval (default 60 s, minimum 60 s per the GBFS `ttl`, maximum 900 s) and save.
+6. Confirm the polling interval and save. Defaults are sensible — see [Configuration Parameters](#configuration-parameters) for the bounds and the per-entry options-flow fields.
 
 Add more stations by running **Add Integration** again. Each station is its own config entry with its own Device in HA.
 
@@ -118,7 +118,7 @@ When **Track e-bike battery state** is enabled on an entry, the `Bikes available
 
 | Attribute | Type | Example / notes |
 |---|---|---|
-| `e_bike_avg_battery_pct` / `min` / `max` | float | Per-station battery % aggregated from e-bikes reporting `current_fuel_percent`. Upstream coverage is ~8.6% — stations with zero reporting bikes omit these keys. |
+| `e_bike_avg_battery_pct`, `e_bike_min_battery_pct`, `e_bike_max_battery_pct` | float | Per-station battery % aggregated from e-bikes reporting `current_fuel_percent`. Upstream coverage is ~8.6% — stations with zero reporting bikes omit all three keys. |
 | `e_bike_range_samples` | int | How many bikes at this station contributed a sample. |
 | `e_bike_battery_list` | list[dict] | Sorted max→min: `[{"pct": 95.0, "type": "E-Bike"}, …]`. Drives per-slot battery fill in the bundled card. |
 | `bikes_reserved` | int | Bikes physically at the station but held by another user. Only present when >0. |
