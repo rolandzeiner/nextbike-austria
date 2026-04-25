@@ -37,11 +37,14 @@ ATTRIBUTION: Final = "Data: nextbike GmbH, CC0-1.0"
 # Matches the same scheme used by wiener_linien_austria and tankstellen_austria.
 USER_AGENT: Final = f"HomeAssistant/{_HA_VERSION} {DOMAIN}/{INTEGRATION_VERSION}"
 
-# Lovelace card — the JS at www/nextbike-austria-card.js carries a
-# `const CARD_VERSION` that MUST match this string byte-for-byte.
-# A mismatch triggers HA's reload-banner loop (banner prompts reload,
-# reload re-serves the same stale JS, banner reappears). Bump both in
-# the same commit.
+# Lovelace card version. Tracked separately from INTEGRATION_VERSION so
+# the card and the integration can rev independently.
+#
+# This MUST stay byte-identical to `CARD_VERSION` in src/const.ts (the
+# TS bundle's constant, NOT INTEGRATION_VERSION). A drift triggers HA's
+# reload-banner loop: banner prompts reload, reload re-serves the same
+# mismatched JS, banner reappears. The invariant is enforced in CI by
+# tests/test_card_version.py.
 CARD_VERSION: Final = "1.0.0"
 CARD_URL: Final = "/nextbike_austria/nextbike-austria-card.js"
 CARD_FILENAME: Final = "nextbike-austria-card.js"
@@ -88,6 +91,8 @@ class SystemInfo(TypedDict):
 #   1. Confirm its GBFS feed exists at `{GBFS_BASE}/{system_id}/gbfs.json`.
 #   2. Append a SystemInfo entry here.
 #   3. Add translation entries for the system's display in strings.json.
+#   4. Add the system to `SYSTEM_ACCENT` and `SYSTEM_LABEL` in
+#      src/const.ts so the Lovelace card's per-system theming works.
 AUSTRIAN_SYSTEMS: Final[tuple[SystemInfo, ...]] = (
     {"id": "nextbike_wr", "name": "Wien — WienMobil Rad", "region": "Wien"},
     {"id": "nextbike_la", "name": "Niederösterreich", "region": "Niederösterreich"},
