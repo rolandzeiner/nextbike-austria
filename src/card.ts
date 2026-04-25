@@ -362,11 +362,19 @@ export class NextbikeAustriaCard extends LitElement {
 
     const bikeWord = bikes === 1 ? this._t("bike") : this._t("bikes");
 
+    const chips = this._renderPills(ebikes, docks, capacity);
+
     return html`
-      <section class="station" aria-label=${title}>
+      <section
+        class="station"
+        aria-label=${title}
+        style=${`--nb-accent:${accent};`}
+      >
         <header class="header">
-          <div class="accent" aria-hidden="true" style=${`background:${accent}`}></div>
-          <div style="min-width:0;flex:1;">
+          <div class="icon-tile" aria-hidden="true">
+            <ha-icon icon="mdi:bicycle"></ha-icon>
+          </div>
+          <div class="header-text">
             <h2 class="title">
               ${hasFriendlyName ? html`<span lang="de">${title}</span>` : title}
             </h2>
@@ -375,24 +383,32 @@ export class NextbikeAustriaCard extends LitElement {
           ${mapUrl
             ? html`
                 <a
-                  class="header-link"
+                  class="icon-action"
                   href=${mapUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label=${`${this._t("open_map")}: ${title}`}
                   title=${this._t("open_map")}
                 >
-                  <ha-icon icon="mdi:map-marker" aria-hidden="true"></ha-icon>${this._t("open_map")}
+                  <ha-icon icon="mdi:map-marker" aria-hidden="true"></ha-icon>
                 </a>
               `
             : nothing}
         </header>
 
-        <div class="primary">
-          <span class="bikes-num">${bikes}</span>
-          ${capacity !== null ? html`<span class="bikes-of">/ ${capacity}</span>` : nothing}
-          <span class="bikes-label">${bikeWord}</span>
-          <span class="pill-row">${this._renderPills(ebikes, docks, capacity)}</span>
+        <div class="hero">
+          <div class="metric">
+            <div class="metric-value">
+              <span class="metric-num">${bikes}</span>
+              ${capacity !== null
+                ? html`<span class="metric-of">/ ${capacity}</span>`
+                : nothing}
+            </div>
+            <div class="metric-label">${bikeWord}</div>
+          </div>
+          ${chips.length
+            ? html`<div class="chip-row">${chips}</div>`
+            : nothing}
         </div>
 
         ${this._config.show_rack && capacity !== null && capacity > 0
@@ -435,20 +451,20 @@ export class NextbikeAustriaCard extends LitElement {
       // — same visual vocabulary regardless of whether per-bike charge
       // data is known.
       out.push(html`
-        <span class="pill ebike">
+        <span class="chip ebike">
           <ha-icon icon="mdi:lightning-bolt"></ha-icon>${ebikes}
           ${this._t("ebikes")}
         </span>
       `);
     }
-    // Only render the docks pill when capacity is actually published.
+    // Only render the docks chip when capacity is actually published.
     // Stations with null capacity (virtual or unpublished racks) still
     // report `num_docks_available` as 0 upstream, which would otherwise
     // paint a misleading "0 docks".
     if (this._config.show_docks && docks !== null && capacity !== null) {
       const dockWord = docks === 1 ? this._t("dock") : this._t("docks");
       out.push(html`
-        <span class="pill muted">
+        <span class="chip muted">
           <ha-icon icon="mdi:parking"></ha-icon>${docks} ${dockWord}
         </span>
       `);
@@ -615,25 +631,32 @@ export class NextbikeAustriaCard extends LitElement {
       .replace("{available}", String(bikesVis))
       .replace("{capacity}", String(capacity));
     return html`
-      <div class="rack" role="group" aria-label=${rackAriaLabel}>
-        ${slots}
-        ${hasOverflow
-          ? html`<span class="rack-note" aria-label=${`+${bikes - capacity}`}>+${bikes - capacity}</span>`
+      <div class="rack-block">
+        <div class="rack" role="group" aria-label=${rackAriaLabel}>
+          ${slots}
+          ${hasOverflow
+            ? html`<span
+                class="rack-note"
+                aria-label=${`+${bikes - capacity}`}
+                >+${bikes - capacity}</span
+              >`
+            : nothing}
+        </div>
+        ${this._config.show_legend
+          ? this._renderLegend({
+              accent,
+              hasEbikes,
+              hasOverflow,
+              hasEmptyVisible,
+              battery:
+                showBattery && typeof batteryPct === "number"
+                  ? { pct: batteryPct, color: batteryColor(batteryPct) }
+                  : null,
+              hasReservedVisible,
+              hasDisabledVisible,
+            })
           : nothing}
       </div>
-      ${this._config.show_legend
-        ? this._renderLegend({
-            accent,
-            hasEbikes,
-            hasOverflow,
-            hasEmptyVisible,
-            battery: showBattery && typeof batteryPct === "number"
-              ? { pct: batteryPct, color: batteryColor(batteryPct) }
-              : null,
-            hasReservedVisible,
-            hasDisabledVisible,
-          })
-        : nothing}
     `;
   }
 
@@ -754,21 +777,36 @@ export class NextbikeAustriaCard extends LitElement {
     a: HassEntityAttributes,
     rentUri: string,
   ): TemplateResult | typeof nothing {
-    const bits: TemplateResult[] = [];
-    if (this._config.show_rent_button && rentUri) {
-      bits.push(html`
-        <a class="rent" href=${rentUri} target="_blank" rel="noopener noreferrer">
-          <ha-icon icon="mdi:cellphone-arrow-down"></ha-icon>${this._t("rent_in_app")}
-        </a>
-      `);
-    }
-    if (this._config.show_timestamp) {
-      const rel = relativeTime(a.last_reported, (k) => this._t(k));
-      if (rel) {
-        bits.push(html`<span>${this._t("last_updated")} ${rel}</span>`);
-      }
-    }
-    return bits.length ? html`<div class="footer">${bits}</div>` : nothing;
+    const showRent = !!this._config.show_rent_button && !!rentUri;
+    const tsLabel = this._config.show_timestamp
+      ? relativeTime(a.last_reported, (k) => this._t(k))
+      : null;
+    if (!showRent && !tsLabel) return nothing;
+    return html`
+      <div class="actions">
+        ${showRent
+          ? html`
+              <a
+                class="btn-primary"
+                href=${rentUri}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ha-icon
+                  icon="mdi:cellphone-arrow-down"
+                  aria-hidden="true"
+                ></ha-icon>
+                ${this._t("rent_in_app")}
+              </a>
+            `
+          : nothing}
+        ${tsLabel
+          ? html`<span class="timestamp"
+              >${this._t("last_updated")} ${tsLabel}</span
+            >`
+          : nothing}
+      </div>
+    `;
   }
 }
 
