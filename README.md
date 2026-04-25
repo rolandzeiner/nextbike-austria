@@ -2,7 +2,7 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 [![HA min version](https://img.shields.io/badge/Home%20Assistant-%3E%3D2025.1-blue.svg)](https://www.home-assistant.io/)
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/rolandzeiner/nextbike-austria/releases)
+[![Version](https://img.shields.io/badge/version-1.1.0--beta.1-blue.svg)](https://github.com/rolandzeiner/nextbike-austria/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![vibe-coded](https://img.shields.io/badge/vibe-coded-ff69b4?logo=musicbrainz&logoColor=white)](https://en.wikipedia.org/wiki/Vibe_coding)
 
@@ -126,8 +126,9 @@ The `Docks available` sensor additionally exposes `is_virtual_station` and `capa
 
 - Poll interval defaults to **60 s** (the value the GBFS feed advertises in `ttl`). Faster polling returns the same cached body, so the integration caps the form at 60 s on the floor and 900 s on the ceiling.
 - **Per-system shared fetch**: one HTTP request per system per poll, regardless of how many stations in that system are tracked. Implemented as a memoized client in `hass.data[DOMAIN]["systems"]` with a TTL lock that collapses concurrent calls.
-- `vehicle_types.json` is fetched once at startup (nearly static) and only refreshed when empty; it's what drives the e-bike detection heuristic.
-- **Battery / reservation tracking** (opt-in): with *Track e-bike battery state* enabled on at least one entry, the shared client additionally fetches `free_bike_status.json` every **30 min** (independent of the station poll interval). The feed is ~1.3 MB for Wien — approximately **63 MB/day / 1.9 GB/month** per opted-in Austrian system. Leave off if your bandwidth is capped.
+- **Conditional GET**: the shared client remembers each feed's `Last-Modified` and sends `If-Modified-Since` on the next request. When the upstream answers `304 Not Modified` the body transfer is skipped entirely and the cached payload is reused — particularly effective on quiet feeds like `vehicle_types.json`.
+- `vehicle_types.json` is fetched once at startup (nearly static) and refreshed only when needed; it provides both the e-bike detection heuristic and the human-readable type name used in card tooltips. Battery aggregation works without it (falling back to a generic "Bike" label).
+- **Battery / reservation tracking** (opt-in): with *Track e-bike battery state* enabled on at least one entry, the shared client additionally fetches `free_bike_status.json` every **30 min** (independent of the station poll interval). The feed is ~1.3 MB for Wien — approximately **63 MB/day / 1.9 GB/month** per opted-in Austrian system. Leave off if your bandwidth is capped. When the upstream is unavailable or returns no usable rows, the 30 min back-off is honoured so a flaky feed cannot trigger per-poll retries.
 - All payloads are parsed with `json.loads(..., strict=False)` because nextbike occasionally emits raw control characters in `vehicle_types` descriptions — a tolerated quirk rather than a broken feed.
 
 ## Use Cases

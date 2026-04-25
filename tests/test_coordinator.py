@@ -33,6 +33,33 @@ BASE_ENTRY_DATA = {
 }
 
 
+class _CtxResp:
+    """Adapt a fake response (or raise) into an async context manager.
+
+    The production code uses ``async with session.get(...) as resp``, so
+    the fake ``session.get`` must return an object exposing
+    ``__aenter__`` / ``__aexit__``. ``raise_on_enter`` simulates failures
+    happening at the request layer (timeouts, connection errors).
+    """
+
+    def __init__(
+        self,
+        resp: Any | None = None,
+        *,
+        raise_on_enter: Exception | None = None,
+    ) -> None:
+        self._resp = resp
+        self._raise_on_enter = raise_on_enter
+
+    async def __aenter__(self) -> Any:
+        if self._raise_on_enter is not None:
+            raise self._raise_on_enter
+        return self._resp
+
+    async def __aexit__(self, *exc: Any) -> None:
+        return None
+
+
 def _make_entry(data: dict[str, Any] | None = None) -> MockConfigEntry:
     entry_data = {**BASE_ENTRY_DATA, **(data or {})}
     return MockConfigEntry(
@@ -193,8 +220,8 @@ async def test_shared_client_translates_timeout(hass: HomeAssistant) -> None:
     client = SharedSystemClient(hass, "nextbike_wr")
 
     class _FakeSession:
-        async def get(self, *args: Any, **kwargs: Any) -> Any:
-            raise asyncio.TimeoutError()
+        def get(self, *args: Any, **kwargs: Any) -> _CtxResp:
+            return _CtxResp(raise_on_enter=asyncio.TimeoutError())
 
     client._session = _FakeSession()  # type: ignore[assignment]
     with pytest.raises(GBFSError) as excinfo:
@@ -210,6 +237,7 @@ async def test_shared_client_translates_http_error(hass: HomeAssistant) -> None:
 
     class _FakeResp:
         status = 500
+        headers: dict[str, str] = {}
 
         def raise_for_status(self) -> None:
             raise _aiohttp.ClientResponseError(
@@ -220,8 +248,8 @@ async def test_shared_client_translates_http_error(hass: HomeAssistant) -> None:
             )
 
     class _FakeSession:
-        async def get(self, *args: Any, **kwargs: Any) -> _FakeResp:
-            return _FakeResp()
+        def get(self, *args: Any, **kwargs: Any) -> _CtxResp:
+            return _CtxResp(_FakeResp())
 
     client._session = _FakeSession()  # type: ignore[assignment]
     with pytest.raises(GBFSError) as excinfo:
@@ -237,8 +265,8 @@ async def test_shared_client_translates_client_error(hass: HomeAssistant) -> Non
     client = SharedSystemClient(hass, "nextbike_wr")
 
     class _FakeSession:
-        async def get(self, *args: Any, **kwargs: Any) -> Any:
-            raise _aiohttp.ClientError("dns lookup failed")
+        def get(self, *args: Any, **kwargs: Any) -> _CtxResp:
+            return _CtxResp(raise_on_enter=_aiohttp.ClientError("dns lookup failed"))
 
     client._session = _FakeSession()  # type: ignore[assignment]
     with pytest.raises(GBFSError) as excinfo:
@@ -252,6 +280,7 @@ async def test_shared_client_translates_invalid_json(hass: HomeAssistant) -> Non
 
     class _FakeResp:
         status = 200
+        headers: dict[str, str] = {}
 
         def raise_for_status(self) -> None:
             return None
@@ -260,8 +289,8 @@ async def test_shared_client_translates_invalid_json(hass: HomeAssistant) -> Non
             return "this is not json"
 
     class _FakeSession:
-        async def get(self, *args: Any, **kwargs: Any) -> _FakeResp:
-            return _FakeResp()
+        def get(self, *args: Any, **kwargs: Any) -> _CtxResp:
+            return _CtxResp(_FakeResp())
 
     client._session = _FakeSession()  # type: ignore[assignment]
     with pytest.raises(GBFSError) as excinfo:
@@ -275,6 +304,7 @@ async def test_shared_client_rejects_non_dict_body(hass: HomeAssistant) -> None:
 
     class _FakeResp:
         status = 200
+        headers: dict[str, str] = {}
 
         def raise_for_status(self) -> None:
             return None
@@ -283,8 +313,8 @@ async def test_shared_client_rejects_non_dict_body(hass: HomeAssistant) -> None:
             return "[1, 2, 3]"
 
     class _FakeSession:
-        async def get(self, *args: Any, **kwargs: Any) -> _FakeResp:
-            return _FakeResp()
+        def get(self, *args: Any, **kwargs: Any) -> _CtxResp:
+            return _CtxResp(_FakeResp())
 
     client._session = _FakeSession()  # type: ignore[assignment]
     with pytest.raises(GBFSError) as excinfo:
@@ -504,6 +534,96 @@ async def test_battery_fetch_respects_ttl(hass: HomeAssistant) -> None:
         await client.async_fetch_battery()  # within TTL — should collapse
 
     assert calls == 1
+
+
+async def test_battery_fetch_backoff_on_upstream_failure(hass: HomeAssistant) -> None:
+    """A failed free_bike_status fetch still arms the TTL — no hammering."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+    client._vehicle_types = {  # type: ignore[assignment]
+        "183": {"vehicle_type_id": "183", "propulsion_type": "electric_assist", "name": "E-Bike"},
+    }
+    calls = 0
+
+    async def fake_fetch(feed: str) -> dict[str, Any]:
+        nonlocal calls
+        calls += 1
+        raise GBFSError("api_http_error", status="503", reason="Service Unavailable")
+
+    with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
+        await client.async_fetch_battery()
+        await client.async_fetch_battery()  # within TTL — must not retry
+
+    assert calls == 1
+
+
+async def test_battery_fetch_backoff_on_empty_result(hass: HomeAssistant) -> None:
+    """Successful but empty fetch (no e-bikes/reserved/disabled) honours TTL."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+    client._vehicle_types = {  # type: ignore[assignment]
+        "192": {"vehicle_type_id": "192", "propulsion_type": "human", "name": "Classic Bike"},
+    }
+    calls = 0
+
+    async def fake_fetch(feed: str) -> dict[str, Any]:
+        nonlocal calls
+        calls += 1
+        # All bikes lack station_id / battery / reserved / disabled —
+        # aggregates dict ends up empty.
+        return {"data": {"bikes": [{"vehicle_type_id": "192"}]}}
+
+    with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
+        await client.async_fetch_battery()
+        await client.async_fetch_battery()  # within TTL — must not retry
+
+    assert calls == 1
+
+
+async def test_fetch_json_uses_conditional_get(hass: HomeAssistant) -> None:
+    """Last-Modified is captured and sent back as If-Modified-Since; 304 reuses cache."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+
+    seen_headers: list[dict[str, str]] = []
+    response_status = {"status": 200}
+
+    class _FirstResp:
+        status = 200
+        headers = {"Last-Modified": "Wed, 21 Apr 2026 12:00:00 GMT"}
+
+        def raise_for_status(self) -> None:
+            return None
+
+        async def text(self) -> str:
+            return '{"data": {"stations": [{"station_id": "1"}]}}'
+
+    class _NotModifiedResp:
+        status = 304
+        headers: dict[str, str] = {}
+
+        def raise_for_status(self) -> None:
+            return None
+
+        async def text(self) -> str:  # pragma: no cover — not reached on 304
+            return ""
+
+    class _FakeSession:
+        def get(self, *args: Any, **kwargs: Any) -> _CtxResp:
+            seen_headers.append(dict(kwargs.get("headers") or {}))
+            if response_status["status"] == 304:
+                return _CtxResp(_NotModifiedResp())
+            return _CtxResp(_FirstResp())
+
+    client._session = _FakeSession()  # type: ignore[assignment]
+
+    first = await client._fetch_json("station_information")
+    assert first["data"]["stations"][0]["station_id"] == "1"
+    # First request: no conditional header (no prior Last-Modified).
+    assert "If-Modified-Since" not in seen_headers[0]
+
+    response_status["status"] = 304
+    second = await client._fetch_json("station_information")
+    # Second request: conditional header sent, cached body returned verbatim.
+    assert seen_headers[1]["If-Modified-Since"] == "Wed, 21 Apr 2026 12:00:00 GMT"
+    assert second is first
 
 
 async def test_coordinator_skips_battery_when_opt_off(hass: HomeAssistant) -> None:

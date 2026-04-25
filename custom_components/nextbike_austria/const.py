@@ -15,7 +15,7 @@ from homeassistant.const import __version__ as _HA_VERSION
 DOMAIN: Final = "nextbike_austria"
 
 # Integration version — must match manifest.json "version" field.
-INTEGRATION_VERSION: Final = "1.0.0"
+INTEGRATION_VERSION: Final = "1.1.0-beta.1"
 
 # Config entry keys
 CONF_SYSTEM_ID: Final = "system_id"
