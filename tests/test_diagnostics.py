@@ -6,6 +6,7 @@ from unittest.mock import patch
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from syrupy.assertion import SnapshotAssertion
 
 from custom_components.nextbike_austria.const import (
     CONF_STATION_ID,
@@ -77,3 +78,34 @@ async def test_diagnostics_carries_attribution_and_redacts_coords(
     # Entry section round-trips title + version + redacted data/options.
     assert diag["entry"]["title"] == "Hoher Markt"
     assert diag["entry"]["data"][CONF_STATION_ID] == "68577989"
+
+
+async def test_diagnostics_snapshot(
+    hass: HomeAssistant, snapshot: SnapshotAssertion
+) -> None:
+    """Pin the full redacted diagnostics shape so silent format changes surface.
+
+    A failing diff usually means: a field was added to the entry/coordinator
+    payload, or the redaction set changed. Update the snapshot
+    (`pytest --snapshot-update`) only after confirming the change is intentional.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data=BASE_DATA,
+        options={},
+        title="Hoher Markt",
+        unique_id="nextbike_wr_68577989",
+    )
+    entry.add_to_hass(hass)
+
+    fake = FakeClient()
+    fake.set_stations({"68577989": _STATION})
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=fake,
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    diag = await async_get_config_entry_diagnostics(hass, entry)
+    assert diag == snapshot

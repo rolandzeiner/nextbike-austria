@@ -1,0 +1,38 @@
+Data: nextbike GmbH, CC0-1.0
+
+Data source
+-----------
+nextbike GBFS 2.3 feeds (system_information / station_information /
+station_status / vehicle_types / system_pricing_plans)
+https://github.com/MobilityData/gbfs
+
+License
+-------
+All station and bike-availability data is published under the Creative
+Commons Zero 1.0 Public Domain Dedication (CC0-1.0), as declared in each
+system's `system_information.license_id`:
+https://creativecommons.org/publicdomain/zero/1.0/
+
+No legal attribution is required. Crediting nextbike is good practice but
+not obligatory.
+
+Attribution string
+------------------
+The integration surfaces the following attribution on every sensor (via the
+`attribution` state attribute) and in every diagnostics download:
+
+    Data: nextbike GmbH, CC0-1.0
+
+Disclaimer
+----------
+This integration is not affiliated with or endorsed by nextbike GmbH. All
+station and bike-availability data is provided through public GBFS 2.3 feeds
+operated by nextbike and its Austrian partners. The developer assumes no
+liability for the accuracy, completeness, or timeliness of the displayed
+data — including bike availability, dock availability, station operational
+status, or estimated e-bike range. Use at your own risk.
+
+Diese Integration steht in keiner Verbindung zur nextbike GmbH und wird
+von dieser nicht unterstützt. Für die Richtigkeit, Vollständigkeit und
+Aktualität der angezeigten Daten wird keine Haftung übernommen.
+Nutzung auf eigene Verantwortung.
