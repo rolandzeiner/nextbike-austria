@@ -114,6 +114,8 @@ async def test_all_three_sensors_populated_when_capacity_known(
     assert ebikes is not None and ebikes.state == "17"
     # The docks sensor now surfaces capacity as an attribute
     assert docks.attributes.get("capacity") == 54
+    # last_reported is normalised from GBFS Unix-epoch to ISO-8601 UTC.
+    assert bikes.attributes.get("last_reported") == "2026-04-21T14:46:02+00:00"
 
 
 async def test_options_update_reloads_entry(hass: HomeAssistant) -> None:
