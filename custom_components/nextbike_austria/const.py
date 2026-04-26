@@ -59,13 +59,15 @@ DEFAULT_SCAN_INTERVAL: Final = 60  # seconds
 MIN_POLL_SECONDS: Final = 60       # never below the feed's TTL
 MAX_POLL_SECONDS: Final = 900      # 15 min — bikes move fast enough that stale data is useless
 
-# Battery-range fetch cadence. `free_bike_status.json` is ~1.3 MB for Wien.
-# Parked e-bikes charge and discharge slowly — a 30-min window is
-# granular enough for any realistic "is there a charged bike at my
-# home station?" automation, and halves the bandwidth cost vs. 15 or
-# 20 min. Approx ~63 MB/day / ~1.9 GB/month per opted-in Austrian
-# system. Only fetched when at least one tracked entry has
-# `track_e_bike_range` enabled in its options.
+# Battery-range fetch cadence. `free_bike_status.json` is ~1.2 MB raw for
+# Wien but ~75 KB on the wire under `Accept-Encoding: gzip` (16.7×
+# compression — measured April 2026). Parked e-bikes charge and discharge
+# slowly, so a 30-min window is granular enough for any realistic
+# "is there a charged bike at my home station?" automation and halves
+# the bandwidth cost vs. 15 or 20 min. Approx ~3.5 MB/day / ~105 MB/month
+# per opted-in Austrian system on the wire (vs. the ~1.9 GB/month it would
+# be without compression). Only fetched when at least one tracked entry
+# has `track_e_bike_range` enabled in its options.
 BATTERY_FETCH_TTL_SECONDS: Final = 1800
 
 # GBFS endpoint base. Each Austrian system (see AUSTRIAN_SYSTEMS below)

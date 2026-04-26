@@ -141,10 +141,12 @@ class SharedSystemClient:
     async def async_fetch_battery(self, *, force: bool = False) -> None:
         """Refresh the per-bike battery cache, respecting a longer TTL.
 
-        ``free_bike_status.json`` is ~1.3 MB for the biggest system (Wien)
-        and battery state doesn't change by the second — polling every
-        30 minutes (``BATTERY_FETCH_TTL_SECONDS``) keeps bandwidth modest
-        while still catching the kind of change a dashboard cares about.
+        ``free_bike_status.json`` is ~1.2 MB raw for the biggest system
+        (Wien) but only ~75 KB on the wire under ``Accept-Encoding: gzip``
+        (~17× compression). Battery state doesn't change by the second
+        either, so polling every 30 minutes (``BATTERY_FETCH_TTL_SECONDS``)
+        keeps bandwidth modest while still catching the kind of change a
+        dashboard cares about.
         Coverage is low on nextbike's side — currently ~8% of e-bikes
         report ``current_range_meters`` at all — so many stations may end
         up with zero battery samples.
