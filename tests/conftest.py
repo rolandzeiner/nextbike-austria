@@ -1,7 +1,8 @@
 """Shared pytest fixtures for Nextbike Austria tests."""
 from __future__ import annotations
 
-from unittest.mock import patch
+from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pytest_homeassistant_custom_component.syrupy import HomeAssistantSnapshotExtension
@@ -26,17 +27,44 @@ def auto_enable_custom_integrations(enable_custom_integrations):
     yield
 
 
+def _trip_session(*args: Any, **kwargs: Any) -> MagicMock:
+    """Sentinel session — using it should fail the test, not silently succeed.
+
+    Tests that legitimately need to exercise an HTTP path must override
+    ``async_get_clientsession`` themselves (via a nested ``patch`` or by
+    assigning ``client._session``). Anything else means production code
+    is escaping to a fake that doesn't behave like ``aiohttp`` — the
+    previous fixture made that look like a pass-with-warnings, so this
+    sentinel turns the leak into a failure at the moment of use.
+    """
+    sentinel = MagicMock(name="UNPATCHED_SESSION")
+
+    def _explode(*_a: Any, **_k: Any) -> None:
+        pytest.fail(
+            "Unpatched aiohttp session was used inside a test. "
+            "Override `async_get_clientsession` (or `client._session`) "
+            "with a recording fake before exercising HTTP paths."
+        )
+
+    sentinel.get.side_effect = _explode
+    return sentinel
+
+
 @pytest.fixture(autouse=True)
 def mock_aiohttp_session():
-    """Stop pycares's DNS-resolver thread from leaking into verify_cleanup.
+    """Replace ``async_get_clientsession`` with a tripwire by default.
 
-    Patching ``async_get_clientsession`` in both modules that import it is
-    enough — neither the coordinator's SharedSystemClient nor the config
-    flow's catalogue fetch actually calls the real session in tests,
-    because the network-touching callables are monkey-patched per test.
+    Tests that genuinely want a session must opt in by re-patching the
+    same target with their own recording fake (see ``_fakes.RecordingSession``).
     """
     with (
-        patch("custom_components.nextbike_austria.coordinator.async_get_clientsession"),
-        patch("custom_components.nextbike_austria.config_flow.async_get_clientsession"),
+        patch(
+            "custom_components.nextbike_austria.coordinator.async_get_clientsession",
+            side_effect=_trip_session,
+        ),
+        patch(
+            "custom_components.nextbike_austria.config_flow.async_get_clientsession",
+            side_effect=_trip_session,
+        ),
     ):
         yield
