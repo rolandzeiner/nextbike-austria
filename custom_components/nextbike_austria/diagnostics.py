@@ -10,10 +10,23 @@ from .const import ATTRIBUTION
 from .coordinator import NextbikeAustriaConfigEntry
 
 # Nextbike's GBFS is unauthenticated, so there are no credentials to
-# redact. We still strip coordinates — they identify a specific station
-# which, combined with the HA install ID, could be used to infer the
-# user's rough location.
-TO_REDACT = {"lat", "lon", "latitude", "longitude"}
+# redact today. We still strip coordinates — they identify a specific
+# station which, combined with the HA install ID, could be used to
+# infer the user's rough location. `api_key` / `password` / `token`
+# are defensive future-proofing — diagnostics dumps end up in public
+# GitHub issues, so over-redacting is essentially free and protects
+# against a future contributor adding a generically-named credential
+# field without remembering to update this set. Treat the set as
+# monotonically growing — never shrink.
+TO_REDACT = {
+    "lat",
+    "lon",
+    "latitude",
+    "longitude",
+    "api_key",
+    "password",
+    "token",
+}
 
 
 async def async_get_config_entry_diagnostics(
