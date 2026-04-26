@@ -25,39 +25,14 @@ from custom_components.nextbike_austria.coordinator import (
     SharedSystemClient,
 )
 
+from ._fakes import CtxResp, FakeClient
+
 BASE_ENTRY_DATA = {
     CONF_SYSTEM_ID: "nextbike_wr",
     CONF_STATION_ID: "68577989",
     CONF_STATION_NAME: "Hoher Markt",
     CONF_SCAN_INTERVAL: 60,
 }
-
-
-class _CtxResp:
-    """Adapt a fake response (or raise) into an async context manager.
-
-    The production code uses ``async with session.get(...) as resp``, so
-    the fake ``session.get`` must return an object exposing
-    ``__aenter__`` / ``__aexit__``. ``raise_on_enter`` simulates failures
-    happening at the request layer (timeouts, connection errors).
-    """
-
-    def __init__(
-        self,
-        resp: Any | None = None,
-        *,
-        raise_on_enter: Exception | None = None,
-    ) -> None:
-        self._resp = resp
-        self._raise_on_enter = raise_on_enter
-
-    async def __aenter__(self) -> Any:
-        if self._raise_on_enter is not None:
-            raise self._raise_on_enter
-        return self._resp
-
-    async def __aexit__(self, *exc: Any) -> None:
-        return None
 
 
 def _make_entry(data: dict[str, Any] | None = None) -> MockConfigEntry:
@@ -92,30 +67,27 @@ def _station_snapshot(sid: str = "68577989") -> dict[str, Any]:
     }
 
 
-class _FakeClient:
-    """Minimal in-memory SharedSystemClient replacement used by tests."""
+def _make_session(resp_or_session: Any) -> Any:
+    """Build a fake aiohttp session that returns ``resp_or_session`` from .get()."""
 
-    def __init__(self, system_id: str = "nextbike_wr") -> None:
-        self.system_id = system_id
-        self._stations: dict[str, dict[str, Any]] = {}
-        self._raise: Exception | None = None
-        self._ebike_ids: frozenset[str] = frozenset({"183"})
+    class _S:
+        def get(self, *args: Any, **kwargs: Any) -> CtxResp:
+            return CtxResp(resp_or_session)
 
-    def set_stations(self, stations: dict[str, dict[str, Any]]) -> None:
-        self._stations = stations
+    return _S()
 
-    def set_error(self, err: Exception | None) -> None:
-        self._raise = err
 
-    async def async_fetch(self, *, force: bool = False) -> None:
-        if self._raise is not None:
-            raise self._raise
+def _seed_session(client: SharedSystemClient, session: Any) -> None:
+    """Inject a fake session into the SharedSystemClient.
 
-    def station(self, station_id: str) -> dict[str, Any] | None:
-        return self._stations.get(station_id)
+    Helper isolates the single ``# type: ignore`` and gives one-line tests.
+    """
+    client._session = session  # type: ignore[assignment]
 
-    def is_ebike_type(self, tid: str) -> bool:
-        return tid in self._ebike_ids
+
+# ---------------------------------------------------------------------
+# Coordinator-level behaviour (uses FakeClient)
+# ---------------------------------------------------------------------
 
 
 async def test_fetch_success(hass: HomeAssistant) -> None:
@@ -123,7 +95,7 @@ async def test_fetch_success(hass: HomeAssistant) -> None:
     entry = _make_entry()
     entry.add_to_hass(hass)
 
-    fake = _FakeClient()
+    fake = FakeClient()
     fake.set_stations({"68577989": _station_snapshot()})
     with patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
@@ -136,12 +108,14 @@ async def test_fetch_success(hass: HomeAssistant) -> None:
     assert coordinator.data["num_bikes_available"] == 29
 
 
-async def test_station_missing_raises_update_failed(hass: HomeAssistant) -> None:
-    """A station that isn't in the feed produces UpdateFailed + repair issue."""
+async def test_station_missing_raises_update_failed_and_idempotent_issue(
+    hass: HomeAssistant,
+) -> None:
+    """Missing station → UpdateFailed + Repairs issue, idempotent on retry."""
     entry = _make_entry()
     entry.add_to_hass(hass)
 
-    fake = _FakeClient()
+    fake = FakeClient()
     fake.set_stations({})  # configured station isn't present
     with patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
@@ -150,10 +124,35 @@ async def test_station_missing_raises_update_failed(hass: HomeAssistant) -> None
         coordinator = NextbikeStationCoordinator(hass, entry)
         with pytest.raises(UpdateFailed):
             await coordinator._async_update_data()
+        # Second tick must not duplicate the issue or raise.
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
 
     registry = ir.async_get(hass)
     issue = registry.async_get_issue(DOMAIN, f"station_gone_{entry.entry_id}")
     assert issue is not None
+
+
+async def test_repair_issue_clears_on_recovery(hass: HomeAssistant) -> None:
+    """Once the station reappears, the Repairs issue is cleared."""
+    entry = _make_entry()
+    entry.add_to_hass(hass)
+
+    fake = FakeClient()
+    fake.set_stations({})
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=fake,
+    ):
+        coordinator = NextbikeStationCoordinator(hass, entry)
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
+        # Station comes back.
+        fake.set_stations({"68577989": _station_snapshot()})
+        await coordinator._async_update_data()
+
+    registry = ir.async_get(hass)
+    assert registry.async_get_issue(DOMAIN, f"station_gone_{entry.entry_id}") is None
 
 
 async def test_transport_error_raises_update_failed(hass: HomeAssistant) -> None:
@@ -161,7 +160,7 @@ async def test_transport_error_raises_update_failed(hass: HomeAssistant) -> None
     entry = _make_entry()
     entry.add_to_hass(hass)
 
-    fake = _FakeClient()
+    fake = FakeClient()
     fake.set_error(GBFSError("api_timeout", seconds="15"))
     with patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
@@ -178,7 +177,7 @@ async def test_setup_retry_on_first_refresh_failure(hass: HomeAssistant) -> None
     entry = _make_entry()
     entry.add_to_hass(hass)
 
-    fake = _FakeClient()
+    fake = FakeClient()
     fake.set_error(GBFSError("api_connection_error", error_type="ClientError", error="boom"))
     with patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
@@ -189,30 +188,9 @@ async def test_setup_retry_on_first_refresh_failure(hass: HomeAssistant) -> None
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
-async def test_repair_issue_lifecycle(hass: HomeAssistant) -> None:
-    """Degraded-condition issue raises once and clears on recovery."""
-    entry = _make_entry()
-    entry.add_to_hass(hass)
-
-    fake = _FakeClient()
-    with patch(
-        "custom_components.nextbike_austria.coordinator._get_shared_client",
-        return_value=fake,
-    ):
-        coordinator = NextbikeStationCoordinator(hass, entry)
-
-    coordinator._raise_degraded_issue(
-        "station_gone", station_id="x", system_id="nextbike_wr"
-    )
-    coordinator._raise_degraded_issue(
-        "station_gone", station_id="x", system_id="nextbike_wr"
-    )  # idempotent
-
-    registry = ir.async_get(hass)
-    assert registry.async_get_issue(DOMAIN, f"station_gone_{entry.entry_id}") is not None
-
-    coordinator._clear_degraded_issue("station_gone")
-    assert registry.async_get_issue(DOMAIN, f"station_gone_{entry.entry_id}") is None
+# ---------------------------------------------------------------------
+# SharedSystemClient HTTP-translation behaviour
+# ---------------------------------------------------------------------
 
 
 async def test_shared_client_translates_timeout(hass: HomeAssistant) -> None:
@@ -220,10 +198,10 @@ async def test_shared_client_translates_timeout(hass: HomeAssistant) -> None:
     client = SharedSystemClient(hass, "nextbike_wr")
 
     class _FakeSession:
-        def get(self, *args: Any, **kwargs: Any) -> _CtxResp:
-            return _CtxResp(raise_on_enter=asyncio.TimeoutError())
+        def get(self, *args: Any, **kwargs: Any) -> CtxResp:
+            return CtxResp(raise_on_enter=asyncio.TimeoutError())
 
-    client._session = _FakeSession()  # type: ignore[assignment]
+    _seed_session(client, _FakeSession())
     with pytest.raises(GBFSError) as excinfo:
         await client._fetch_json("station_information")
     assert excinfo.value.translation_key == "api_timeout"
@@ -247,11 +225,7 @@ async def test_shared_client_translates_http_error(hass: HomeAssistant) -> None:
                 message="Internal Server Error",
             )
 
-    class _FakeSession:
-        def get(self, *args: Any, **kwargs: Any) -> _CtxResp:
-            return _CtxResp(_FakeResp())
-
-    client._session = _FakeSession()  # type: ignore[assignment]
+    _seed_session(client, _make_session(_FakeResp()))
     with pytest.raises(GBFSError) as excinfo:
         await client._fetch_json("station_information")
     assert excinfo.value.translation_key == "api_http_error"
@@ -265,10 +239,10 @@ async def test_shared_client_translates_client_error(hass: HomeAssistant) -> Non
     client = SharedSystemClient(hass, "nextbike_wr")
 
     class _FakeSession:
-        def get(self, *args: Any, **kwargs: Any) -> _CtxResp:
-            return _CtxResp(raise_on_enter=_aiohttp.ClientError("dns lookup failed"))
+        def get(self, *args: Any, **kwargs: Any) -> CtxResp:
+            return CtxResp(raise_on_enter=_aiohttp.ClientError("dns lookup failed"))
 
-    client._session = _FakeSession()  # type: ignore[assignment]
+    _seed_session(client, _FakeSession())
     with pytest.raises(GBFSError) as excinfo:
         await client._fetch_json("station_information")
     assert excinfo.value.translation_key == "api_connection_error"
@@ -288,11 +262,7 @@ async def test_shared_client_translates_invalid_json(hass: HomeAssistant) -> Non
         async def text(self) -> str:
             return "this is not json"
 
-    class _FakeSession:
-        def get(self, *args: Any, **kwargs: Any) -> _CtxResp:
-            return _CtxResp(_FakeResp())
-
-    client._session = _FakeSession()  # type: ignore[assignment]
+    _seed_session(client, _make_session(_FakeResp()))
     with pytest.raises(GBFSError) as excinfo:
         await client._fetch_json("station_information")
     assert excinfo.value.translation_key == "api_invalid_response"
@@ -312,14 +282,15 @@ async def test_shared_client_rejects_non_dict_body(hass: HomeAssistant) -> None:
         async def text(self) -> str:
             return "[1, 2, 3]"
 
-    class _FakeSession:
-        def get(self, *args: Any, **kwargs: Any) -> _CtxResp:
-            return _CtxResp(_FakeResp())
-
-    client._session = _FakeSession()  # type: ignore[assignment]
+    _seed_session(client, _make_session(_FakeResp()))
     with pytest.raises(GBFSError) as excinfo:
         await client._fetch_json("station_information")
     assert excinfo.value.translation_key == "api_invalid_response"
+
+
+# ---------------------------------------------------------------------
+# vehicle_types + battery aggregation
+# ---------------------------------------------------------------------
 
 
 async def test_refresh_vehicle_types_populates_ebike_ids(hass: HomeAssistant) -> None:
@@ -357,7 +328,7 @@ async def test_refresh_vehicle_types_swallows_gbfs_error(hass: HomeAssistant) ->
     with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
         # Should NOT raise — vehicle_types is optional.
         await client._refresh_vehicle_types()
-    assert client._vehicle_types == {}
+    assert client.vehicle_type_names() == {}
 
 
 async def test_shared_client_raises_for_unknown_system(hass: HomeAssistant) -> None:
@@ -368,39 +339,46 @@ async def test_shared_client_raises_for_unknown_system(hass: HomeAssistant) -> N
         _get_shared_client(hass, "nextbike_bogus")
 
 
+async def test_shared_client_is_memoized_per_system(hass: HomeAssistant) -> None:
+    """Two requests for the same system return the SAME client.
+
+    Architectural promise: every coordinator for ``nextbike_wr`` shares
+    one HTTP-level client so per-tick GBFS fetches collapse. If this
+    regresses to a fresh client per call, the bandwidth saving is
+    silently lost.
+    """
+    from custom_components.nextbike_austria.coordinator import _get_shared_client
+
+    a = _get_shared_client(hass, "nextbike_wr")
+    b = _get_shared_client(hass, "nextbike_wr")
+    c = _get_shared_client(hass, "nextbike_la")
+    assert a is b
+    assert a is not c
+
+
+def _seed_vehicle_types(client: SharedSystemClient) -> None:
+    """Seed two known vehicle types via the production refresh path."""
+    client._vehicle_types = {  # type: ignore[assignment]
+        "183": {"vehicle_type_id": "183", "propulsion_type": "electric_assist", "name": "E-Bike"},
+        "192": {"vehicle_type_id": "192", "propulsion_type": "human", "name": "Classic Bike"},
+    }
+
+
 async def test_battery_fetch_aggregates_per_station(hass: HomeAssistant) -> None:
     """free_bike_status → per-station avg/min/max/samples + sorted per-bike list."""
     client = SharedSystemClient(hass, "nextbike_wr")
-    # Vehicle types are only needed for the id→name map used in tooltips;
-    # battery % now comes straight from `current_fuel_percent`, so
-    # `max_range_meters` is no longer read.
-    client._vehicle_types = {  # type: ignore[assignment]
-        "183": {
-            "vehicle_type_id": "183",
-            "propulsion_type": "electric_assist",
-            "name": "E-Bike",
-        },
-        "192": {
-            "vehicle_type_id": "192",
-            "propulsion_type": "human",
-            "name": "Classic Bike",
-        },
-    }
+    _seed_vehicle_types(client)
 
     async def fake_fetch(feed: str) -> dict[str, Any]:
         assert feed == "free_bike_status"
         return {
             "data": {
                 "bikes": [
-                    # Station A: two e-bikes at 50% and 100%
                     {"station_id": "A", "vehicle_type_id": "183", "current_fuel_percent": 0.5},
                     {"station_id": "A", "vehicle_type_id": "183", "current_fuel_percent": 1.0},
-                    # Station A: one classic bike without fuel info — ignored
-                    {"station_id": "A", "vehicle_type_id": "192"},
-                    # Station B: one e-bike at 25%
+                    {"station_id": "A", "vehicle_type_id": "192"},  # ignored
                     {"station_id": "B", "vehicle_type_id": "183", "current_fuel_percent": 0.25},
-                    # Bike without station_id — skipped
-                    {"vehicle_type_id": "183", "current_fuel_percent": 0.4},
+                    {"vehicle_type_id": "183", "current_fuel_percent": 0.4},  # no station_id
                 ]
             }
         }
@@ -415,16 +393,13 @@ async def test_battery_fetch_aggregates_per_station(hass: HomeAssistant) -> None
     assert a["avg_pct"] == pytest.approx(75.0)
     assert a["min_pct"] == pytest.approx(50.0)
     assert a["max_pct"] == pytest.approx(100.0)
-    # Sorted descending — max charge first.
     assert [e["pct"] for e in a["per_bike"]] == [100.0, 50.0]
-    # Type name resolved from vehicle_types.
     assert all(e["type"] == "E-Bike" for e in a["per_bike"])
     assert b is not None
     assert b["samples"] == 1
     assert b["avg_pct"] == pytest.approx(25.0)
     assert b["per_bike"] == [{"pct": 25.0, "type": "E-Bike"}]
 
-    # vehicle_type_names map exposes id→name for classic + e-bike types.
     names = client.vehicle_type_names()
     assert names["183"] == "E-Bike"
     assert names["192"] == "Classic Bike"
@@ -433,24 +408,16 @@ async def test_battery_fetch_aggregates_per_station(hass: HomeAssistant) -> None
 async def test_battery_fetch_tracks_disabled_bikes(hass: HomeAssistant) -> None:
     """Disabled bikes surface as disabled_count + types, regardless of reserved flag."""
     client = SharedSystemClient(hass, "nextbike_wr")
-    client._vehicle_types = {  # type: ignore[assignment]
-        "183": {"vehicle_type_id": "183", "propulsion_type": "electric_assist", "name": "E-Bike"},
-        "192": {"vehicle_type_id": "192", "propulsion_type": "human", "name": "Classic Bike"},
-    }
+    _seed_vehicle_types(client)
 
     async def fake_fetch(feed: str) -> dict[str, Any]:
         return {
             "data": {
                 "bikes": [
-                    # Station A: one disabled classic, one disabled e-bike,
-                    # and a third disabled+reserved bike — the disabled
-                    # flag wins, it counts as disabled only.
                     {"station_id": "A", "vehicle_type_id": "192", "is_disabled": True},
                     {"station_id": "A", "vehicle_type_id": "183", "is_disabled": True},
                     {"station_id": "A", "vehicle_type_id": "192", "is_reserved": True, "is_disabled": True},
-                    # Station B: a reserved bike (counts as reserved, not disabled)
                     {"station_id": "B", "vehicle_type_id": "192", "is_reserved": True, "is_disabled": False},
-                    # Disabled floating bike (no station_id) — skipped
                     {"vehicle_type_id": "192", "is_disabled": True},
                 ]
             }
@@ -464,7 +431,6 @@ async def test_battery_fetch_tracks_disabled_bikes(hass: HomeAssistant) -> None:
     assert a is not None
     assert a["disabled_count"] == 3
     assert sorted(a["disabled_types"]) == ["Classic Bike", "Classic Bike", "E-Bike"]
-    # Disabled wins over reserved — no reserved bucket on station A.
     assert "reserved_count" not in a
     assert b is not None
     assert b["reserved_count"] == 1
@@ -474,23 +440,16 @@ async def test_battery_fetch_tracks_disabled_bikes(hass: HomeAssistant) -> None:
 async def test_battery_fetch_tracks_reserved_bikes(hass: HomeAssistant) -> None:
     """Reserved (and not disabled) bikes surface as reserved_count + types."""
     client = SharedSystemClient(hass, "nextbike_wr")
-    client._vehicle_types = {  # type: ignore[assignment]
-        "183": {"vehicle_type_id": "183", "propulsion_type": "electric_assist", "name": "E-Bike"},
-        "192": {"vehicle_type_id": "192", "propulsion_type": "human", "name": "Classic Bike"},
-    }
+    _seed_vehicle_types(client)
 
     async def fake_fetch(feed: str) -> dict[str, Any]:
         return {
             "data": {
                 "bikes": [
-                    # Station A: one reserved classic + one reserved e-bike
                     {"station_id": "A", "vehicle_type_id": "192", "is_reserved": True, "is_disabled": False},
                     {"station_id": "A", "vehicle_type_id": "183", "is_reserved": True, "is_disabled": False},
-                    # Station A: a reserved AND disabled bike is skipped
                     {"station_id": "A", "vehicle_type_id": "192", "is_reserved": True, "is_disabled": True},
-                    # Station B: just an available bike (not reserved)
                     {"station_id": "B", "vehicle_type_id": "192", "is_reserved": False, "is_disabled": False},
-                    # Reserved floating bike (no station_id) — skipped
                     {"vehicle_type_id": "183", "is_reserved": True, "is_disabled": False},
                 ]
             }
@@ -504,18 +463,14 @@ async def test_battery_fetch_tracks_reserved_bikes(hass: HomeAssistant) -> None:
     assert a is not None
     assert a["reserved_count"] == 2
     assert sorted(a["reserved_types"]) == ["Classic Bike", "E-Bike"]
-    # Reserved-only stations carry no battery keys.
     assert "samples" not in a
-    # Station with no reserved and no battery samples isn't recorded.
     assert b is None
 
 
 async def test_battery_fetch_respects_ttl(hass: HomeAssistant) -> None:
     """Within the 20-min TTL window, a second call doesn't re-fetch."""
     client = SharedSystemClient(hass, "nextbike_wr")
-    client._vehicle_types = {  # type: ignore[assignment]
-        "183": {"vehicle_type_id": "183", "propulsion_type": "electric_assist", "name": "E-Bike"},
-    }
+    _seed_vehicle_types(client)
     calls = 0
 
     async def fake_fetch(feed: str) -> dict[str, Any]:
@@ -539,9 +494,7 @@ async def test_battery_fetch_respects_ttl(hass: HomeAssistant) -> None:
 async def test_battery_fetch_backoff_on_upstream_failure(hass: HomeAssistant) -> None:
     """A failed free_bike_status fetch still arms the TTL — no hammering."""
     client = SharedSystemClient(hass, "nextbike_wr")
-    client._vehicle_types = {  # type: ignore[assignment]
-        "183": {"vehicle_type_id": "183", "propulsion_type": "electric_assist", "name": "E-Bike"},
-    }
+    _seed_vehicle_types(client)
     calls = 0
 
     async def fake_fetch(feed: str) -> dict[str, Any]:
@@ -559,16 +512,12 @@ async def test_battery_fetch_backoff_on_upstream_failure(hass: HomeAssistant) ->
 async def test_battery_fetch_backoff_on_empty_result(hass: HomeAssistant) -> None:
     """Successful but empty fetch (no e-bikes/reserved/disabled) honours TTL."""
     client = SharedSystemClient(hass, "nextbike_wr")
-    client._vehicle_types = {  # type: ignore[assignment]
-        "192": {"vehicle_type_id": "192", "propulsion_type": "human", "name": "Classic Bike"},
-    }
+    _seed_vehicle_types(client)
     calls = 0
 
     async def fake_fetch(feed: str) -> dict[str, Any]:
         nonlocal calls
         calls += 1
-        # All bikes lack station_id / battery / reserved / disabled —
-        # aggregates dict ends up empty.
         return {"data": {"bikes": [{"vehicle_type_id": "192"}]}}
 
     with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
@@ -606,24 +555,27 @@ async def test_fetch_json_uses_conditional_get(hass: HomeAssistant) -> None:
             return ""
 
     class _FakeSession:
-        def get(self, *args: Any, **kwargs: Any) -> _CtxResp:
+        def get(self, *args: Any, **kwargs: Any) -> CtxResp:
             seen_headers.append(dict(kwargs.get("headers") or {}))
             if response_status["status"] == 304:
-                return _CtxResp(_NotModifiedResp())
-            return _CtxResp(_FirstResp())
+                return CtxResp(_NotModifiedResp())
+            return CtxResp(_FirstResp())
 
-    client._session = _FakeSession()  # type: ignore[assignment]
+    _seed_session(client, _FakeSession())
 
     first = await client._fetch_json("station_information")
     assert first["data"]["stations"][0]["station_id"] == "1"
-    # First request: no conditional header (no prior Last-Modified).
     assert "If-Modified-Since" not in seen_headers[0]
 
     response_status["status"] = 304
     second = await client._fetch_json("station_information")
-    # Second request: conditional header sent, cached body returned verbatim.
     assert seen_headers[1]["If-Modified-Since"] == "Wed, 21 Apr 2026 12:00:00 GMT"
     assert second is first
+
+
+# ---------------------------------------------------------------------
+# Coordinator + battery merge
+# ---------------------------------------------------------------------
 
 
 async def test_coordinator_skips_battery_when_opt_off(hass: HomeAssistant) -> None:
@@ -631,14 +583,8 @@ async def test_coordinator_skips_battery_when_opt_off(hass: HomeAssistant) -> No
     entry = _make_entry()
     entry.add_to_hass(hass)
 
-    fake = _FakeClient()
+    fake = FakeClient()
     fake.set_stations({"68577989": _station_snapshot()})
-    fake.battery_calls = 0  # type: ignore[attr-defined]
-
-    async def mock_fetch_battery(*args: Any, **kwargs: Any) -> None:
-        fake.battery_calls += 1  # type: ignore[attr-defined]
-
-    fake.async_fetch_battery = mock_fetch_battery  # type: ignore[attr-defined]
 
     with patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
@@ -647,7 +593,7 @@ async def test_coordinator_skips_battery_when_opt_off(hass: HomeAssistant) -> No
         coordinator = NextbikeStationCoordinator(hass, entry)
         await coordinator.async_refresh()
 
-    assert fake.battery_calls == 0  # type: ignore[attr-defined]
+    assert fake.battery_calls == 0
 
 
 async def test_coordinator_merges_battery_when_opt_on(hass: HomeAssistant) -> None:
@@ -657,12 +603,6 @@ async def test_coordinator_merges_battery_when_opt_on(hass: HomeAssistant) -> No
     entry = _make_entry({CONF_TRACK_E_BIKE_RANGE: True})
     entry.add_to_hass(hass)
 
-    fake = _FakeClient()
-    fake.set_stations({"68577989": _station_snapshot()})
-
-    async def mock_fetch_battery(*args: Any, **kwargs: Any) -> None:
-        return None
-
     per_bike_list = [
         {"pct": 95.0, "type": "E-Bike"},
         {"pct": 76.3, "type": "E-Bike"},
@@ -670,23 +610,20 @@ async def test_coordinator_merges_battery_when_opt_on(hass: HomeAssistant) -> No
         {"pct": 40.0, "type": "E-Bike"},
     ]
 
-    def fake_battery_stats(station_id: str) -> dict[str, Any] | None:
-        if station_id == "68577989":
-            return {
+    fake = FakeClient()
+    fake.set_stations({"68577989": _station_snapshot()})
+    fake.set_battery(
+        {
+            "68577989": {
                 "avg_pct": 76.3,
                 "min_pct": 40.0,
                 "max_pct": 95.0,
                 "samples": 4,
                 "per_bike": per_bike_list,
             }
-        return None
-
-    def fake_vehicle_type_names() -> dict[str, str]:
-        return {"183": "E-Bike", "192": "Classic Bike"}
-
-    fake.async_fetch_battery = mock_fetch_battery  # type: ignore[attr-defined]
-    fake.battery_stats = fake_battery_stats  # type: ignore[attr-defined]
-    fake.vehicle_type_names = fake_vehicle_type_names  # type: ignore[attr-defined]
+        },
+        type_names={"183": "E-Bike", "192": "Classic Bike"},
+    )
 
     with patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
@@ -702,6 +639,7 @@ async def test_coordinator_merges_battery_when_opt_on(hass: HomeAssistant) -> No
     assert coordinator.data["_e_bike_range_samples"] == 4
     assert coordinator.data["_e_bike_battery_list"] == per_bike_list
     assert coordinator.data["_vehicle_type_names"] == {"183": "E-Bike", "192": "Classic Bike"}
+    assert fake.battery_calls == 1
 
 
 async def test_coordinator_merges_reserved_when_opt_on(hass: HomeAssistant) -> None:
@@ -711,28 +649,17 @@ async def test_coordinator_merges_reserved_when_opt_on(hass: HomeAssistant) -> N
     entry = _make_entry({CONF_TRACK_E_BIKE_RANGE: True})
     entry.add_to_hass(hass)
 
-    fake = _FakeClient()
+    fake = FakeClient()
     fake.set_stations({"68577989": _station_snapshot()})
-
-    async def mock_fetch_battery(*args: Any, **kwargs: Any) -> None:
-        return None
-
-    def fake_battery_stats(station_id: str) -> dict[str, Any] | None:
-        if station_id == "68577989":
-            # A station that has reserved bikes but no battery samples —
-            # the merge path must still surface the reserved keys.
-            return {
+    fake.set_battery(
+        {
+            "68577989": {
                 "reserved_count": 2,
                 "reserved_types": ["Classic Bike", "E-Bike"],
             }
-        return None
-
-    def fake_vehicle_type_names() -> dict[str, str]:
-        return {"183": "E-Bike", "192": "Classic Bike"}
-
-    fake.async_fetch_battery = mock_fetch_battery  # type: ignore[attr-defined]
-    fake.battery_stats = fake_battery_stats  # type: ignore[attr-defined]
-    fake.vehicle_type_names = fake_vehicle_type_names  # type: ignore[attr-defined]
+        },
+        type_names={"183": "E-Bike", "192": "Classic Bike"},
+    )
 
     with patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
@@ -744,7 +671,6 @@ async def test_coordinator_merges_reserved_when_opt_on(hass: HomeAssistant) -> N
     assert coordinator.data is not None
     assert coordinator.data["_bikes_reserved"] == 2
     assert coordinator.data["_bikes_reserved_types"] == ["Classic Bike", "E-Bike"]
-    # Battery keys are absent when only reserved info was reported.
     assert "_e_bike_avg_battery_pct" not in coordinator.data
 
 
@@ -783,7 +709,35 @@ async def test_shared_client_ttl_collapses_fetches(hass: HomeAssistant) -> None:
         await client.async_fetch()
         first_call_count = len(calls)
         await client.async_fetch()  # within TTL → should not hit network again
-    # Exactly three fetches on the first call (vehicle_types, info, status)
-    # and zero on the second call.
     assert first_call_count == 3
     assert len(calls) == 3
+
+
+async def test_async_fetch_skips_status_orphans(hass: HomeAssistant) -> None:
+    """A status entry whose station_id is absent from station_information is dropped."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+
+    async def fake_fetch(feed: str) -> dict[str, Any]:
+        if feed == "vehicle_types":
+            return {"data": {"vehicle_types": []}}
+        if feed == "station_information":
+            return {"data": {"stations": [{"station_id": "1", "name": "One"}]}}
+        if feed == "station_status":
+            return {
+                "data": {
+                    "stations": [
+                        {"station_id": "1", "num_bikes_available": 3},
+                        # Orphan: status references a station_id that
+                        # never appeared in station_information. Must
+                        # be filtered, not raised.
+                        {"station_id": "ghost", "num_bikes_available": 99},
+                    ]
+                }
+            }
+        return {"data": {}}
+
+    with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
+        await client.async_fetch()
+
+    assert client.station("1") is not None
+    assert client.station("ghost") is None
