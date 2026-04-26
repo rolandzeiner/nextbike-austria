@@ -129,6 +129,8 @@ def _station_label(station: dict[str, Any]) -> str:
 class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle the multi-step config flow for Nextbike Austria."""
 
+    # Bump + add async_migrate_entry when entry.data shape changes.
+    # Tracks the config-entry schema, NOT the integration release version.
     VERSION = 1
 
     def __init__(self) -> None:
