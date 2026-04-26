@@ -77,7 +77,11 @@ async def _fetch_stations(hass: HomeAssistant, system_id: str) -> list[dict[str,
     try:
         async with session.get(
             url,
-            headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+            headers={
+                "User-Agent": USER_AGENT,
+                "Accept": "application/json",
+                "Accept-Encoding": "gzip",
+            },
             timeout=_HTTP_TIMEOUT,
         ) as resp:
             resp.raise_for_status()
