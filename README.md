@@ -186,7 +186,7 @@ card:
 - **Niederösterreich dock data is incomplete.** The `nextbike_la` system publishes `capacity` for only 10 out of 239 stations, and permanently reports `num_docks_available: 0` for the rest — regardless of whether the station is empty or full. The integration detects this (missing `capacity` field) and reports the `Docks available` sensor as **`unknown`** rather than a misleading `0`. Wien, Innsbruck, Tirol, Linz, and Klagenfurt publish dock counts for nearly every station.
 - **Station IDs are stable but `bike_id`s rotate** (privacy rotation by nextbike). Don't write automations keyed on individual bike identifiers — they won't persist across ticks.
 - **Virtual stations** (`is_virtual_station: true`) are geofences without physical docks. The `Docks available` sensor reads 0 on these by design; use the `Bikes available` sensor instead.
-- **`num_bikes_available` can exceed `capacity`** when bikes are crammed at full stations (observed at Hoher Markt with 29/25). Don't template on `capacity - bikes` as a synonym for "docks free".
+- **`num_bikes_available` can exceed `capacity`** when bikes are crammed at full stations. Don't template on `capacity - bikes` as a synonym for "docks free".
 - **Per-bike detail is opt-in.** `free_bike_status.json` (battery via `current_fuel_percent`, plus `is_reserved` / `is_disabled` flags) is skipped entirely unless *Track e-bike battery state* is enabled — bandwidth profile in [Data Updates](#data-updates).
 - **Battery coverage is sparse upstream.** Only ~8.6% of e-bikes report a `current_fuel_percent` sample — a station may opt in and still see no battery data until at least one of its bikes reports.
 
