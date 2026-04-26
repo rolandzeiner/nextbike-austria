@@ -48,7 +48,7 @@
         },
         "data_description": {
           "scan_interval": "Abfragezyklus pro Station (mindestens 60 Sek.).",
-          "track_e_bike_range": "Lädt zusätzlich alle 30 Minuten einen Feed — ~75 KB übertragen (gzip-komprimiert), also ca. 3,5 MB pro Tag / 105 MB pro Monat pro aktiviertem System. Bei begrenzten Datenvolumen besser deaktiviert lassen."
+          "track_e_bike_range": "Lädt zusätzlich alle 20 Minuten einen Feed — ~75 KB übertragen (gzip-komprimiert), also ca. 5,3 MB pro Tag / 160 MB pro Monat pro aktiviertem System. Bei begrenzten Datenvolumen besser deaktiviert lassen."
         }
       }
     }

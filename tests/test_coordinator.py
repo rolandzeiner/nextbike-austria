@@ -511,7 +511,7 @@ async def test_battery_fetch_tracks_reserved_bikes(hass: HomeAssistant) -> None:
 
 
 async def test_battery_fetch_respects_ttl(hass: HomeAssistant) -> None:
-    """Within the 30-min TTL window, a second call doesn't re-fetch."""
+    """Within the 20-min TTL window, a second call doesn't re-fetch."""
     client = SharedSystemClient(hass, "nextbike_wr")
     client._vehicle_types = {  # type: ignore[assignment]
         "183": {"vehicle_type_id": "183", "propulsion_type": "electric_assist", "name": "E-Bike"},
