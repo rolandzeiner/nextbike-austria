@@ -126,7 +126,7 @@ class _BikesAvailableSensor(_BaseStationSensor):
         E-bike battery stats are only present when the options flow has
         ``track_e_bike_range`` enabled AND upstream reported
         ``current_range_meters`` for at least one e-bike at this station
-        in the last ~30 minutes. Keys are omitted otherwise rather than
+        in the last ~20 minutes. Keys are omitted otherwise rather than
         published as ``None`` — templates can check with
         ``if 'e_bike_avg_battery_pct' in states.xxx.attributes``.
         """

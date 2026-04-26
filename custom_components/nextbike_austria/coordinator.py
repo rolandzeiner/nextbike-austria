@@ -144,7 +144,7 @@ class SharedSystemClient:
         ``free_bike_status.json`` is ~1.2 MB raw for the biggest system
         (Wien) but only ~75 KB on the wire under ``Accept-Encoding: gzip``
         (~17× compression). Battery state doesn't change by the second
-        either, so polling every 30 minutes (``BATTERY_FETCH_TTL_SECONDS``)
+        either, so polling every 20 minutes (``BATTERY_FETCH_TTL_SECONDS``)
         keeps bandwidth modest while still catching the kind of change a
         dashboard cares about.
         Coverage is low on nextbike's side — currently ~8% of e-bikes
@@ -419,7 +419,7 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._client = _get_shared_client(hass, self._system_id)
         self._issue_raised: bool = False
         # Opt-in per entry. When enabled, the coordinator also triggers
-        # the shared client's separate battery-cache refresh (30 min TTL)
+        # the shared client's separate battery-cache refresh (20 min TTL)
         # on each station poll and exposes per-station battery aggregates.
         self._track_battery: bool = bool(data.get(CONF_TRACK_E_BIKE_RANGE, False))
 
@@ -462,7 +462,7 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 translation_placeholders=err.placeholders,
             ) from err
 
-        # Opt-in: pull per-bike battery state on the separate 30-min cadence.
+        # Opt-in: pull per-bike battery state on the separate 20-min cadence.
         # Errors here are swallowed inside `async_fetch_battery` — missing
         # battery data is an attribute absence, not an integration failure.
         if self._track_battery:
