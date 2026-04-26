@@ -17,7 +17,10 @@ from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.nextbike_austria import _async_register_card
+from custom_components.nextbike_austria import (
+    _async_register_card,
+    _websocket_card_version,
+)
 from custom_components.nextbike_austria.const import (
     CARD_URL,
     CARD_VERSION,
@@ -74,27 +77,22 @@ def _patch_client() -> Any:
 # ---------------------------------------------------------------------
 
 
-async def test_websocket_card_version_returns_const(
-    hass: HomeAssistant, hass_ws_client: Any
-) -> None:
+async def test_websocket_card_version_returns_const(hass: HomeAssistant) -> None:
     """The WebSocket command echoes the bundled card version.
 
-    Without this assertion, a typo in either ``send_result`` or the
-    payload key would break the frontend's drift detector silently —
-    the reload-banner loop would re-emerge. We exercise the real
-    WebSocket dispatch (not the bare handler) because the public
-    handler is wrapped by ``websocket_api.async_response``.
+    Calls the underlying coroutine via ``__wrapped__`` (set by
+    ``functools.wraps`` inside ``websocket_api.async_response``) so we
+    avoid spinning up the http + websocket_api stack in a unit test —
+    that stack registers the ``_run_safe_shutdown_loop`` daemon thread
+    that p-h-c-c's ``verify_cleanup`` fixture treats as a leak on some
+    versions, turning a passing test into a teardown ERROR on CI.
     """
-    from homeassistant.setup import async_setup_component
+    connection = MagicMock()
+    msg = {"id": 42, "type": "nextbike_austria/card_version"}
 
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
+    await _websocket_card_version.__wrapped__(hass, connection, msg)
 
-    client = await hass_ws_client(hass)
-    await client.send_json({"id": 1, "type": "nextbike_austria/card_version"})
-    response = await client.receive_json()
-    assert response["success"] is True
-    assert response["result"] == {"version": CARD_VERSION}
+    connection.send_result.assert_called_once_with(42, {"version": CARD_VERSION})
 
 
 # ---------------------------------------------------------------------
