@@ -1,0 +1,39 @@
+# serializer version: 1
+# name: test_diagnostics_snapshot
+  dict({
+    'attribution': 'Data: nextbike GmbH, CC0-1.0',
+    'coordinator': dict({
+      'last_update_success': True,
+      'station_id': '68577989',
+      'station_snapshot': dict({
+        'capacity': 25,
+        'is_installed': True,
+        'is_renting': True,
+        'is_returning': True,
+        'last_reported': 1776780838,
+        'lat': '**REDACTED**',
+        'lon': '**REDACTED**',
+        'name': 'Hoher Markt',
+        'num_bikes_available': 29,
+        'num_docks_available': 0,
+        'station_id': '68577989',
+        'vehicle_types_available': list([
+        ]),
+      }),
+      'system_id': 'nextbike_wr',
+      'update_interval': '0:01:00',
+    }),
+    'entry': dict({
+      'data': dict({
+        'scan_interval': 60,
+        'station_id': '68577989',
+        'station_name': 'Hoher Markt',
+        'system_id': 'nextbike_wr',
+      }),
+      'options': dict({
+      }),
+      'title': 'Hoher Markt',
+      'version': 1,
+    }),
+  })
+# ---

@@ -1,6 +1,8 @@
 {
   "no_entities_picked": "Keine Station ausgewählt",
   "no_entities_available": "Keine Nextbike-Sensoren gefunden",
+  "no_entities_unavailable": "Ausgewählte Station ist gerade nicht verfügbar",
+  "rack_summary": "Radständer: {available} von {capacity} Rädern verfügbar",
   "offline": "offline",
   "no_rental": "keine Ausleihe",
   "no_return": "keine Rückgabe",
@@ -44,6 +46,7 @@
     "show_flags": "Statussymbole anzeigen",
     "show_timestamp": "Zeitstempel anzeigen",
     "show_rent_button": "App-Mietlink anzeigen",
+    "hide_header": "Kopfzeile ausblenden",
     "hide_attribution": "Datenquelle ausblenden",
     "no_sensors_available": "Keine Nextbike-Sensoren verfügbar. Erst eine Station über Einstellungen → Geräte & Dienste hinzufügen."
   }

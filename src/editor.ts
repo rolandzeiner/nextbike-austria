@@ -21,6 +21,7 @@ type BoolField =
   | "show_flags"
   | "show_timestamp"
   | "show_rent_button"
+  | "hide_header"
   | "hide_attribution";
 
 @customElement("nextbike-austria-card-editor")
@@ -123,6 +124,7 @@ export class NextbikeAustriaCardEditor extends LitElement {
               </button>
             </div>
           </div>
+          ${this._renderHideToggle("hide_header")}
           ${this._renderToggle("show_rack")}
           ${rackOn
             ? html`
@@ -137,7 +139,7 @@ export class NextbikeAustriaCardEditor extends LitElement {
           ${this._renderToggle("show_flags")}
           ${this._renderToggle("show_timestamp")}
           ${this._renderToggle("show_rent_button")}
-          ${this._renderHideAttribution()}
+          ${this._renderHideToggle("hide_attribution")}
         </div>
       </div>
     `;
@@ -163,7 +165,9 @@ export class NextbikeAustriaCardEditor extends LitElement {
     `;
   }
 
-  private _renderToggle(field: Exclude<BoolField, "hide_attribution">): TemplateResult {
+  private _renderToggle(
+    field: Exclude<BoolField, "hide_header" | "hide_attribution">,
+  ): TemplateResult {
     const id = `nb-toggle-${field}`;
     const checked = (this._config[field] as boolean | undefined) !== false;
     return html`
@@ -179,22 +183,21 @@ export class NextbikeAustriaCardEditor extends LitElement {
     `;
   }
 
-  // hide_attribution is the one "inverted" toggle — default false, on = hide.
-  private _renderHideAttribution(): TemplateResult {
-    const on = this._config.hide_attribution === true;
+  // Inverted toggles (hide_*) — default false, on = hide. Generic so
+  // any "hide_X" field follows the same wiring without copy-paste.
+  private _renderHideToggle(
+    field: "hide_header" | "hide_attribution",
+  ): TemplateResult {
+    const on = this._config[field] === true;
+    const id = `nb-toggle-${field}`;
     return html`
       <div class="toggle-row">
-        <label for="nb-toggle-hide_attribution">
-          ${this._et("hide_attribution")}
-        </label>
+        <label for=${id}>${this._et(field)}</label>
         <ha-switch
-          id="nb-toggle-hide_attribution"
+          id=${id}
           ?checked=${on}
           @change=${(e: Event) =>
-            this._setBool(
-              "hide_attribution",
-              (e.target as HTMLInputElement).checked,
-            )}
+            this._setBool(field, (e.target as HTMLInputElement).checked)}
         ></ha-switch>
       </div>
     `;

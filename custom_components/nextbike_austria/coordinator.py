@@ -17,6 +17,7 @@ therefore exempt and there is no 401/403 branch here.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 from datetime import timedelta
@@ -29,6 +30,7 @@ from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
@@ -97,6 +99,14 @@ class SharedSystemClient:
         # "max_pct": float, "samples": int}}.
         self._battery_by_station: dict[str, dict[str, Any]] = {}
         self._battery_last_fetch: float = 0.0
+        # Per-feed `Last-Modified` strings, sent back as `If-Modified-Since`
+        # on the next request. nextbike honours conditional GETs and
+        # answers 304 when nothing changed — saves the body transfer
+        # entirely on quiet feeds (vehicle_types in particular).
+        self._last_modified: dict[str, str] = {}
+        # Last successfully-parsed JSON body per feed. We hand the cached
+        # copy back when the upstream returns 304 Not Modified.
+        self._payload_cache: dict[str, dict[str, Any]] = {}
 
     @property
     def system_id(self) -> str:
@@ -132,10 +142,12 @@ class SharedSystemClient:
     async def async_fetch_battery(self, *, force: bool = False) -> None:
         """Refresh the per-bike battery cache, respecting a longer TTL.
 
-        ``free_bike_status.json`` is ~1.3 MB for the biggest system (Wien)
-        and battery state doesn't change by the second — polling every
-        30 minutes (``BATTERY_FETCH_TTL_SECONDS``) keeps bandwidth modest
-        while still catching the kind of change a dashboard cares about.
+        ``free_bike_status.json`` is ~1.2 MB raw for the biggest system
+        (Wien) but only ~75 KB on the wire under ``Accept-Encoding: gzip``
+        (~17× compression). Battery state doesn't change by the second
+        either, so polling every 20 minutes (``BATTERY_FETCH_TTL_SECONDS``)
+        keeps bandwidth modest while still catching the kind of change a
+        dashboard cares about.
         Coverage is low on nextbike's side — currently ~8% of e-bikes
         report ``current_range_meters`` at all — so many stations may end
         up with zero battery samples.
@@ -144,32 +156,32 @@ class SharedSystemClient:
             now = time.monotonic()
             if (
                 not force
-                and self._battery_by_station
+                and self._battery_last_fetch > 0.0
                 and (now - self._battery_last_fetch) < BATTERY_FETCH_TTL_SECONDS
             ):
                 return
 
-            # vehicle_types tells us each type's max_range_meters. We
-            # need it to convert current_range → battery %. If the
-            # catalogue hasn't loaded yet, we can't compute anything.
+            # vehicle_types provides the friendly type name used in
+            # tooltips. Battery % comes straight from
+            # `current_fuel_percent`, so a missing catalogue is no
+            # longer a hard blocker — try to load it once, but fall
+            # back to a generic "Bike" label if it's unavailable.
             if not self._vehicle_types:
                 await self._refresh_vehicle_types()
-            if not self._vehicle_types:
-                _LOGGER.debug(
-                    "Skipping battery fetch: vehicle_types still unavailable"
-                )
-                return
 
             try:
                 payload = await self._fetch_json("free_bike_status")
             except GBFSError as err:
                 # free_bike_status being unavailable isn't fatal — station
-                # data is still usable. Log and keep the previous cache.
+                # data is still usable. Log, keep the previous cache, and
+                # bump the timestamp so we honour the TTL backoff instead
+                # of hammering a failing upstream every coordinator tick.
                 _LOGGER.debug(
                     "free_bike_status feed unavailable for %s: %s",
                     self._system_id,
                     err.translation_key,
                 )
+                self._battery_last_fetch = now
                 return
 
             bikes = payload.get("data", {}).get("bikes") or []
@@ -249,7 +261,11 @@ class SharedSystemClient:
         """Refresh the cached snapshot, respecting the TTL window."""
         async with self._lock:
             now = time.monotonic()
-            if not force and self._stations_by_id and (now - self._last_fetch) < _GBFS_TTL_SECONDS:
+            if (
+                not force
+                and self._last_fetch > 0.0
+                and (now - self._last_fetch) < _GBFS_TTL_SECONDS
+            ):
                 return
 
             # vehicle_types rarely changes; fetch once and keep unless empty.
@@ -301,16 +317,41 @@ class SharedSystemClient:
     async def _fetch_json(self, feed: str) -> dict[str, Any]:
         """Fetch one sub-feed and return the parsed JSON body.
 
+        Sends ``If-Modified-Since`` based on the last seen ``Last-Modified``
+        for this feed; on a 304 the cached body is returned without
+        re-parsing.
+
         GBFS bodies from nextbike occasionally include stray control
         characters (e.g. raw CRLF in vehicle-type descriptions). We parse
         with ``strict=False`` to survive those — the alternative is the
         whole feed being unusable for a single escaping bug.
         """
         url = gbfs_feed_url(self._system_id, feed)
-        headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+        headers = {
+            "User-Agent": USER_AGENT,
+            "Accept": "application/json",
+            # GBFS feeds compress dramatically (station_status: 65 KB → 3 KB,
+            # station_information: 84 KB → 11 KB). aiohttp decompresses
+            # transparently; without this header the server falls back to
+            # identity and we pay the full wire cost on every tick.
+            "Accept-Encoding": "gzip",
+        }
+        cached = self._payload_cache.get(feed)
+        if (last_mod := self._last_modified.get(feed)) is not None and cached is not None:
+            headers["If-Modified-Since"] = last_mod
+        status: int | None = None
+        text: str | None = None
+        new_last_mod: str | None = None
         try:
-            resp = await self._session.get(url, headers=headers, timeout=_HTTP_TIMEOUT)
-            resp.raise_for_status()
+            async with self._session.get(
+                url, headers=headers, timeout=_HTTP_TIMEOUT
+            ) as resp:
+                status = resp.status
+                if status == 304 and cached is not None:
+                    return cached
+                resp.raise_for_status()
+                text = await resp.text()
+                new_last_mod = resp.headers.get("Last-Modified")
         except asyncio.TimeoutError as err:
             raise GBFSError("api_timeout", seconds="15") from err
         except aiohttp.ClientResponseError as err:
@@ -318,27 +359,29 @@ class SharedSystemClient:
                 "api_http_error", status=str(err.status), reason=err.message or ""
             ) from err
         except aiohttp.ClientError as err:
+            # Covers ClientPayloadError / ClientConnectionError raised
+            # mid-body as well as connect-time failures.
             raise GBFSError(
                 "api_connection_error",
                 error_type=type(err).__name__,
                 error=str(err),
             ) from err
 
-        import json as _json  # local — json is stdlib and aiohttp's built-in is strict
-
         try:
-            text = await resp.text()
-            parsed = _json.loads(text, strict=False)
+            parsed = json.loads(text, strict=False)
         except ValueError as err:
             raise GBFSError(
-                "api_invalid_response", status=str(resp.status), error=str(err)
+                "api_invalid_response", status=str(status), error=str(err)
             ) from err
         if not isinstance(parsed, dict):
             raise GBFSError(
                 "api_invalid_response",
-                status=str(resp.status),
+                status=str(status),
                 error=f"expected dict, got {type(parsed).__name__}",
             )
+        if new_last_mod:
+            self._last_modified[feed] = new_last_mod
+        self._payload_cache[feed] = parsed
         return parsed
 
 
@@ -377,7 +420,7 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._client = _get_shared_client(hass, self._system_id)
         self._issue_raised: bool = False
         # Opt-in per entry. When enabled, the coordinator also triggers
-        # the shared client's separate battery-cache refresh (30 min TTL)
+        # the shared client's separate battery-cache refresh (20 min TTL)
         # on each station poll and exposes per-station battery aggregates.
         self._track_battery: bool = bool(data.get(CONF_TRACK_E_BIKE_RANGE, False))
 
@@ -388,6 +431,15 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             config_entry=entry,
             name=f"{DOMAIN}_{self._station_id}",
             update_interval=timedelta(seconds=scan),
+            # Absorb request storms (options-flow save, manual reload,
+            # dashboard edit-mode flip) so the GBFS feed isn't pulled
+            # multiple times in quick succession during routine UI activity.
+            request_refresh_debouncer=Debouncer(
+                hass,
+                _LOGGER,
+                cooldown=15,
+                immediate=False,
+            ),
         )
 
     @property
@@ -420,7 +472,7 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 translation_placeholders=err.placeholders,
             ) from err
 
-        # Opt-in: pull per-bike battery state on the separate 30-min cadence.
+        # Opt-in: pull per-bike battery state on the separate 20-min cadence.
         # Errors here are swallowed inside `async_fetch_battery` — missing
         # battery data is an attribute absence, not an integration failure.
         if self._track_battery:
