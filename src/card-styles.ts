@@ -9,17 +9,35 @@ export const cardStyles: CSSResultGroup = css`
 
        Font sizes are in rem (root-relative, 16px baseline) so the user's
        browser/OS text-size preference reaches the card; padding/margin/gap
-       stay in px aligned to HA's 4-px spacing scale. */
+       stay in px aligned to HA's 4-px spacing scale.
+
+       color-scheme enables light-dark() and steers forced-colors palette
+       selection (WCAG 1.4.11). HA's active theme drives the resolution. */
+    color-scheme: light dark;
     display: block;
     container-type: inline-size;
     container-name: nbcard;
+
+    /* Brand accent — domain-specific, no HA equivalent. */
     --nb-accent: var(--primary-color);
-    --nb-radius-sm: 6px;
-    --nb-radius-md: 10px;
-    --nb-radius-lg: var(--ha-card-border-radius, 12px);
-    --nb-pad-x: 16px;
-    --nb-pad-y: 14px;
-    --nb-row-gap: 12px;
+
+    /* Semantic state tokens layered over HA's official semantic palette
+       so theme authors can recolour the whole portfolio in one place;
+       hard-coded fallbacks for older HA versions. */
+    --nb-rt:      var(--ha-color-success, #43a047);
+    --nb-warning: var(--ha-color-warning, #ffa000);
+    --nb-error:   var(--ha-color-error,   #db4437);
+    --nb-info:    var(--ha-color-info,    #1565c0);
+
+    /* Spacing / radius / sizing — layered over the HA Design System
+       so the card moves with HA when tokens evolve. Hard-coded values
+       are the fallback for older HA versions. */
+    --nb-radius-sm: var(--ha-radius-sm, 6px);
+    --nb-radius-md: var(--ha-radius-md, 10px);
+    --nb-radius-lg: var(--ha-card-border-radius, var(--ha-radius-lg, 12px));
+    --nb-pad-x:     var(--ha-spacing-4, 16px);
+    --nb-pad-y:     var(--ha-spacing-3, 14px);
+    --nb-row-gap:   var(--ha-spacing-3, 12px);
     --nb-slot-size: 18px;
     --nb-slot-height: 22px;
     --nb-slot-radius: 4px;
@@ -42,7 +60,7 @@ export const cardStyles: CSSResultGroup = css`
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    background: var(--warning-color, #ffa000);
+    background: var(--nb-warning);
     color: #fff;
     padding: 10px 14px;
     margin: calc(var(--nb-pad-y) * -1) calc(var(--nb-pad-x) * -1) 0;
@@ -52,7 +70,7 @@ export const cardStyles: CSSResultGroup = css`
   }
   .banner button {
     background: #fff;
-    color: var(--warning-color, #ffa000);
+    color: var(--nb-warning);
     border: none;
     border-radius: 999px;
     padding: 6px 14px;
@@ -97,8 +115,8 @@ export const cardStyles: CSSResultGroup = css`
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    transition: color 0.18s ease, box-shadow 0.18s ease,
-      background-color 0.18s ease;
+    transition: color var(--ha-transition-duration-fast, 160ms) var(--ha-transition-easing-standard, ease), box-shadow var(--ha-transition-duration-fast, 160ms) var(--ha-transition-easing-standard, ease),
+      background-color var(--ha-transition-duration-fast, 160ms) var(--ha-transition-easing-standard, ease);
   }
   .tab:hover {
     color: var(--primary-text-color);
@@ -109,7 +127,7 @@ export const cardStyles: CSSResultGroup = css`
        Survives any single-channel deficit (low vision, protanopia,
        grayscale). */
     color: var(--primary-color);
-    font-weight: 700;
+    font-weight: var(--ha-font-weight-bold, 600);
     box-shadow: inset 0 -2px 0 var(--primary-color);
   }
 
@@ -155,9 +173,11 @@ export const cardStyles: CSSResultGroup = css`
   }
   .title {
     /* <h2> override: nuke UA heading margins + set a strong but
-       restrained card-header type size. Semantics only. */
+       restrained card-header type size. Semantics only. Body tier
+       (--ha-font-size-m ≈ 0.9375rem) keeps the heading aligned with
+       the linz + wiener cards on a stacked dashboard. */
     margin: 0;
-    font-size: 1rem;
+    font-size: var(--ha-font-size-m, 0.9375rem);
     font-weight: 600;
     line-height: 1.25;
     color: var(--primary-text-color);
@@ -188,7 +208,7 @@ export const cardStyles: CSSResultGroup = css`
     border-radius: 50%;
     color: var(--secondary-text-color);
     text-decoration: none;
-    transition: background-color 0.18s ease, color 0.18s ease;
+    transition: background-color var(--ha-transition-duration-fast, 160ms) var(--ha-transition-easing-standard, ease), color var(--ha-transition-duration-fast, 160ms) var(--ha-transition-easing-standard, ease);
     --mdc-icon-size: 20px;
   }
   .icon-action:hover {
@@ -218,7 +238,7 @@ export const cardStyles: CSSResultGroup = css`
   }
   .metric-num {
     font-size: 2.25rem;
-    font-weight: 700;
+    font-weight: var(--ha-font-weight-bold, 600);
     color: var(--primary-text-color);
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.5px;
@@ -464,12 +484,12 @@ export const cardStyles: CSSResultGroup = css`
     --mdc-icon-size: 14px;
   }
   .flag.warn {
-    background: color-mix(in srgb, var(--warning-color, #ffa000) 16%, transparent);
-    color: var(--warning-color, #ffa000);
+    background: color-mix(in srgb, var(--nb-warning) 16%, transparent);
+    color: var(--nb-warning);
   }
   .flag.err {
-    background: color-mix(in srgb, var(--error-color, #db4437) 16%, transparent);
-    color: var(--error-color, #db4437);
+    background: color-mix(in srgb, var(--nb-error) 16%, transparent);
+    color: var(--nb-error);
   }
 
   /* ── Action footer ──────────────────────────────────────────────── */
@@ -498,7 +518,7 @@ export const cardStyles: CSSResultGroup = css`
     font-size: 0.75rem;
     font-weight: 600;
     text-decoration: none;
-    transition: filter 0.18s ease, transform 0.18s ease;
+    transition: filter var(--ha-transition-duration-fast, 160ms) var(--ha-transition-easing-standard, ease), transform var(--ha-transition-duration-fast, 160ms) var(--ha-transition-easing-standard, ease);
     box-shadow: 0 1px 2px color-mix(in srgb, #000 12%, transparent);
   }
   .btn-primary:hover {
