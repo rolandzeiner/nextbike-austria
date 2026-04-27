@@ -124,6 +124,7 @@ export class NextbikeAustriaCardEditor extends LitElement {
               </button>
             </div>
           </div>
+          ${this._renderHideToggle("hide_header")}
           ${this._renderToggle("show_rack")}
           ${rackOn
             ? html`
@@ -138,7 +139,6 @@ export class NextbikeAustriaCardEditor extends LitElement {
           ${this._renderToggle("show_flags")}
           ${this._renderToggle("show_timestamp")}
           ${this._renderToggle("show_rent_button")}
-          ${this._renderHideToggle("hide_header")}
           ${this._renderHideToggle("hide_attribution")}
         </div>
       </div>
