@@ -370,31 +370,35 @@ export class NextbikeAustriaCard extends LitElement {
         aria-label=${title}
         style=${`--nb-accent:${accent};`}
       >
-        <header class="header">
-          <div class="icon-tile" aria-hidden="true">
-            <ha-icon icon="mdi:bicycle"></ha-icon>
-          </div>
-          <div class="header-text">
-            <h2 class="title">
-              ${hasFriendlyName ? html`<span lang="de">${title}</span>` : title}
-            </h2>
-            <p class="subtitle">${systemName}</p>
-          </div>
-          ${mapUrl
-            ? html`
-                <a
-                  class="icon-action"
-                  href=${mapUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label=${`${this._t("open_map")}: ${title}`}
-                  title=${this._t("open_map")}
-                >
-                  <ha-icon icon="mdi:map-marker" aria-hidden="true"></ha-icon>
-                </a>
-              `
-            : nothing}
-        </header>
+        ${this._config.hide_header
+          ? nothing
+          : html`<header class="header">
+              <div class="icon-tile" aria-hidden="true">
+                <ha-icon icon="mdi:bicycle"></ha-icon>
+              </div>
+              <div class="header-text">
+                <h2 class="title">
+                  ${hasFriendlyName
+                    ? html`<span lang="de">${title}</span>`
+                    : title}
+                </h2>
+                <p class="subtitle">${systemName}</p>
+              </div>
+              ${mapUrl
+                ? html`
+                    <a
+                      class="icon-action"
+                      href=${mapUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label=${`${this._t("open_map")}: ${title}`}
+                      title=${this._t("open_map")}
+                    >
+                      <ha-icon icon="mdi:map-marker" aria-hidden="true"></ha-icon>
+                    </a>
+                  `
+                : nothing}
+            </header>`}
 
         <div class="hero">
           <div class="metric">

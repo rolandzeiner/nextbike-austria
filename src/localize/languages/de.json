@@ -46,6 +46,7 @@
     "show_flags": "Statussymbole anzeigen",
     "show_timestamp": "Zeitstempel anzeigen",
     "show_rent_button": "App-Mietlink anzeigen",
+    "hide_header": "Kopfzeile ausblenden",
     "hide_attribution": "Datenquelle ausblenden",
     "no_sensors_available": "Keine Nextbike-Sensoren verfügbar. Erst eine Station über Einstellungen → Geräte & Dienste hinzufügen."
   }

@@ -67,6 +67,7 @@ export interface NextbikeAustriaCardConfig {
   show_flags?: boolean;
   show_timestamp?: boolean;
   show_rent_button?: boolean;
+  hide_header?: boolean;
   hide_attribution?: boolean;
 }
 
