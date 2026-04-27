@@ -2,31 +2,34 @@ import { css, type CSSResultGroup } from "lit";
 
 export const editorStyles: CSSResultGroup = css`
   :host {
+    /* color-scheme enables light-dark() and steers forced-colors palette
+       selection. HA's active theme drives the resolution. */
+    color-scheme: light dark;
     display: block;
   }
   .editor {
-    padding: 16px;
+    padding: var(--ha-spacing-4, 16px);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--ha-spacing-3, 12px);
   }
   .editor-section {
     background: var(--secondary-background-color, rgba(0, 0, 0, 0.04));
-    border-radius: 12px;
-    padding: 14px 16px;
+    border-radius: var(--ha-radius-lg, 12px);
+    padding: var(--ha-spacing-3, 14px) var(--ha-spacing-4, 16px);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--ha-spacing-2, 10px);
   }
   .section-header {
-    font-size: 11px;
+    font-size: var(--ha-font-size-xs, 11px);
     font-weight: 600;
     letter-spacing: 0.6px;
     text-transform: uppercase;
     color: var(--secondary-text-color);
   }
   .editor-hint {
-    font-size: 12px;
+    font-size: var(--ha-font-size-xs, 12px);
     color: var(--secondary-text-color);
     line-height: 1.4;
   }
@@ -40,10 +43,19 @@ export const editorStyles: CSSResultGroup = css`
     align-items: center;
     gap: 6px;
     padding: 5px 12px;
+    /* Pill radius — kept fully rounded since 16px is what produces the
+       capsule look on this size. Not an HA token target. */
     border-radius: 16px;
     font-size: 13px;
     cursor: pointer;
-    transition: all 0.15s;
+    /* Be specific about the animated properties — transition: all picks
+       up everything (including layout) and is wasteful. Same fast/standard
+       motion tokens the card uses. */
+    transition:
+      background-color var(--ha-transition-duration-fast, 150ms) var(--ha-transition-easing-standard, ease),
+      color var(--ha-transition-duration-fast, 150ms) var(--ha-transition-easing-standard, ease),
+      border-color var(--ha-transition-duration-fast, 150ms) var(--ha-transition-easing-standard, ease),
+      opacity var(--ha-transition-duration-fast, 150ms) var(--ha-transition-easing-standard, ease);
     border: 1px solid var(--divider-color);
     background: var(--card-background-color, #fff);
     color: var(--primary-text-color);
@@ -60,7 +72,7 @@ export const editorStyles: CSSResultGroup = css`
     font-weight: 500;
   }
   .chip .eid {
-    font-size: 11px;
+    font-size: var(--ha-font-size-xs, 11px);
     opacity: 0.7;
   }
   .toggle-row {
@@ -79,9 +91,9 @@ export const editorStyles: CSSResultGroup = css`
   .sub-toggles {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding-left: 12px;
-    border-left: 2px solid var(--divider-color, rgba(0,0,0,0.12));
+    gap: var(--ha-spacing-2, 8px);
+    padding-left: var(--ha-spacing-3, 12px);
+    border-left: 2px solid var(--divider-color, rgba(0, 0, 0, 0.12));
     margin-left: 4px;
   }
   .layout-buttons {
@@ -90,6 +102,7 @@ export const editorStyles: CSSResultGroup = css`
   }
   .layout-buttons button {
     padding: 4px 12px;
+    /* Pill radius — fully rounded for these toggle buttons. */
     border-radius: 14px;
     border: 1px solid var(--divider-color);
     background: var(--card-background-color, #fff);
