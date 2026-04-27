@@ -45,7 +45,7 @@ USER_AGENT: Final = f"HomeAssistant/{_HA_VERSION} {DOMAIN}/{INTEGRATION_VERSION}
 # reload-banner loop: banner prompts reload, reload re-serves the same
 # mismatched JS, banner reappears. The invariant is enforced in CI by
 # tests/test_card_version.py.
-CARD_VERSION: Final = "1.0.0"
+CARD_VERSION: Final = "1.1.0"
 CARD_URL: Final = "/nextbike_austria/nextbike-austria-card.js"
 CARD_FILENAME: Final = "nextbike-austria-card.js"
 
