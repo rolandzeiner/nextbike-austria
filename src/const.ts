@@ -1,6 +1,6 @@
 // Must match CARD_VERSION in custom_components/nextbike_austria/const.py
 // byte-for-byte — drift causes an infinite reload-banner loop.
-export const CARD_VERSION = "1.0.0";
+export const CARD_VERSION = "1.1.0";
 
 // System-specific brand tints for the header accent. Pulled from each
 // operator's public brand guides; falls back to theme primary otherwise.

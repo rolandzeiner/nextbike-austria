@@ -15,7 +15,7 @@ from homeassistant.const import __version__ as _HA_VERSION
 DOMAIN: Final = "nextbike_austria"
 
 # Integration version — must match manifest.json "version" field.
-INTEGRATION_VERSION: Final = "1.0.0"
+INTEGRATION_VERSION: Final = "1.1.0-beta.1"
 
 # Config entry keys
 CONF_SYSTEM_ID: Final = "system_id"
@@ -37,12 +37,15 @@ ATTRIBUTION: Final = "Data: nextbike GmbH, CC0-1.0"
 # Matches the same scheme used by wiener_linien_austria and tankstellen_austria.
 USER_AGENT: Final = f"HomeAssistant/{_HA_VERSION} {DOMAIN}/{INTEGRATION_VERSION}"
 
-# Lovelace card — the JS at www/nextbike-austria-card.js carries a
-# `const CARD_VERSION` that MUST match this string byte-for-byte.
-# A mismatch triggers HA's reload-banner loop (banner prompts reload,
-# reload re-serves the same stale JS, banner reappears). Bump both in
-# the same commit.
-CARD_VERSION: Final = "1.0.0"
+# Lovelace card version. Tracked separately from INTEGRATION_VERSION so
+# the card and the integration can rev independently.
+#
+# This MUST stay byte-identical to `CARD_VERSION` in src/const.ts (the
+# TS bundle's constant, NOT INTEGRATION_VERSION). A drift triggers HA's
+# reload-banner loop: banner prompts reload, reload re-serves the same
+# mismatched JS, banner reappears. The invariant is enforced in CI by
+# tests/test_card_version.py.
+CARD_VERSION: Final = "1.1.0"
 CARD_URL: Final = "/nextbike_austria/nextbike-austria-card.js"
 CARD_FILENAME: Final = "nextbike-austria-card.js"
 
@@ -56,14 +59,18 @@ DEFAULT_SCAN_INTERVAL: Final = 60  # seconds
 MIN_POLL_SECONDS: Final = 60       # never below the feed's TTL
 MAX_POLL_SECONDS: Final = 900      # 15 min — bikes move fast enough that stale data is useless
 
-# Battery-range fetch cadence. `free_bike_status.json` is ~1.3 MB for Wien.
-# Parked e-bikes charge and discharge slowly — a 30-min window is
-# granular enough for any realistic "is there a charged bike at my
-# home station?" automation, and halves the bandwidth cost vs. 15 or
-# 20 min. Approx ~63 MB/day / ~1.9 GB/month per opted-in Austrian
-# system. Only fetched when at least one tracked entry has
-# `track_e_bike_range` enabled in its options.
-BATTERY_FETCH_TTL_SECONDS: Final = 1800
+# Battery-range fetch cadence. `free_bike_status.json` is ~1.2 MB raw for
+# Wien but ~75 KB on the wire under `Accept-Encoding: gzip` (16.7×
+# compression — measured April 2026). The GBFS feed advertises ttl=60s,
+# so the API permits anything from 60 s upward; we settle on 20 min as
+# the sweet spot — battery state changes slowly, but 20 min gives users
+# 1.5× fresher samples than the previous 30 min while still being a
+# polite cadence for an opt-in feed. Approx ~5.3 MB/day / ~160 MB/month
+# per opted-in Austrian system on the wire (vs. the ~2.6 GB/month it
+# would be at this cadence without compression). Only fetched when at
+# least one tracked entry has `track_e_bike_range` enabled in its
+# options.
+BATTERY_FETCH_TTL_SECONDS: Final = 1200
 
 # GBFS endpoint base. Each Austrian system (see AUSTRIAN_SYSTEMS below)
 # publishes at `{GBFS_BASE}/{system_id}/{lang}/{feed}.json`.
@@ -88,6 +95,8 @@ class SystemInfo(TypedDict):
 #   1. Confirm its GBFS feed exists at `{GBFS_BASE}/{system_id}/gbfs.json`.
 #   2. Append a SystemInfo entry here.
 #   3. Add translation entries for the system's display in strings.json.
+#   4. Add the system to `SYSTEM_ACCENT` and `SYSTEM_LABEL` in
+#      src/const.ts so the Lovelace card's per-system theming works.
 AUSTRIAN_SYSTEMS: Final[tuple[SystemInfo, ...]] = (
     {"id": "nextbike_wr", "name": "Wien — WienMobil Rad", "region": "Wien"},
     {"id": "nextbike_la", "name": "Niederösterreich", "region": "Niederösterreich"},

@@ -24,6 +24,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .const import ATTRIBUTION, DOMAIN
 from .coordinator import NextbikeAustriaConfigEntry, NextbikeStationCoordinator
@@ -31,6 +32,23 @@ from .coordinator import NextbikeAustriaConfigEntry, NextbikeStationCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 0
+
+
+def _epoch_to_iso(value: Any) -> str | None:
+    """Convert a GBFS Unix-epoch second to ISO-8601 UTC.
+
+    GBFS publishes `last_reported` as an integer epoch second; HA template
+    consumers and the Lovelace card both prefer ISO-8601, so convert at the
+    attribute boundary. Non-numeric or missing values yield None instead of
+    raising — upstream payload shape drift shouldn't take the sensor down.
+    """
+    if value is None:
+        return None
+    try:
+        ts = float(value)
+    except (TypeError, ValueError):
+        return None
+    return dt_util.utc_from_timestamp(ts).isoformat()
 
 
 async def async_setup_entry(
@@ -108,7 +126,7 @@ class _BikesAvailableSensor(_BaseStationSensor):
         E-bike battery stats are only present when the options flow has
         ``track_e_bike_range`` enabled AND upstream reported
         ``current_range_meters`` for at least one e-bike at this station
-        in the last ~30 minutes. Keys are omitted otherwise rather than
+        in the last ~20 minutes. Keys are omitted otherwise rather than
         published as ``None`` — templates can check with
         ``if 'e_bike_avg_battery_pct' in states.xxx.attributes``.
         """
@@ -125,7 +143,7 @@ class _BikesAvailableSensor(_BaseStationSensor):
             "is_installed": data.get("is_installed"),
             "is_renting": data.get("is_renting"),
             "is_returning": data.get("is_returning"),
-            "last_reported": data.get("last_reported"),
+            "last_reported": _epoch_to_iso(data.get("last_reported")),
             "vehicle_types_available": data.get("vehicle_types_available"),
             "rental_uri": (data.get("rental_uris") or {}).get("web"),
         }

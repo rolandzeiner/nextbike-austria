@@ -1,8 +1,10 @@
 """Tests for the Nextbike Austria config flow."""
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
+import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
@@ -13,8 +15,11 @@ from custom_components.nextbike_austria.const import (
     CONF_STATION_ID,
     CONF_STATION_NAME,
     CONF_SYSTEM_ID,
+    CONF_TRACK_E_BIKE_RANGE,
     DOMAIN,
 )
+
+from ._fakes import CtxResp, FakeClient
 
 # Small synthetic catalogue — two distinct names so the search logic has
 # something to discriminate between. Enough to exercise the whole flow
@@ -46,7 +51,34 @@ def _patch_fetch(stations: list[dict] | None = None) -> Any:
     )
 
 
-from typing import Any  # noqa: E402  (kept at bottom so the fake-list literal reads naturally)
+def _station_snapshot(sid: str = "68577989") -> dict[str, Any]:
+    return {
+        "station_id": sid,
+        "name": "Hoher Markt",
+        "capacity": 25,
+        "num_bikes_available": 5,
+        "num_docks_available": 20,
+        "is_installed": True,
+        "is_renting": True,
+        "is_returning": True,
+        "last_reported": 1_776_780_838,
+        "vehicle_types_available": [],
+    }
+
+
+def _patch_shared_client(station_id: str = "68577989") -> Any:
+    """Patch the coordinator's shared-client factory.
+
+    Needed once a flow returns CREATE_ENTRY because HA core auto-runs
+    the entry's first refresh, which would otherwise hit the tripwired
+    aiohttp session.
+    """
+    fake = FakeClient()
+    fake.set_stations({station_id: _station_snapshot(station_id)})
+    return patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=fake,
+    )
 
 
 async def test_form_shows_system_picker(hass: HomeAssistant) -> None:
@@ -60,7 +92,7 @@ async def test_form_shows_system_picker(hass: HomeAssistant) -> None:
 
 async def test_full_flow_creates_entry(hass: HomeAssistant) -> None:
     """user → search_station → select_station creates an entry."""
-    with _patch_fetch():
+    with _patch_fetch(), _patch_shared_client():
         # Step 1: pick system
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -92,7 +124,7 @@ async def test_full_flow_creates_entry(hass: HomeAssistant) -> None:
 
 async def test_duplicate_station_aborted(hass: HomeAssistant) -> None:
     """A second entry for the same station is aborted."""
-    with _patch_fetch():
+    with _patch_fetch(), _patch_shared_client():
         for _ in range(2):
             result = await hass.config_entries.flow.async_init(
                 DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -159,27 +191,30 @@ async def test_no_matches(hass: HomeAssistant) -> None:
 
 
 async def test_invalid_system_rejected(hass: HomeAssistant) -> None:
-    """A system id outside the Austrian registry is rejected."""
+    """A system id outside the Austrian registry is rejected.
+
+    ``SelectSelector`` raises voluptuous ``Invalid`` for values outside its
+    option list; if a future refactor relaxes the selector, the explicit
+    ``invalid_system`` error in ``async_step_user`` is the second line of
+    defence and must still fire.
+    """
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    # voluptuous selector rejects values outside the option list before
-    # our handler sees them; catch either the vol error or our explicit
-    # error flag.
     try:
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {CONF_SYSTEM_ID: "nextbike_nonsense"}
         )
-    except Exception:  # noqa: BLE001 — either selector reject or our handler
+    except (vol.Invalid, vol.MultipleInvalid):
         return
-    # If vol allowed it through, our code must have flagged it.
+    # Selector accepted the value → the handler's own guard must reject.
     assert result["type"] == FlowResultType.FORM
     assert result["errors"].get(CONF_SYSTEM_ID) == "invalid_system"
 
 
 async def test_options_flow_updates_interval(hass: HomeAssistant) -> None:
     """Options flow persists a new scan interval."""
-    with _patch_fetch():
+    with _patch_fetch(), _patch_shared_client():
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
@@ -193,16 +228,46 @@ async def test_options_flow_updates_interval(hass: HomeAssistant) -> None:
             result["flow_id"],
             {CONF_STATION_ID: "68577989", CONF_SCAN_INTERVAL: 60},
         )
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+        entry = hass.config_entries.async_entries(DOMAIN)[0]
 
-    flow = await hass.config_entries.options.async_init(entry.entry_id)
-    result = await hass.config_entries.options.async_configure(
-        flow["flow_id"], {CONF_SCAN_INTERVAL: 180}
-    )
+        flow = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await hass.config_entries.options.async_configure(
+            flow["flow_id"], {CONF_SCAN_INTERVAL: 180, CONF_TRACK_E_BIKE_RANGE: False}
+        )
     assert result["type"] == FlowResultType.CREATE_ENTRY
     refreshed = hass.config_entries.async_get_entry(entry.entry_id)
     assert refreshed is not None
     assert refreshed.options[CONF_SCAN_INTERVAL] == 180
+
+
+async def test_options_flow_persists_track_e_bike_range(
+    hass: HomeAssistant,
+) -> None:
+    """Options flow persists the e-bike-range tracking toggle."""
+    with _patch_fetch(), _patch_shared_client():
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_SYSTEM_ID: "nextbike_wr"}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_SEARCH_QUERY: "Hoher"}
+        )
+        await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_STATION_ID: "68577989", CONF_SCAN_INTERVAL: 60},
+        )
+        entry = hass.config_entries.async_entries(DOMAIN)[0]
+
+        flow = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await hass.config_entries.options.async_configure(
+            flow["flow_id"],
+            {CONF_SCAN_INTERVAL: 60, CONF_TRACK_E_BIKE_RANGE: True},
+        )
+    refreshed = hass.config_entries.async_get_entry(entry.entry_id)
+    assert refreshed is not None
+    assert refreshed.options[CONF_TRACK_E_BIKE_RANGE] is True
 
 
 async def test_search_again_returns_to_search_step(hass: HomeAssistant) -> None:
@@ -235,8 +300,8 @@ async def test_fetch_stations_survives_client_error(
     from custom_components.nextbike_austria.config_flow import _fetch_stations
 
     class _FakeSession:
-        async def get(self, *args: Any, **kwargs: Any) -> Any:  # noqa: D401
-            raise _aiohttp.ClientError("boom")
+        def get(self, *args: Any, **kwargs: Any) -> CtxResp:
+            return CtxResp(raise_on_enter=_aiohttp.ClientError("boom"))
 
     with patch(
         "custom_components.nextbike_austria.config_flow.async_get_clientsession",
@@ -262,8 +327,8 @@ async def test_fetch_stations_survives_non_dict_body(
             return ["not", "a", "dict"]
 
     class _FakeSession:
-        async def get(self, *args: Any, **kwargs: Any) -> _FakeResp:
-            return _FakeResp()
+        def get(self, *args: Any, **kwargs: Any) -> CtxResp:
+            return CtxResp(_FakeResp())
 
     with patch(
         "custom_components.nextbike_austria.config_flow.async_get_clientsession",
@@ -298,11 +363,24 @@ def test_match_stations_prefix_beats_substring() -> None:
     assert [s["station_id"] for s in matches] == ["2", "1"]
 
 
+def test_match_stations_skips_empty_and_missing_names() -> None:
+    """Stations with empty or missing ``name`` are filtered out."""
+    from custom_components.nextbike_austria.config_flow import _match_stations
+
+    stations = [
+        {"station_id": "1", "name": ""},
+        {"station_id": "2"},  # missing name entirely
+        {"station_id": "3", "name": "Karlsplatz"},
+    ]
+    matches = _match_stations(stations, "kar")
+    assert [s["station_id"] for s in matches] == ["3"]
+
+
 async def test_reconfigure_to_different_station_in_same_system(
     hass: HomeAssistant,
 ) -> None:
     """Reconfigure picks a new station; unique_id updates to the new one."""
-    with _patch_fetch():
+    with _patch_fetch(), _patch_shared_client():
         # Initial entry.
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -317,10 +395,9 @@ async def test_reconfigure_to_different_station_in_same_system(
             result["flow_id"],
             {CONF_STATION_ID: "68577989", CONF_SCAN_INTERVAL: 60},
         )
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
+        entry = hass.config_entries.async_entries(DOMAIN)[0]
 
-    # Reconfigure: keep the same station (unique_id match path).
-    with _patch_fetch():
+        # Reconfigure: keep the same station (unique_id match path).
         flow = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={
@@ -340,3 +417,58 @@ async def test_reconfigure_to_different_station_in_same_system(
     refreshed = hass.config_entries.async_get_entry(entry.entry_id)
     assert refreshed is not None
     assert refreshed.data[CONF_SCAN_INTERVAL] == 120
+
+
+async def test_reconfigure_to_different_station_aborts_on_mismatch(
+    hass: HomeAssistant,
+) -> None:
+    """Reconfigure that resolves to a *different* station id aborts."""
+    fake = FakeClient()
+    fake.set_stations(
+        {
+            "68577989": _station_snapshot("68577989"),
+            "68577704": _station_snapshot("68577704"),
+        }
+    )
+    with (
+        _patch_fetch(),
+        patch(
+            "custom_components.nextbike_austria.coordinator._get_shared_client",
+            return_value=fake,
+        ),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_SYSTEM_ID: "nextbike_wr"}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_SEARCH_QUERY: "Hoher"}
+        )
+        await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_STATION_ID: "68577989", CONF_SCAN_INTERVAL: 60},
+        )
+        entry = hass.config_entries.async_entries(DOMAIN)[0]
+
+        flow = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_RECONFIGURE,
+                "entry_id": entry.entry_id,
+            },
+        )
+        result = await hass.config_entries.flow.async_configure(
+            flow["flow_id"], {CONF_SEARCH_QUERY: "Julius"}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_STATION_ID: "68577704", CONF_SCAN_INTERVAL: 60},
+        )
+    # _abort_if_unique_id_mismatch fires — different station ids must not
+    # silently overwrite the original entry's identity.
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] != "reconfigure_successful"
+
+

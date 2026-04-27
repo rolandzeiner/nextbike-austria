@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
@@ -14,6 +14,8 @@ from custom_components.nextbike_austria.const import (
     CONF_SYSTEM_ID,
     DOMAIN,
 )
+
+from ._fakes import FakeClient
 
 BASE_DATA = {
     CONF_SYSTEM_ID: "nextbike_wr",
@@ -57,24 +59,6 @@ def _station_without_capacity() -> dict[str, Any]:
     }
 
 
-class _FakeClient:
-    """Minimal stand-in for SharedSystemClient in integration tests."""
-
-    def __init__(self, station: dict[str, Any], system_id: str = "nextbike_wr") -> None:
-        self.system_id = system_id
-        self._station = station
-        self._ebike_ids: frozenset[str] = frozenset({"183"})
-
-    async def async_fetch(self, *, force: bool = False) -> None:
-        return None
-
-    def station(self, station_id: str) -> dict[str, Any] | None:
-        return self._station if station_id == self._station["station_id"] else None
-
-    def is_ebike_type(self, tid: str) -> bool:
-        return tid in self._ebike_ids
-
-
 def _make_entry(station_id: str, station_name: str, system_id: str) -> MockConfigEntry:
     return MockConfigEntry(
         domain=DOMAIN,
@@ -90,6 +74,12 @@ def _make_entry(station_id: str, station_name: str, system_id: str) -> MockConfi
     )
 
 
+def _client_for(station: dict[str, Any], system_id: str = "nextbike_wr") -> FakeClient:
+    fake = FakeClient(system_id=system_id)
+    fake.set_stations({station["station_id"]: station})
+    return fake
+
+
 async def test_all_three_sensors_populated_when_capacity_known(
     hass: HomeAssistant,
 ) -> None:
@@ -100,7 +90,7 @@ async def test_all_three_sensors_populated_when_capacity_known(
 
     with patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
-        return_value=_FakeClient(station),
+        return_value=_client_for(station),
     ):
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -112,29 +102,38 @@ async def test_all_three_sensors_populated_when_capacity_known(
     assert bikes is not None and bikes.state == "48"
     assert docks is not None and docks.state == "6"
     assert ebikes is not None and ebikes.state == "17"
-    # The docks sensor now surfaces capacity as an attribute
     assert docks.attributes.get("capacity") == 54
+    assert bikes.attributes.get("last_reported") == "2026-04-21T14:46:02+00:00"
 
 
-async def test_options_update_reloads_entry(hass: HomeAssistant) -> None:
-    """Changing options fires the update-listener → async_reload runs."""
+async def test_options_update_triggers_reload(hass: HomeAssistant) -> None:
+    """Updating an entry's options must fire ``async_reload``.
+
+    The previous version only checked that options were stored — which
+    ``async_update_entry`` does on its own — so the listener could be
+    deleted and the test would still pass. Spying on ``async_reload``
+    proves the wiring is intact.
+    """
     station = _station_with_capacity()
     entry = _make_entry("68586882", "Hauptbahnhof S U", "nextbike_wr")
     entry.add_to_hass(hass)
 
     with patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
-        return_value=_FakeClient(station),
+        return_value=_client_for(station),
     ):
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
 
-        # Trigger the update listener by mutating options. async_update_entry
-        # calls every registered listener — _async_reload_entry is one of them.
-        hass.config_entries.async_update_entry(entry, options={"scan_interval": 300})
-        await hass.async_block_till_done()
+        with patch.object(
+            hass.config_entries, "async_reload", AsyncMock(return_value=True)
+        ) as reload_mock:
+            hass.config_entries.async_update_entry(
+                entry, options={"scan_interval": 300}
+            )
+            await hass.async_block_till_done()
 
-    # Entry must survive the reload cleanly.
+    assert reload_mock.await_count >= 1
     refreshed = hass.config_entries.async_get_entry(entry.entry_id)
     assert refreshed is not None
     assert refreshed.options == {"scan_interval": 300}
@@ -145,8 +144,6 @@ async def test_battery_attributes_surface_when_coordinator_provides_them(
 ) -> None:
     """Battery aggregates flow from coordinator.data into sensor attrs."""
     station = _station_with_capacity()
-    # Simulate what the coordinator attaches when track_e_bike_range is on
-    # and the shared client reported samples.
     station["_e_bike_avg_battery_pct"] = 76.3
     station["_e_bike_min_battery_pct"] = 40.0
     station["_e_bike_max_battery_pct"] = 95.0
@@ -164,7 +161,7 @@ async def test_battery_attributes_surface_when_coordinator_provides_them(
 
     with patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
-        return_value=_FakeClient(station),
+        return_value=_client_for(station),
     ):
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -192,7 +189,7 @@ async def test_battery_attributes_absent_when_not_tracked(
 
     with patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
-        return_value=_FakeClient(station),
+        return_value=_client_for(station),
     ):
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -210,10 +207,6 @@ async def test_reserved_attributes_surface_when_coordinator_provides_them(
 ) -> None:
     """Reserved-bike info flows from coordinator.data into sensor attrs."""
     station = _station_with_capacity()
-    # Simulate what the coordinator attaches when tracking is on AND
-    # the shared client reports at least one reserved bike. Battery
-    # stats are independent — a station can have reserved bikes
-    # without any current_fuel_percent samples.
     station["_bikes_reserved"] = 2
     station["_bikes_reserved_types"] = ["Classic Bike", "E-Bike"]
 
@@ -222,7 +215,7 @@ async def test_reserved_attributes_surface_when_coordinator_provides_them(
 
     with patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
-        return_value=_FakeClient(station),
+        return_value=_client_for(station),
     ):
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -246,7 +239,7 @@ async def test_disabled_attributes_surface_when_coordinator_provides_them(
 
     with patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
-        return_value=_FakeClient(station),
+        return_value=_client_for(station),
     ):
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -269,7 +262,7 @@ async def test_docks_unavailable_when_capacity_unpublished(
 
     with patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
-        return_value=_FakeClient(station, system_id="nextbike_la"),
+        return_value=_client_for(station, system_id="nextbike_la"),
     ):
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -281,3 +274,31 @@ async def test_docks_unavailable_when_capacity_unpublished(
     assert bikes is not None and bikes.state == "0"
     assert docks is not None and docks.state == "unknown"
     assert ebikes is not None and ebikes.state == "0"
+
+
+async def test_docks_unknown_when_value_is_non_int(hass: HomeAssistant) -> None:
+    """Capacity present but num_docks_available non-int → docks reads 'unknown'."""
+    station = _station_with_capacity()
+    station["num_docks_available"] = "not-a-number"  # type: ignore[assignment]
+    entry = _make_entry("68586882", "Hauptbahnhof S U", "nextbike_wr")
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=_client_for(station),
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    docks = hass.states.get("sensor.hauptbahnhof_s_u_docks_available")
+    assert docks is not None and docks.state == "unknown"
+
+
+def test_epoch_to_iso_handles_none_and_garbage() -> None:
+    """``_epoch_to_iso`` returns None for unparseable values, not raise."""
+    from custom_components.nextbike_austria.sensor import _epoch_to_iso
+
+    assert _epoch_to_iso(None) is None
+    assert _epoch_to_iso("not-a-number") is None
+    assert _epoch_to_iso(0) is not None  # 0 is a valid epoch
+    assert _epoch_to_iso(1_776_782_762).startswith("2026-")
