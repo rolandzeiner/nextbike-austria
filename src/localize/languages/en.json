@@ -46,6 +46,7 @@
     "show_flags": "Show status flags",
     "show_timestamp": "Show timestamp",
     "show_rent_button": "Show app-rent link",
+    "hide_header": "Hide header",
     "hide_attribution": "Hide attribution",
     "no_sensors_available": "No nextbike sensors available. Add a station first via Settings → Devices & Services."
   }
