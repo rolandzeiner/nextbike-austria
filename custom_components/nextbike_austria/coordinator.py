@@ -30,6 +30,7 @@ from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
@@ -430,6 +431,15 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             config_entry=entry,
             name=f"{DOMAIN}_{self._station_id}",
             update_interval=timedelta(seconds=scan),
+            # Absorb request storms (options-flow save, manual reload,
+            # dashboard edit-mode flip) so the GBFS feed isn't pulled
+            # multiple times in quick succession during routine UI activity.
+            request_refresh_debouncer=Debouncer(
+                hass,
+                _LOGGER,
+                cooldown=15,
+                immediate=False,
+            ),
         )
 
     @property
