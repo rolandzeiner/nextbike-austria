@@ -775,6 +775,7 @@ const e="1.0.0",t={nextbike_wr:"#DC2026",nextbike_la:"#004E9E",nextbike_si:"#C81
               </button>
             </div>
           </div>
+          ${this._renderHideToggle("hide_header")}
           ${this._renderToggle("show_rack")}
           ${r?q`
                 <div class="sub-toggles">
@@ -787,7 +788,6 @@ const e="1.0.0",t={nextbike_wr:"#DC2026",nextbike_la:"#004E9E",nextbike_si:"#C81
           ${this._renderToggle("show_flags")}
           ${this._renderToggle("show_timestamp")}
           ${this._renderToggle("show_rent_button")}
-          ${this._renderHideToggle("hide_header")}
           ${this._renderHideToggle("hide_attribution")}
         </div>
       </div>
