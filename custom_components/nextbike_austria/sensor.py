@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.const import ATTR_ATTRIBUTION
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -73,7 +73,11 @@ class _BaseStationSensor(
     """Shared scaffolding for all per-station sensors."""
 
     _attr_has_entity_name = True
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    # Deliberately no state_class: bikes-available is a sawtooth that
+    # jumps on every rental/return — the hourly LTS mean/min/max
+    # carries no analytical signal worth keeping forever. Dropping
+    # state_class stops new long-term statistics; existing orphan
+    # buckets clear via Settings → System → Statistics.
     _attr_native_unit_of_measurement = "bikes"
 
     # Subclasses set these:
