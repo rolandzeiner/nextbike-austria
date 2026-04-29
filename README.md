@@ -5,6 +5,7 @@
 [![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/rolandzeiner/nextbike-austria/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![vibe-coded](https://img.shields.io/badge/vibe-coded-ff69b4?logo=musicbrainz&logoColor=white)](https://en.wikipedia.org/wiki/Vibe_coding)
+[![Live demo](https://img.shields.io/badge/live-demo-2196F3.svg)](https://demo.rolandzeiner.at/#nextbike)
 
 Home Assistant integration for nextbike-operated bike-sharing stations across Austria. Uses the official [GBFS 2.3 feeds](https://github.com/MobilityData/gbfs) — no API key, no YAML editing, station-level tracking out of the box. Pick a city, type a station name, save. One device per station with three sensors: bikes available, docks available, e-bikes available.
 
