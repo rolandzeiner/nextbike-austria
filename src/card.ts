@@ -30,6 +30,8 @@ import {
   batteryColor,
   relativeTime,
   cleanStationName,
+  getEbikeIds,
+  safeHttpsUri,
 } from "./utils";
 
 // Eagerly register the editor. With inlineDynamicImports=true the editor
@@ -235,7 +237,14 @@ export class NextbikeAustriaCard extends LitElement {
         ${stations.map((s, i) => {
           const a = this.hass?.states[s.entity]?.attributes || {};
           const hasFriendlyName = typeof a.friendly_name === "string" && a.friendly_name.length > 0;
-          const label = cleanStationName(a.friendly_name || s.entity);
+          // Prefer the locale-agnostic display name surfaced by the
+          // sensor; fall back to stripping HA's friendly-name suffix
+          // for users on an older Python integration version.
+          const displayName =
+            typeof a.station_display_name === "string" && a.station_display_name
+              ? a.station_display_name
+              : cleanStationName(a.friendly_name || s.entity);
+          const label = displayName;
           const selected = i === this._activeTab;
           // WCAG 3.1.2 Language of Parts: station names come from the
           // nextbike API in German. Wrap in lang="de" so screen readers
@@ -336,6 +345,10 @@ export class NextbikeAustriaCard extends LitElement {
     const vehicleTypesAvailable = Array.isArray(a.vehicle_types_available)
       ? a.vehicle_types_available
       : [];
+    // Live e-bike id set surfaced by the Python coordinator (with a
+    // small fallback for old coordinators). Built once per render and
+    // threaded through the rack helpers.
+    const ebikeIds = getEbikeIds(a);
     // Reserved bikes occupy extra rack slots beyond `num_bikes_available`.
     const reservedCount =
       typeof a.bikes_reserved === "number" ? a.bikes_reserved : 0;
@@ -355,12 +368,25 @@ export class NextbikeAustriaCard extends LitElement {
     const systemName =
       (typeof a.system_label === "string" && a.system_label) ||
       systemId.replace(/^nextbike_/, "");
-    const rentUri = typeof a.rental_uri === "string" ? a.rental_uri : "";
+    const rentUri = safeHttpsUri(a.rental_uri);
     const hasFriendlyName = typeof a.friendly_name === "string" && a.friendly_name.length > 0;
-    const title = cleanStationName(a.friendly_name || stopCfg.entity);
-    const mapUrl =
+    // Locale-agnostic display name (config-entry title) when the
+    // sensor surfaces it; regex-strip fallback for old coordinators.
+    const title =
+      typeof a.station_display_name === "string" && a.station_display_name
+        ? a.station_display_name
+        : cleanStationName(a.friendly_name || stopCfg.entity);
+    // mapUrl is built from numeric lat/lon so the literal is always
+    // https://, but pipe it through the same trust-boundary guard as
+    // the rental URI so a future contributor can't add a stop-URL
+    // attribute and bypass the allowlist. safeHttpsUri returns "" for
+    // anything non-HTTP(S); we lift "" to null so the call site's
+    // existing nullish gate keeps the link off entirely on a miss.
+    const mapUrl: string | null =
       typeof a.latitude === "number" && typeof a.longitude === "number"
-        ? `https://www.google.com/maps/search/?api=1&query=${a.latitude},${a.longitude}`
+        ? safeHttpsUri(
+            `https://www.google.com/maps/search/?api=1&query=${a.latitude},${a.longitude}`,
+          ) || null
         : null;
 
     const bikeWord = bikes === 1 ? this._t("bike") : this._t("bikes");
@@ -437,6 +463,7 @@ export class NextbikeAustriaCard extends LitElement {
               batteryList,
               vehicleTypesAvailable,
               vehicleTypeNames,
+              ebikeIds,
               reservedCount,
               reservedTypes,
               disabledCount,
@@ -497,6 +524,7 @@ export class NextbikeAustriaCard extends LitElement {
     batteryList: Array<{ type?: string; pct?: number }> | null;
     vehicleTypesAvailable: Array<{ vehicle_type_id?: string; count?: number }>;
     vehicleTypeNames: Record<string, string>;
+    ebikeIds: ReadonlySet<string>;
     reservedCount: number;
     reservedTypes: string[];
     disabledCount: number;
@@ -512,6 +540,7 @@ export class NextbikeAustriaCard extends LitElement {
       batteryList,
       vehicleTypesAvailable,
       vehicleTypeNames,
+      ebikeIds,
       reservedCount,
       reservedTypes,
       disabledCount,
@@ -541,10 +570,12 @@ export class NextbikeAustriaCard extends LitElement {
     const ebikeFallbackType = firstEbikeTypeName(
       vehicleTypesAvailable,
       vehicleTypeNames,
+      ebikeIds,
     );
     const classicSequence = expandClassicTypes(
       vehicleTypesAvailable,
       vehicleTypeNames,
+      ebikeIds,
     );
     let classicCursor = 0;
 

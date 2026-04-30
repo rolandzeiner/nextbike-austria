@@ -1,9 +1,48 @@
-import { EBIKE_IDS } from "./const";
 import type {
+  HassEntityAttributes,
   HomeAssistant,
   NextbikeAustriaCardConfig,
   NextbikeStationEntry,
 } from "./types";
+
+// Fallback set of e-bike vehicle-type ids for users on a Python
+// coordinator that pre-dates the `e_bike_vehicle_type_ids` sensor
+// attribute (added in v1.2.0). Live installs read the set from the
+// sensor and this constant is only the safety net during the
+// integration-vs-bundle version transition.
+const DEFAULT_EBIKE_IDS: ReadonlySet<string> = new Set(["143", "183", "200"]);
+
+/** Resolve the active e-bike vehicle-type id set for a station's
+ *  attributes. Prefers the live set surfaced by the Python coordinator
+ *  (`e_bike_vehicle_type_ids`, derived from GBFS `propulsion_type` so a
+ *  new pedelec id upstream is counted correctly without a card bundle
+ *  bump). Falls back to the hardcoded default for the brief
+ *  Python-old/JS-new window after an upgrade. */
+export function getEbikeIds(
+  attrs: HassEntityAttributes | undefined,
+): ReadonlySet<string> {
+  const live = attrs?.e_bike_vehicle_type_ids;
+  if (Array.isArray(live) && live.length > 0) {
+    const ids = live.filter(
+      (s): s is string => typeof s === "string" && s.length > 0,
+    );
+    if (ids.length > 0) return new Set(ids);
+  }
+  return DEFAULT_EBIKE_IDS;
+}
+
+/** Trust-boundary guard for upstream-supplied URIs that the card
+ *  renders into ``href`` attributes. Lit's ``${}`` interpolation is
+ *  safe against tag/attribute injection but does NOT block
+ *  ``javascript:`` or ``data:`` URIs — a compromised upstream feed
+ *  could otherwise execute arbitrary JS in HA's frontend origin when
+ *  the user clicks the link. Allowlist HTTP/HTTPS only; everything
+ *  else collapses to an empty string and the call site treats it as
+ *  "no link available". */
+export function safeHttpsUri(raw: unknown): string {
+  if (typeof raw !== "string") return "";
+  return /^https?:\/\//i.test(raw) ? raw : "";
+}
 
 export function findNextbikeEntities(hass: HomeAssistant | undefined): string[] {
   if (!hass || !hass.states) return [];
@@ -73,21 +112,23 @@ export function normaliseConfig(
 }
 
 export function countEbikesAvailable(
-  attrs: Record<string, unknown> | undefined,
+  attrs: HassEntityAttributes | undefined,
 ): number | null {
-  // Best-effort count from `vehicle_types_available`. We mirror the
-  // EBIKE_IDS set the Python coordinator uses for its own e-bikes
-  // sensor; users who expose that sensor should trust it over this
-  // card-side computation.
+  // Best-effort count from `vehicle_types_available`. The id set comes
+  // from the Python coordinator's live propulsion-type resolution
+  // (surfaced as `e_bike_vehicle_type_ids` on the sensor); users who
+  // expose the dedicated `ebikes_available` sensor should trust that
+  // over this card-side computation.
   const breakdown = attrs?.vehicle_types_available;
   if (!Array.isArray(breakdown)) return null;
+  const ebikeIds = getEbikeIds(attrs);
   let total = 0;
   for (const row of breakdown) {
     if (!row || typeof row !== "object") continue;
     const r = row as { vehicle_type_id?: unknown; count?: unknown };
     const tid = String(r.vehicle_type_id ?? "");
     const count = r.count;
-    if (EBIKE_IDS.has(tid) && typeof count === "number" && Number.isFinite(count)) {
+    if (ebikeIds.has(tid) && typeof count === "number" && Number.isFinite(count)) {
       total += count;
     }
   }
@@ -97,11 +138,12 @@ export function countEbikesAvailable(
 export function firstEbikeTypeName(
   vehicleTypesAvailable: Array<{ vehicle_type_id?: string; count?: number }> | undefined,
   vehicleTypeNames: Record<string, string> | undefined,
+  ebikeIds: ReadonlySet<string>,
 ): string | null {
   if (!Array.isArray(vehicleTypesAvailable)) return null;
   for (const row of vehicleTypesAvailable) {
     const tid = String(row?.vehicle_type_id ?? "");
-    if (EBIKE_IDS.has(tid) && vehicleTypeNames?.[tid]) {
+    if (ebikeIds.has(tid) && vehicleTypeNames?.[tid]) {
       return vehicleTypeNames[tid];
     }
   }
@@ -111,6 +153,7 @@ export function firstEbikeTypeName(
 export function expandClassicTypes(
   vehicleTypesAvailable: Array<{ vehicle_type_id?: string; count?: number }> | undefined,
   vehicleTypeNames: Record<string, string> | undefined,
+  ebikeIds: ReadonlySet<string>,
 ): string[] {
   // Flatten `[{vehicle_type_id, count}]` into a sequential list of
   // type names for classic (non-e-bike) slots, in the order they
@@ -121,7 +164,7 @@ export function expandClassicTypes(
   for (const row of vehicleTypesAvailable) {
     const tid = String(row?.vehicle_type_id ?? "");
     const count = typeof row?.count === "number" && Number.isFinite(row.count) ? row.count : 0;
-    if (EBIKE_IDS.has(tid) || count <= 0) continue;
+    if (ebikeIds.has(tid) || count <= 0) continue;
     const name = vehicleTypeNames?.[tid] || "";
     for (let i = 0; i < count; i++) out.push(name);
   }

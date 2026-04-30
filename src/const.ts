@@ -15,7 +15,9 @@ export const SYSTEM_ACCENT: Record<string, string> = {
   nextbike_ka: "#FFC20E", // Klagenfurt yellow
 };
 
-// Known e-bike vehicle_type_ids across Austrian nextbike systems. Canonical
-// home is coordinator.py EBIKE_PROPULSIONS, but the card can't reach Python
-// so we mirror the ids the aggregator cares about.
-export const EBIKE_IDS: ReadonlySet<string> = new Set(["143", "183", "200"]);
+// E-bike vehicle-type ids are no longer hardcoded on the card side.
+// The Python coordinator resolves them live from GBFS `propulsion_type`
+// and surfaces the set as the `e_bike_vehicle_type_ids` sensor
+// attribute; the card reads it via `getEbikeIds(attrs)` in utils.ts
+// (with a small fallback for the brief Python-old/JS-new window after
+// an upgrade).
