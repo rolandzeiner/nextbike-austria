@@ -32,10 +32,10 @@
   "version_update": "Nextbike Austria updated to v{v} — please reload",
   "version_reload": "Reload",
   "editor": {
-    "section_stations": "Stations",
-    "stations_hint": "Show one or more stations.",
+    "entities_helper": "Pick one or more nextbike-austria sensors. Use Settings → Devices & Services to add more stations.",
     "section_display": "Display",
-    "layout_label": "Multi-station layout",
+    "layout": "Multi-station layout",
+    "layout_helper": "Stacked shows every station in one column; Tabs adds a tab strip when two or more stations are picked.",
     "layout_stacked": "Stacked",
     "layout_tabs": "Tabs",
     "show_rack": "Show bike rack",
@@ -47,7 +47,6 @@
     "show_timestamp": "Show timestamp",
     "show_rent_button": "Show app-rent link",
     "hide_header": "Hide header",
-    "hide_attribution": "Hide attribution",
-    "no_sensors_available": "No nextbike sensors available. Add a station first via Settings → Devices & Services."
+    "hide_attribution": "Hide attribution"
   }
 }
