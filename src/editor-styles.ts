@@ -115,4 +115,36 @@ export const editorStyles: CSSResultGroup = css`
     color: var(--text-primary-color, #fff);
     border-color: var(--primary-color);
   }
+
+  /* ── Accessibility primitives ───────────────────────────────────── */
+  /* Focus ring (WCAG 2.4.7 AA; 2px / 3:1 also meets 2.4.13 AAA). */
+  .chip:focus-visible,
+  .layout-buttons button:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+
+  /* Forced-colors fallback (Windows High Contrast). */
+  @media (forced-colors: active) {
+    .chip:focus-visible,
+    .layout-buttons button:focus-visible {
+      outline-color: CanvasText;
+    }
+    .chip,
+    .layout-buttons button {
+      forced-color-adjust: none;
+    }
+  }
+
+  /* Honour user motion preference (catch-all). */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 `;

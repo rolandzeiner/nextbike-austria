@@ -457,8 +457,17 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Return the shared GBFS client backing this coordinator."""
         return self._client
 
-    async def _async_setup(self) -> None:
-        """Nothing to do until the first refresh runs."""
+    async def async_teardown(self) -> None:
+        """Coordinator teardown hook.
+
+        Wired via ``entry.async_on_unload`` after first_refresh succeeds.
+        Nothing per-coordinator to cancel today (no custom listeners,
+        no debounced background tasks beyond the one HA owns), but the
+        method documents the contract for future per-entry resources.
+        Per-system ``SharedSystemClient`` cleanup is the
+        ``async_unload_entry``'s job since the client is shared across
+        coordinators for the same system.
+        """
         return None
 
     async def _async_update_data(self) -> dict[str, Any]:

@@ -16,12 +16,14 @@ from custom_components.nextbike_austria.const import (
 )
 
 from ._fakes import FakeClient
+from .conftest import BASE_ENTRY_DATA
 
+# Hauptbahnhof S U overrides the canonical Hoher Markt station so the
+# entity-id slugs in the assertions stay distinct.
 BASE_DATA = {
-    CONF_SYSTEM_ID: "nextbike_wr",
+    **BASE_ENTRY_DATA,
     CONF_STATION_ID: "68586882",
     CONF_STATION_NAME: "Hauptbahnhof S U",
-    CONF_SCAN_INTERVAL: 60,
 }
 
 

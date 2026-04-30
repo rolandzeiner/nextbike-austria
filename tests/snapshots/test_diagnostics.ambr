@@ -3,25 +3,15 @@
   dict({
     'attribution': 'Data: nextbike GmbH, CC0-1.0',
     'coordinator': dict({
+      'battery_samples_count': 0,
+      'bikes_available_count': 29,
+      'docks_available_count': 0,
+      'last_exception': 'None',
       'last_update_success': True,
       'station_id': '68577989',
-      'station_snapshot': dict({
-        'capacity': 25,
-        'is_installed': True,
-        'is_renting': True,
-        'is_returning': True,
-        'last_reported': 1776780838,
-        'lat': '**REDACTED**',
-        'lon': '**REDACTED**',
-        'name': 'Hoher Markt',
-        'num_bikes_available': 29,
-        'num_docks_available': 0,
-        'station_id': '68577989',
-        'vehicle_types_available': list([
-        ]),
-      }),
       'system_id': 'nextbike_wr',
       'update_interval': '0:01:00',
+      'vehicle_types_count': 2,
     }),
     'entry': dict({
       'data': dict({
