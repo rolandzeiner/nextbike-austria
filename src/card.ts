@@ -8,8 +8,12 @@ import {
 } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
-import { CARD_VERSION, SYSTEM_ACCENT, SYSTEM_LABEL } from "./const";
-import { t, pickLang } from "./localize/localize";
+import { CARD_VERSION, SYSTEM_ACCENT } from "./const";
+import { t } from "./localize/localize";
+import {
+  checkCardVersionWS,
+  renderVersionBanner,
+} from "./shared-render";
 import { cardStyles } from "./card-styles";
 import type {
   HomeAssistant,
@@ -26,6 +30,8 @@ import {
   batteryColor,
   relativeTime,
   cleanStationName,
+  getEbikeIds,
+  safeHttpsUri,
 } from "./utils";
 
 // Eagerly register the editor. With inlineDynamicImports=true the editor
@@ -85,6 +91,16 @@ export class NextbikeAustriaCard extends LitElement {
       this._versionChecked = true;
       void this._checkCardVersion();
     }
+    // Bounds-fix the active tab BEFORE render() runs. Mutating @state
+    // inside render() schedules a redundant Lit cycle and triggers
+    // dev-mode warnings.
+    if (changed.has("_config") || changed.has("hass")) {
+      const stations = this._resolveEntities();
+      const useTabs = this._config.layout === "tabs" && stations.length >= 2;
+      if (useTabs && this._activeTab >= stations.length) {
+        this._activeTab = 0;
+      }
+    }
   }
 
   // Performance gate — every entity state change in HA fires a hass
@@ -138,23 +154,18 @@ export class NextbikeAustriaCard extends LitElement {
 
   public static getStubConfig(
     hass: HomeAssistant,
-  ): Partial<NextbikeAustriaCardConfig> {
+  ): Record<string, unknown> {
     const entities = findNextbikeEntities(hass);
-    return { entities: entities.length ? [{ entity: entities[0] }] : [] };
+    const first = entities[0];
+    return { entities: first ? [{ entity: first }] : [] };
   }
 
   private async _checkCardVersion(): Promise<void> {
-    if (!this.hass?.callWS) return;
-    try {
-      const result = await this.hass.callWS<{ version?: string }>({
-        type: "nextbike_austria/card_version",
-      });
-      if (result?.version && result.version !== CARD_VERSION) {
-        this._versionMismatch = result.version;
-      }
-    } catch {
-      /* backend may not support the command yet */
-    }
+    this._versionMismatch = await checkCardVersionWS(
+      this.hass,
+      "nextbike_austria/card_version",
+      CARD_VERSION,
+    );
   }
 
   private _t(key: string): string {
@@ -169,14 +180,15 @@ export class NextbikeAustriaCard extends LitElement {
       : [];
     if (picked.length) return picked;
     const available = findNextbikeEntities(hass);
-    return available.length ? [{ entity: available[0] }] : [];
+    const first = available[0];
+    return first ? [{ entity: first }] : [];
   }
 
   protected render(): TemplateResult | typeof nothing {
     if (!this.hass || !this._config) return nothing;
     const stations = this._resolveEntities();
     const useTabs = this._config.layout === "tabs" && stations.length >= 2;
-    if (useTabs && this._activeTab >= stations.length) this._activeTab = 0;
+    // _activeTab clamp moved to willUpdate() — keeping render() pure.
 
     const attribution =
       stations
@@ -191,7 +203,10 @@ export class NextbikeAustriaCard extends LitElement {
     if (!stations.length) {
       content = this._renderEmpty();
     } else if (useTabs) {
-      content = this._renderStation(stations[this._activeTab]);
+      // _activeTab is clamped to [0, stations.length) above, so the
+      // index is in-bounds; narrow for noUncheckedIndexedAccess.
+      const active = stations[this._activeTab] ?? stations[0]!;
+      content = this._renderStation(active, this._activeTab);
     } else {
       content = stations.map((s) => this._renderStation(s));
     }
@@ -200,7 +215,7 @@ export class NextbikeAustriaCard extends LitElement {
       <ha-card>
         ${useTabs ? this._renderTabs(stations) : nothing}
         <div class="wrap">
-          ${this._versionMismatch ? this._renderBanner() : nothing}
+          ${renderVersionBanner(this._versionMismatch, (k) => this._t(k))}
           ${content}
           ${this._config.hide_attribution
             ? nothing
@@ -210,29 +225,10 @@ export class NextbikeAustriaCard extends LitElement {
     `;
   }
 
-  private _renderBanner(): TemplateResult {
-    const msg = this._t("version_update").replace(
-      "{v}",
-      this._versionMismatch || "?",
-    );
-    return html`
-      <div class="banner" role="alert" aria-live="assertive">
-        <span>${msg}</span>
-        <button
-          type="button"
-          aria-label=${this._t("version_reload")}
-          @click=${() => window.location.reload()}
-        >
-          ${this._t("version_reload")}
-        </button>
-      </div>
-    `;
-  }
-
   private _renderEmpty(): TemplateResult {
     const available = findNextbikeEntities(this.hass);
     const key = available.length ? "no_entities_picked" : "no_entities_available";
-    return html`<div class="empty-state">${this._t(key)}</div>`;
+    return html`<div class="empty-state" role="status">${this._t(key)}</div>`;
   }
 
   private _renderTabs(stations: NextbikeStationEntry[]): TemplateResult {
@@ -241,7 +237,14 @@ export class NextbikeAustriaCard extends LitElement {
         ${stations.map((s, i) => {
           const a = this.hass?.states[s.entity]?.attributes || {};
           const hasFriendlyName = typeof a.friendly_name === "string" && a.friendly_name.length > 0;
-          const label = cleanStationName(a.friendly_name || s.entity);
+          // Prefer the locale-agnostic display name surfaced by the
+          // sensor; fall back to stripping HA's friendly-name suffix
+          // for users on an older Python integration version.
+          const displayName =
+            typeof a.station_display_name === "string" && a.station_display_name
+              ? a.station_display_name
+              : cleanStationName(a.friendly_name || s.entity);
+          const label = displayName;
           const selected = i === this._activeTab;
           // WCAG 3.1.2 Language of Parts: station names come from the
           // nextbike API in German. Wrap in lang="de" so screen readers
@@ -252,6 +255,8 @@ export class NextbikeAustriaCard extends LitElement {
             <button
               type="button"
               role="tab"
+              id=${`nbtab-${i}`}
+              aria-controls=${`nbpanel-${i}`}
               class="tab ${selected ? "active" : ""}"
               aria-selected=${selected ? "true" : "false"}
               tabindex=${selected ? "0" : "-1"}
@@ -301,14 +306,17 @@ export class NextbikeAustriaCard extends LitElement {
     });
   }
 
-  private _renderStation(stopCfg: NextbikeStationEntry): TemplateResult {
+  private _renderStation(
+    stopCfg: NextbikeStationEntry,
+    tabIndex?: number,
+  ): TemplateResult {
     const state = this.hass?.states[stopCfg.entity];
     if (!state) {
       // User picked a station in the editor but its sensor doesn't
       // exist (integration unloaded, entity renamed). Distinct from
       // _renderEmpty's "nothing configured" case — use a specific
       // message so the user knows what went wrong.
-      return html`<div class="empty-state">${this._t("no_entities_unavailable")}</div>`;
+      return html`<div class="empty-state" role="status">${this._t("no_entities_unavailable")}</div>`;
     }
     const a = state.attributes || ({} as HassEntityAttributes);
     const bikes = Number.isFinite(parseInt(state.state, 10))
@@ -337,6 +345,10 @@ export class NextbikeAustriaCard extends LitElement {
     const vehicleTypesAvailable = Array.isArray(a.vehicle_types_available)
       ? a.vehicle_types_available
       : [];
+    // Live e-bike id set surfaced by the Python coordinator (with a
+    // small fallback for old coordinators). Built once per render and
+    // threaded through the rack helpers.
+    const ebikeIds = getEbikeIds(a);
     // Reserved bikes occupy extra rack slots beyond `num_bikes_available`.
     const reservedCount =
       typeof a.bikes_reserved === "number" ? a.bikes_reserved : 0;
@@ -350,24 +362,49 @@ export class NextbikeAustriaCard extends LitElement {
       : [];
     const systemId = a.system_id || "";
     const accent = SYSTEM_ACCENT[systemId] || "var(--primary-color)";
+    // `system_label` ships from the Python sensor (single source of
+    // truth in const.py::AUSTRIAN_SYSTEMS); fall back to a slug strip
+    // for older bundles that pre-date the attribute.
     const systemName =
-      SYSTEM_LABEL[systemId] || systemId.replace(/^nextbike_/, "");
-    const rentUri = typeof a.rental_uri === "string" ? a.rental_uri : "";
+      (typeof a.system_label === "string" && a.system_label) ||
+      systemId.replace(/^nextbike_/, "");
+    const rentUri = safeHttpsUri(a.rental_uri);
     const hasFriendlyName = typeof a.friendly_name === "string" && a.friendly_name.length > 0;
-    const title = cleanStationName(a.friendly_name || stopCfg.entity);
-    const mapUrl =
+    // Locale-agnostic display name (config-entry title) when the
+    // sensor surfaces it; regex-strip fallback for old coordinators.
+    const title =
+      typeof a.station_display_name === "string" && a.station_display_name
+        ? a.station_display_name
+        : cleanStationName(a.friendly_name || stopCfg.entity);
+    // mapUrl is built from numeric lat/lon so the literal is always
+    // https://, but pipe it through the same trust-boundary guard as
+    // the rental URI so a future contributor can't add a stop-URL
+    // attribute and bypass the allowlist. safeHttpsUri returns "" for
+    // anything non-HTTP(S); we lift "" to null so the call site's
+    // existing nullish gate keeps the link off entirely on a miss.
+    const mapUrl: string | null =
       typeof a.latitude === "number" && typeof a.longitude === "number"
-        ? `https://www.google.com/maps/search/?api=1&query=${a.latitude},${a.longitude}`
+        ? safeHttpsUri(
+            `https://www.google.com/maps/search/?api=1&query=${a.latitude},${a.longitude}`,
+          ) || null
         : null;
 
     const bikeWord = bikes === 1 ? this._t("bike") : this._t("bikes");
 
     const chips = this._renderPills(ebikes, docks, capacity);
 
+    // WAI-ARIA tabpanel pattern: when rendered inside the tab strip,
+    // tie the section back to the active tab so AT users hear the
+    // panel-of-this-tab relationship.
+    const inTabs = typeof tabIndex === "number";
     return html`
       <section
         class="station"
         aria-label=${title}
+        role=${inTabs ? "tabpanel" : nothing}
+        id=${inTabs ? `nbpanel-${tabIndex}` : nothing}
+        aria-labelledby=${inTabs ? `nbtab-${tabIndex}` : nothing}
+        tabindex=${inTabs ? "-1" : nothing}
         style=${`--nb-accent:${accent};`}
       >
         ${this._config.hide_header
@@ -426,6 +463,7 @@ export class NextbikeAustriaCard extends LitElement {
               batteryList,
               vehicleTypesAvailable,
               vehicleTypeNames,
+              ebikeIds,
               reservedCount,
               reservedTypes,
               disabledCount,
@@ -486,6 +524,7 @@ export class NextbikeAustriaCard extends LitElement {
     batteryList: Array<{ type?: string; pct?: number }> | null;
     vehicleTypesAvailable: Array<{ vehicle_type_id?: string; count?: number }>;
     vehicleTypeNames: Record<string, string>;
+    ebikeIds: ReadonlySet<string>;
     reservedCount: number;
     reservedTypes: string[];
     disabledCount: number;
@@ -501,6 +540,7 @@ export class NextbikeAustriaCard extends LitElement {
       batteryList,
       vehicleTypesAvailable,
       vehicleTypeNames,
+      ebikeIds,
       reservedCount,
       reservedTypes,
       disabledCount,
@@ -530,10 +570,12 @@ export class NextbikeAustriaCard extends LitElement {
     const ebikeFallbackType = firstEbikeTypeName(
       vehicleTypesAvailable,
       vehicleTypeNames,
+      ebikeIds,
     );
     const classicSequence = expandClassicTypes(
       vehicleTypesAvailable,
       vehicleTypeNames,
+      ebikeIds,
     );
     let classicCursor = 0;
 
@@ -814,7 +856,3 @@ export class NextbikeAustriaCard extends LitElement {
   }
 }
 
-// Keep the import visible to the tree-shaker — pickLang is called via
-// localize re-exports in other modules, but the editor also references
-// it directly. This noop satisfies TS's unused-import check.
-void pickLang;

@@ -16,6 +16,13 @@ const TRANSLATIONS: Record<string, Dict> = {
   de: de as Dict,
 };
 
+// Static guarantee: `en` is declared as a top-level import + populated in
+// the `TRANSLATIONS` map at module load. `noUncheckedIndexedAccess`
+// widens every index access to `… | undefined`, so we narrow once here
+// for the lookup chain. Empty-object fallback covers the impossible-but-
+// typed case of the `en` slot being absent.
+const EN_DICT: Dict = TRANSLATIONS.en ?? {};
+
 export function pickLang(hass: HomeAssistant | undefined): "de" | "en" {
   const hl = hass?.language || "en";
   return hl.startsWith("de") ? "de" : "en";
@@ -36,8 +43,8 @@ function resolvePath(dict: Dict, path: string[]): string | undefined {
 export function t(hass: HomeAssistant | undefined, key: string): string {
   const lang = pickLang(hass);
   return (
-    resolvePath(TRANSLATIONS[lang], [key]) ??
-    resolvePath(TRANSLATIONS.en, [key]) ??
+    resolvePath(TRANSLATIONS[lang] ?? EN_DICT, [key]) ??
+    resolvePath(EN_DICT, [key]) ??
     key
   );
 }
@@ -46,8 +53,8 @@ export function t(hass: HomeAssistant | undefined, key: string): string {
 export function et(hass: HomeAssistant | undefined, key: string): string {
   const lang = pickLang(hass);
   return (
-    resolvePath(TRANSLATIONS[lang], ["editor", key]) ??
-    resolvePath(TRANSLATIONS.en, ["editor", key]) ??
+    resolvePath(TRANSLATIONS[lang] ?? EN_DICT, ["editor", key]) ??
+    resolvePath(EN_DICT, ["editor", key]) ??
     key
   );
 }

@@ -111,6 +111,9 @@ class FakeClient:
     def vehicle_type_names(self) -> dict[str, str]:
         return dict(self._vehicle_type_names)
 
+    def ebike_type_ids(self) -> list[str]:
+        return sorted(self._ebike_ids)
+
     # ----- test seams ---------------------------------------------------
 
     def set_stations(self, stations: dict[str, dict[str, Any]]) -> None:

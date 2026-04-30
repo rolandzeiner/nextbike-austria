@@ -115,3 +115,10 @@ pip-delete-this-directory.txt
 # Each contributor sets these up from the skill template; not shared.
 # ---------------------------------------------------------------------------
 scripts/
+
+# ---------------------------------------------------------------------------
+# Dev-only test-fixture hook — a local-only Python module some integrations
+# use to inject recorded payloads during development. MUST NEVER ship.
+# CI's `no-dev-fixture` job catches `git add -f` bypasses.
+# ---------------------------------------------------------------------------
+custom_components/nextbike_austria/_dev_fixture.py

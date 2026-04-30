@@ -121,6 +121,18 @@ class SharedSystemClient:
         """Return True if the vehicle type is pedelec / throttle-electric."""
         return vehicle_type_id in self._ebike_type_ids
 
+    def ebike_type_ids(self) -> list[str]:
+        """Return the resolved e-bike vehicle-type id set, sorted.
+
+        Single source of truth for the bundled card. Without this
+        accessor the card would have to mirror the EBIKE_PROPULSIONS
+        resolution by hardcoding a known-id allowlist (the way the
+        bundle did pre-v1.2.0), and a new pedelec id upstream would
+        silently undercount on the rack render until someone bumped
+        the bundle.
+        """
+        return sorted(self._ebike_type_ids)
+
     def vehicle_type_names(self) -> dict[str, str]:
         """Return a ``{vehicle_type_id: display_name}`` map.
 
@@ -388,9 +400,11 @@ class SharedSystemClient:
 def _get_shared_client(hass: HomeAssistant, system_id: str) -> SharedSystemClient:
     """Return (and memoize) the SharedSystemClient for a system.
 
-    The cache lives in `hass.data[DOMAIN]["systems"]`. Clients are never
-    removed — the cost is one session reference per Austrian system the
-    user has configured, which is bounded by the short `SYSTEM_IDS` tuple.
+    The cache lives in ``hass.data[DOMAIN]["systems"]``. Clients are
+    cleaned up by ``__init__.py::async_unload_entry`` when the LAST
+    config entry referencing a given system unloads — multiple entries
+    for the same system share one client to collapse GBFS fetches, so
+    removal is gated on the unload of the final reference.
     """
     if system_id not in SYSTEM_IDS:
         # Defensive: the config flow should never let an unknown system
@@ -457,8 +471,17 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Return the shared GBFS client backing this coordinator."""
         return self._client
 
-    async def _async_setup(self) -> None:
-        """Nothing to do until the first refresh runs."""
+    async def async_teardown(self) -> None:
+        """Coordinator teardown hook.
+
+        Wired via ``entry.async_on_unload`` after first_refresh succeeds.
+        Nothing per-coordinator to cancel today (no custom listeners,
+        no debounced background tasks beyond the one HA owns), but the
+        method documents the contract for future per-entry resources.
+        Per-system ``SharedSystemClient`` cleanup is the
+        ``async_unload_entry``'s job since the client is shared across
+        coordinators for the same system.
+        """
         return None
 
     async def _async_update_data(self) -> dict[str, Any]:
@@ -500,6 +523,15 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             )
 
         self._clear_degraded_issue("station_gone")
+
+        # Always carry the live e-bike type-id set. The card mirrors
+        # this onto its rack render so a new pedelec id upstream is
+        # counted correctly without bumping the JS bundle. Cheap to
+        # include — the set is small (3-5 ids per Austrian system) and
+        # the resolution already happened during async_fetch.
+        ebike_ids = self._client.ebike_type_ids()
+        if ebike_ids:
+            station = {**station, "_ebike_type_ids": ebike_ids}
 
         # Merge battery aggregates into the returned dict so the sensor
         # can surface them without a second lookup through the client.

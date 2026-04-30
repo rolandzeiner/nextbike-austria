@@ -28,8 +28,7 @@
       "cannot_connect": "Could not reach the nextbike GBFS API. Check your internet connection and try again.",
       "invalid_system": "Unknown nextbike system.",
       "query_too_short": "Please enter at least 2 characters.",
-      "no_matches": "No stations match your search — try a shorter or different fragment.",
-      "invalid_station": "That station is no longer in the feed. Please pick another."
+      "no_matches": "No stations match your search — try a shorter or different fragment."
     },
     "abort": {
       "already_configured": "This station is already being tracked.",
@@ -41,7 +40,7 @@
     "step": {
       "init": {
         "title": "Nextbike Austria options",
-        "description": "Configure polling and optional e-bike battery tracking.",
+        "description": "Configure polling and optional e-bike battery tracking. To switch the system or station for this entry, use **Reconfigure** instead.",
         "data": {
           "scan_interval": "Update interval (seconds)",
           "track_e_bike_range": "Track e-bike battery state"

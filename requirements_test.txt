@@ -1,6 +1,22 @@
-pytest-homeassistant-custom-component>=0.13.325,<0.14
+# Minimum-version floors so a transitive minor release of any of these
+# can't break green-on-main without a commit on our side. Bump when the
+# project intentionally adopts new behaviour from a newer release.
+# Local dev tracks the floor or higher; CI installs the floor's minor
+# resolved by pip.
+# Floor capped to 3.13-compatible releases. pytest-HACC 0.13.317+
+# requires Python ≥3.14, but our CI is pinned to 3.13 (the pyo3 0.24
+# tree in pydantic-core / orjson / Pillow doesn't support 3.14 yet —
+# see validate.yml). Lift this floor when CI bumps back to 3.14.
+pytest-homeassistant-custom-component>=0.13.205,<0.14
 pytest-timeout>=2.4,<3
 pytest-cov>=5,<8
 syrupy>=5,<6
 mypy>=1.20.2,<2
 ruff>=0.15.12,<1
+# Transitive: HA core 2025.6 pins aiodns==3.5.0, which references
+# pycares.ares_query_a_result at class-body evaluation time. pycares
+# 5.0 renamed/removed that symbol, so on Python 3.13 pip resolves
+# pycares 5.x and pytest crashes at collection with `AttributeError:
+# module 'pycares' has no attribute 'ares_query_a_result'`. Cap below
+# the rename until HA bumps aiodns to a version that targets pycares 5.
+pycares>=4.4,<5

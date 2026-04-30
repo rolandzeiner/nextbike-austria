@@ -2,19 +2,22 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Any
 
 import voluptuous as vol
-from homeassistant.components import websocket_api
-from homeassistant.components.http import StaticPathConfig
-from homeassistant.components.websocket_api import ActiveConnection  # type: ignore[attr-defined]
+from homeassistant.components.websocket_api import async_register_command
+from homeassistant.components.websocket_api.connection import ActiveConnection
+from homeassistant.components.websocket_api.decorators import (
+    async_response,
+    websocket_command,
+)
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, Platform
 from homeassistant.core import CoreState, Event, HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 
-from .const import CARD_FILENAME, CARD_URL, CARD_VERSION, DOMAIN
+from .card_registration import JSModuleRegistration
+from .const import CARD_VERSION, DOMAIN
 from .coordinator import NextbikeAustriaConfigEntry, NextbikeStationCoordinator
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
@@ -23,125 +26,54 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 
-@websocket_api.websocket_command(  # type: ignore[attr-defined]
+@websocket_command(
     {vol.Required("type"): "nextbike_austria/card_version"}
 )
-@websocket_api.async_response  # type: ignore[attr-defined]
+@async_response
 async def _websocket_card_version(
     hass: HomeAssistant,
     connection: ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    """Return the bundled card version so the frontend can detect mismatches."""
+    """Return the bundled card version so the frontend can detect mismatches.
+
+    The frontend bundle hard-codes ``CARD_VERSION`` at build time. When HA
+    updates the integration but the user is still running a tab that
+    cached the old bundle, this probe lets the card surface a reload
+    banner instead of silently misbehaving.
+    """
     connection.send_result(msg["id"], {"version": CARD_VERSION})
 
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
-    """Set up the Nextbike Austria component.
+    """Set up the Nextbike Austria component (domain-level init).
 
-    Also registers the bundled Lovelace card once when the domain is loaded
-    — serving the JS file via static path and upserting the Lovelace
-    resource pointing at it with a ``?v={CARD_VERSION}`` cache-buster.
+    Card registration runs once per HA process — not per config entry. We
+    defer it to ``EVENT_HOMEASSISTANT_STARTED`` if HA is still starting up
+    so the Lovelace resources are loaded by the time we touch them.
     """
     hass.data.setdefault(DOMAIN, {})
 
-    websocket_api.async_register_command(hass, _websocket_card_version)
+    # WS commands registered here survive integration removal — HA's
+    # websocket_api has no public deregister hook. Same caveat as the
+    # static path registration in card_registration.py: pragmatic given
+    # the API surface, harmless in practice (a stray handler that no
+    # caller invokes once the bundle is gone). Behaviour on duplicate
+    # registration is HA core internal; we never reach that branch
+    # since `async_setup` only runs once per HA startup.
+    async_register_command(hass, _websocket_card_version)
 
-    async def _register_frontend(_event: Event | None = None) -> None:
-        await _async_register_card(hass)
+    registration = JSModuleRegistration(hass)
+
+    async def _register_card(_event: Event | None = None) -> None:
+        await registration.async_register()
 
     if hass.state == CoreState.running:
-        await _register_frontend()
+        await _register_card()
     else:
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _register_frontend)
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _register_card)
 
     return True
-
-
-async def _async_register_card(hass: HomeAssistant) -> None:
-    """Serve the card JS and upsert its Lovelace resource with ?v=version.
-
-    Pulled in-line rather than via a separate card_registration module so
-    the control flow is visible where async_setup lives. Storage-mode
-    users get the resource auto-registered; YAML-mode users see a debug
-    log and need to add the resource manually (documented in README).
-    """
-    card_path = Path(__file__).parent / "www" / CARD_FILENAME
-    if not card_path.is_file():
-        _LOGGER.warning("Card JS not found at %s", card_path)
-        return
-
-    try:
-        await hass.http.async_register_static_paths(
-            [StaticPathConfig(CARD_URL, str(card_path), False)]
-        )
-    except Exception:  # noqa: BLE001
-        _LOGGER.debug("Static path already registered or unavailable: %s", CARD_URL)
-
-    try:
-        lovelace = hass.data.get("lovelace")
-        if lovelace is None:
-            _LOGGER.debug(
-                "Lovelace not yet available in hass.data — resource URL "
-                "not updated. The WebSocket version check will notify "
-                "the user if the card JS is stale."
-            )
-            return
-
-        # HA <2024.x exposed .mode directly; newer versions use LovelaceData
-        # where mode lives on .config. Fall back gracefully.
-        mode = getattr(lovelace, "mode", None) or getattr(
-            getattr(lovelace, "config", None), "mode", None
-        )
-        if mode is not None and mode != "storage":
-            _LOGGER.debug(
-                "Lovelace is in %s mode — resource URL must be managed manually",
-                mode,
-            )
-            return
-
-        resources = getattr(lovelace, "resources", None)
-        if resources is None:
-            _LOGGER.debug("Lovelace resources not accessible on this HA version")
-            return
-        await resources.async_load()
-
-        versioned_url = f"{CARD_URL}?v={CARD_VERSION}"
-
-        for item in resources.async_items():
-            existing_base = item.get("url", "").split("?")[0]
-            if existing_base == CARD_URL:
-                if item.get("url") == versioned_url:
-                    return  # already up to date
-                try:
-                    await resources.async_update_item(
-                        item["id"],
-                        {"res_type": "module", "url": versioned_url},
-                    )
-                except Exception as update_err:  # noqa: BLE001
-                    _LOGGER.debug(
-                        "async_update_item failed (%s), trying delete+recreate",
-                        update_err,
-                    )
-                    await resources.async_delete_item(item["id"])
-                    await resources.async_create_item(
-                        {"res_type": "module", "url": versioned_url}
-                    )
-                _LOGGER.info("Updated Lovelace resource to %s", versioned_url)
-                return
-
-        await resources.async_create_item(
-            {"res_type": "module", "url": versioned_url}
-        )
-        _LOGGER.info("Registered Lovelace resource %s", versioned_url)
-
-    except Exception:  # noqa: BLE001
-        _LOGGER.warning(
-            "Could not register Lovelace resource – add manually: "
-            "Settings → Dashboards → Resources → %s (JavaScript module)",
-            CARD_URL,
-            exc_info=True,
-        )
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigEntry) -> bool:
@@ -150,6 +82,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigEnt
     # HA auto-invokes coordinator._async_setup() inside this call before the
     # first fetch; it also raises ConfigEntryNotReady on fetch failure.
     await coordinator.async_config_entry_first_refresh()
+
+    # Register teardown only after first_refresh succeeded — running it on
+    # a half-initialised coordinator that raised ConfigEntryNotReady leaks
+    # listeners.
+    entry.async_on_unload(coordinator.async_teardown)
 
     entry.runtime_data = coordinator
 
@@ -175,5 +112,49 @@ async def _async_reload_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigE
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigEntry) -> bool:
-    """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    """Unload a config entry.
+
+    Drops the per-system ``SharedSystemClient`` from ``hass.data`` only
+    when no other entries for the same system remain — multiple entries
+    for the same Austrian system share one client to collapse GBFS
+    fetches, so removing it while siblings still need it would cost a
+    fresh fetch on every poll.
+    """
+    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if not unloaded:
+        return False
+    # The about-to-be-unloaded coordinator carries the system_id we own.
+    system_id = entry.runtime_data.system_id
+    other_entries_for_system = [
+        e
+        for e in hass.config_entries.async_entries(DOMAIN)
+        if e.entry_id != entry.entry_id
+        and e.runtime_data is not None
+        and e.runtime_data.system_id == system_id
+    ]
+    if not other_entries_for_system:
+        systems: dict[str, Any] = (
+            hass.data.get(DOMAIN, {}).get("systems") or {}
+        )
+        systems.pop(system_id, None)
+    return True
+
+
+async def async_remove_entry(
+    hass: HomeAssistant, entry: NextbikeAustriaConfigEntry
+) -> None:
+    """Drop the Lovelace resource when the LAST config entry is removed.
+
+    The card resource is registered once globally per integration, so
+    reloading or removing a single entry must not remove it. Only when
+    no other entries of this domain remain do we unregister.
+    """
+    remaining = [
+        e
+        for e in hass.config_entries.async_entries(DOMAIN)
+        if e.entry_id != entry.entry_id
+    ]
+    if remaining:
+        return
+    registration = JSModuleRegistration(hass)
+    await registration.async_unregister()

@@ -26,16 +26,16 @@
   "legend_overflow": "Überzählig",
   "legend_reserved": "Reserviert",
   "reserved": "Reserviert",
-  "legend_disabled": "Ausser Betrieb",
-  "disabled": "Ausser Betrieb",
+  "legend_disabled": "Außer Betrieb",
+  "disabled": "Außer Betrieb",
   "battery_unknown": "Batterie unbekannt",
   "version_update": "Nextbike Austria wurde auf v{v} aktualisiert — bitte neu laden",
   "version_reload": "Neu laden",
   "editor": {
-    "section_stations": "Stationen",
-    "stations_hint": "Eine oder mehrere Stationen anzeigen.",
+    "entities_helper": "Eine oder mehrere Nextbike-Austria-Sensoren auswählen. Über Einstellungen → Geräte & Dienste lassen sich weitere Stationen hinzufügen.",
     "section_display": "Anzeige",
-    "layout_label": "Mehrfach-Layout",
+    "layout": "Layout für mehrere Stationen",
+    "layout_helper": "„Gestapelt“ zeigt alle Stationen untereinander, „Reiter“ blendet ab zwei Stationen einen Reiter-Streifen ein.",
     "layout_stacked": "Gestapelt",
     "layout_tabs": "Reiter",
     "show_rack": "Bike-Rack anzeigen",
@@ -47,7 +47,6 @@
     "show_timestamp": "Zeitstempel anzeigen",
     "show_rent_button": "App-Mietlink anzeigen",
     "hide_header": "Kopfzeile ausblenden",
-    "hide_attribution": "Datenquelle ausblenden",
-    "no_sensors_available": "Keine Nextbike-Sensoren verfügbar. Erst eine Station über Einstellungen → Geräte & Dienste hinzufügen."
+    "hide_attribution": "Datenquelle ausblenden"
   }
 }

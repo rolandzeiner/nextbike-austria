@@ -1,6 +1,8 @@
 // Must match CARD_VERSION in custom_components/nextbike_austria/const.py
 // byte-for-byte — drift causes an infinite reload-banner loop.
-export const CARD_VERSION = "1.1.0";
+// Python's CARD_VERSION is aliased to INTEGRATION_VERSION (read from
+// manifest.json), so a manifest bump is what to mirror here.
+export const CARD_VERSION = "1.2.0";
 
 // System-specific brand tints for the header accent. Pulled from each
 // operator's public brand guides; falls back to theme primary otherwise.
@@ -13,16 +15,9 @@ export const SYSTEM_ACCENT: Record<string, string> = {
   nextbike_ka: "#FFC20E", // Klagenfurt yellow
 };
 
-export const SYSTEM_LABEL: Record<string, string> = {
-  nextbike_wr: "Wien",
-  nextbike_la: "Niederösterreich",
-  nextbike_si: "Innsbruck",
-  nextbike_vt: "Tirol",
-  nextbike_al: "Linz",
-  nextbike_ka: "Klagenfurt",
-};
-
-// Known e-bike vehicle_type_ids across Austrian nextbike systems. Canonical
-// home is coordinator.py EBIKE_PROPULSIONS, but the card can't reach Python
-// so we mirror the ids the aggregator cares about.
-export const EBIKE_IDS: ReadonlySet<string> = new Set(["143", "183", "200"]);
+// E-bike vehicle-type ids are no longer hardcoded on the card side.
+// The Python coordinator resolves them live from GBFS `propulsion_type`
+// and surfaces the set as the `e_bike_vehicle_type_ids` sensor
+// attribute; the card reads it via `getEbikeIds(attrs)` in utils.ts
+// (with a small fallback for the brief Python-old/JS-new window after
+// an upgrade).

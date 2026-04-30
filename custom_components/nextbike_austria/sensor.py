@@ -18,20 +18,25 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
-from homeassistant.const import ATTR_ATTRIBUTION
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import ATTRIBUTION, DOMAIN
+from .const import ATTRIBUTION, AUSTRIAN_SYSTEMS, DOMAIN
 from .coordinator import NextbikeAustriaConfigEntry, NextbikeStationCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 0
+
+# Single source of truth for human-friendly per-system labels — the
+# card mirrors this via the `system_label` sensor attribute rather
+# than carrying its own `SYSTEM_LABEL` table. Adding a system is a
+# one-line change in `AUSTRIAN_SYSTEMS` and propagates everywhere.
+_SYSTEM_LABELS: dict[str, str] = {sys["id"]: sys["region"] for sys in AUSTRIAN_SYSTEMS}
 
 
 def _epoch_to_iso(value: Any) -> str | None:
@@ -73,7 +78,12 @@ class _BaseStationSensor(
     """Shared scaffolding for all per-station sensors."""
 
     _attr_has_entity_name = True
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_attribution = ATTRIBUTION
+    # Deliberately no state_class: bikes-available is a sawtooth that
+    # jumps on every rental/return — the hourly LTS mean/min/max
+    # carries no analytical signal worth keeping forever. Dropping
+    # state_class stops new long-term statistics; existing orphan
+    # buckets clear via Settings → System → Statistics.
     _attr_native_unit_of_measurement = "bikes"
 
     # Subclasses set these:
@@ -132,9 +142,17 @@ class _BikesAvailableSensor(_BaseStationSensor):
         """
         data = self.coordinator.data or {}
         attrs: dict[str, Any] = {
-            ATTR_ATTRIBUTION: ATTRIBUTION,
             "station_id": self.coordinator.station_id,
             "system_id": self.coordinator.system_id,
+            "system_label": _SYSTEM_LABELS.get(self.coordinator.system_id, ""),
+            # Clean station name (= entry title set by the config flow)
+            # so the card can render the device label without resorting
+            # to a regex strip of the localised entity-name suffix HA
+            # appends from `_attr_has_entity_name=True + translation_key`.
+            # Adding a new locale (it_IT, fr_FR, …) would otherwise leave
+            # the suffix unstripped on the card; the entry title is
+            # locale-agnostic.
+            "station_display_name": self._entry.title,
             "capacity": data.get("capacity"),
             "num_docks_available": data.get("num_docks_available"),
             "is_virtual_station": data.get("is_virtual_station"),
@@ -175,6 +193,10 @@ class _BikesAvailableSensor(_BaseStationSensor):
         # sample lands.
         if "_vehicle_type_names" in data:
             attrs["vehicle_type_names"] = data["_vehicle_type_names"]
+        # E-bike vehicle-type ids — surfaced unconditionally so the
+        # card stops mirroring the propulsion-type resolution.
+        if "_ebike_type_ids" in data:
+            attrs["e_bike_vehicle_type_ids"] = data["_ebike_type_ids"]
         return attrs
 
 
@@ -213,10 +235,9 @@ class _DocksAvailableSensor(_BaseStationSensor):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Attribution + virtual-station flag + capacity if known."""
+        """Virtual-station flag + capacity if known."""
         data = self.coordinator.data or {}
         return {
-            ATTR_ATTRIBUTION: ATTRIBUTION,
             "is_virtual_station": data.get("is_virtual_station"),
             "capacity": data.get("capacity"),
         }
@@ -250,7 +271,7 @@ class _EbikesAvailableSensor(_BaseStationSensor):
                 total += count
         return total
 
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Attribution only; richer detail lives on the bikes sensor."""
-        return {ATTR_ATTRIBUTION: ATTRIBUTION}
+    # No extra_state_attributes — `_attr_attribution` from the base
+    # carries the attribution string; richer per-station detail lives
+    # on the bikes sensor so dashboards can pull the full fingerprint
+    # from a single entity.

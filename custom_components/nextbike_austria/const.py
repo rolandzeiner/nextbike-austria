@@ -8,14 +8,21 @@ validation / future-proofing.
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Final, TypedDict
 
 from homeassistant.const import __version__ as _HA_VERSION
 
 DOMAIN: Final = "nextbike_austria"
 
-# Integration version — must match manifest.json "version" field.
-INTEGRATION_VERSION: Final = "1.1.0-beta.1"
+# Integration version — read from manifest.json at module import so the
+# string can never drift from HACS's authoritative source. Sync read of a
+# ~600-byte file happens once per process; the manifest is required for
+# HACS anyway. Release workflow: bump only manifest.json "version".
+INTEGRATION_VERSION: Final = json.loads(
+    (Path(__file__).parent / "manifest.json").read_text(encoding="utf-8")
+)["version"]
 
 # Config entry keys
 CONF_SYSTEM_ID: Final = "system_id"
@@ -37,15 +44,13 @@ ATTRIBUTION: Final = "Data: nextbike GmbH, CC0-1.0"
 # Matches the same scheme used by wiener_linien_austria and tankstellen_austria.
 USER_AGENT: Final = f"HomeAssistant/{_HA_VERSION} {DOMAIN}/{INTEGRATION_VERSION}"
 
-# Lovelace card version. Tracked separately from INTEGRATION_VERSION so
-# the card and the integration can rev independently.
-#
-# This MUST stay byte-identical to `CARD_VERSION` in src/const.ts (the
-# TS bundle's constant, NOT INTEGRATION_VERSION). A drift triggers HA's
-# reload-banner loop: banner prompts reload, reload re-serves the same
-# mismatched JS, banner reappears. The invariant is enforced in CI by
-# tests/test_card_version.py.
-CARD_VERSION: Final = "1.1.0"
+# Lovelace card version — pinned to ``INTEGRATION_VERSION`` so the
+# manifest is the single source of truth. ``src/const.ts`` carries the
+# same string as the bundle's compile-time constant; a manifest-only
+# bump that forgets the TS side trips ``tests/test_card_version.py``.
+# The drift it guards against would otherwise put HA into a reload-
+# banner loop (banner → reload → same JS → banner).
+CARD_VERSION: Final = INTEGRATION_VERSION
 CARD_URL: Final = "/nextbike_austria/nextbike-austria-card.js"
 CARD_FILENAME: Final = "nextbike-austria-card.js"
 
@@ -124,5 +129,4 @@ def gbfs_feed_url(system_id: str, feed: str) -> str:
 #   - "human"           → regular pedal bike
 #   - "electric_assist" → pedelec (most common e-bike here)
 #   - "electric"        → throttle-only (rare in AT)
-PROPULSION_HUMAN: Final = "human"
 EBIKE_PROPULSIONS: Final = frozenset({"electric_assist", "electric"})

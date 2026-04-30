@@ -111,7 +111,7 @@ rules:
     comment: All entities are primary data. Flip if you add diagnostic/config entities.
   entity-device-class:
     status: exempt
-    comment: Sensor values are bike / dock counts — no matching HA SensorDeviceClass (none of ENERGY, POWER, TEMPERATURE, etc. applies). native_unit_of_measurement + state_class=MEASUREMENT are set so long-term statistics work.
+    comment: Sensor values are bike / dock counts — no matching HA SensorDeviceClass (none of ENERGY, POWER, TEMPERATURE, etc. applies). native_unit_of_measurement is set; state_class is intentionally omitted because counts are sawtooth (rentals/returns) and LTS aggregates carry no analytical signal worth keeping forever.
   entity-disabled-by-default:
     status: exempt
     comment: No non-essential entities. Flip if you add rarely-used ones.
