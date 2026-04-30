@@ -2,7 +2,7 @@
 // byte-for-byte — drift causes an infinite reload-banner loop.
 // Python's CARD_VERSION is aliased to INTEGRATION_VERSION (read from
 // manifest.json), so a manifest bump is what to mirror here.
-export const CARD_VERSION = "1.2.0-beta.2";
+export const CARD_VERSION = "1.2.0";
 
 // System-specific brand tints for the header accent. Pulled from each
 // operator's public brand guides; falls back to theme primary otherwise.
