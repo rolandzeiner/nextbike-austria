@@ -8,6 +8,7 @@ export interface HassEntityAttributes {
   unit_of_measurement?: string;
   station_id?: string;
   system_id?: string;
+  system_label?: string;
   capacity?: number | null;
   num_docks_available?: number | null;
   vehicle_types_available?: Array<{
@@ -25,7 +26,10 @@ export interface HassEntityAttributes {
   rental_uri?: string;
   latitude?: number;
   longitude?: number;
-  last_reported?: number;
+  // Python sensor emits this as ISO-8601 UTC (sensor.py::_epoch_to_iso),
+  // but YAML configs / older bundles may still surface a raw epoch second.
+  // relativeTime() handles both shapes.
+  last_reported?: number | string;
   is_installed?: boolean;
   is_renting?: boolean;
   is_returning?: boolean;

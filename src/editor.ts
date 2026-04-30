@@ -2,7 +2,7 @@ import { LitElement, html, nothing, type TemplateResult, type CSSResultGroup } f
 import { customElement, property, state } from "lit/decorators.js";
 
 import type { HomeAssistant, NextbikeAustriaCardConfig } from "./types";
-import { et, pickLang } from "./localize/localize";
+import { et } from "./localize/localize";
 import { editorStyles } from "./editor-styles";
 import {
   findNextbikeEntities,
@@ -78,9 +78,18 @@ export class NextbikeAustriaCardEditor extends LitElement {
   };
 
   protected render(): TemplateResult | typeof nothing {
-    if (!this.hass) return nothing;
-
-    const available = findNextbikeEntities(this.hass);
+    // Don't gate the whole editor on `!this.hass` — HA assigns hass
+    // before setConfig in practice, but the race exists. Render the
+    // scaffolding always; only the entity-list block needs hass.
+    const available = this.hass ? findNextbikeEntities(this.hass) : [];
+    // Stable alphabetical sort by station label so the chip layout
+    // stops shuffling on every dashboard reload (Object.keys order is
+    // non-deterministic across HA restarts).
+    available.sort((a, b) => {
+      const la = String(this.hass?.states[a]?.attributes?.friendly_name || a);
+      const lb = String(this.hass?.states[b]?.attributes?.friendly_name || b);
+      return la.localeCompare(lb);
+    });
     const selected = this._config.entities || [];
     const selectedIds = new Set(selected.map((s) => s.entity));
     const layout = this._config.layout === "tabs" ? "tabs" : "stacked";
@@ -111,6 +120,7 @@ export class NextbikeAustriaCardEditor extends LitElement {
               <button
                 type="button"
                 class=${layout === "stacked" ? "active" : ""}
+                aria-pressed=${layout === "stacked" ? "true" : "false"}
                 @click=${() => this._setLayout("stacked")}
               >
                 ${this._et("layout_stacked")}
@@ -118,6 +128,7 @@ export class NextbikeAustriaCardEditor extends LitElement {
               <button
                 type="button"
                 class=${layout === "tabs" ? "active" : ""}
+                aria-pressed=${layout === "tabs" ? "true" : "false"}
                 @click=${() => this._setLayout("tabs")}
               >
                 ${this._et("layout_tabs")}
@@ -150,16 +161,22 @@ export class NextbikeAustriaCardEditor extends LitElement {
     selectedIds: Set<string>,
   ): TemplateResult {
     const a = this.hass?.states[eid]?.attributes;
-    const friendly = a?.friendly_name || eid;
+    const friendlyRaw = a?.friendly_name;
+    const hasFriendlyName =
+      typeof friendlyRaw === "string" && friendlyRaw.length > 0;
+    const friendly = hasFriendlyName ? friendlyRaw : eid;
     const stopName = cleanStationName(friendly);
     const isSel = selectedIds.has(eid);
     return html`
       <button
         type="button"
         class="chip ${isSel ? "selected" : ""}"
+        aria-pressed=${isSel ? "true" : "false"}
         @click=${() => this._toggleStation(eid)}
       >
-        <span class="stop-name">${stopName}</span>
+        ${hasFriendlyName
+          ? html`<span class="stop-name" lang="de">${stopName}</span>`
+          : html`<span class="stop-name">${stopName}</span>`}
         <span class="eid">${eid.split(".")[1] || eid}</span>
       </button>
     `;
@@ -204,6 +221,3 @@ export class NextbikeAustriaCardEditor extends LitElement {
   }
 }
 
-// pickLang kept as import so tree-shaker sees it; used when extending
-// the editor with language-dependent widgets.
-void pickLang;

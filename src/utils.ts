@@ -9,7 +9,9 @@ export function findNextbikeEntities(hass: HomeAssistant | undefined): string[] 
   if (!hass || !hass.states) return [];
   return Object.keys(hass.states).filter((eid) => {
     if (!eid.startsWith("sensor.")) return false;
-    const a = hass.states[eid].attributes;
+    const st = hass.states[eid];
+    if (!st) return false;
+    const a = st.attributes;
     return (
       !!a &&
       typeof a.station_id === "string" &&
@@ -63,6 +65,7 @@ export function normaliseConfig(
   out.show_flags = out.show_flags !== false;
   out.show_timestamp = out.show_timestamp !== false;
   out.show_rent_button = out.show_rent_button !== false;
+  out.hide_header = out.hide_header === true;
   out.hide_attribution = out.hide_attribution === true;
   if (out.layout !== "tabs") out.layout = "stacked";
 
@@ -136,10 +139,19 @@ export function batteryColor(pct: number | undefined | null): string {
 }
 
 export function relativeTime(
-  tsSeconds: number | undefined | null,
+  ts: number | string | undefined | null,
   t: (key: string) => string,
 ): string | null {
-  if (typeof tsSeconds !== "number" || !Number.isFinite(tsSeconds)) return null;
+  // Python sensor emits ISO-8601 UTC; YAML configs / older bundles may
+  // still surface raw epoch seconds. Accept both shapes.
+  let tsSeconds: number | null = null;
+  if (typeof ts === "number" && Number.isFinite(ts)) {
+    tsSeconds = ts;
+  } else if (typeof ts === "string" && ts.length > 0) {
+    const ms = Date.parse(ts);
+    if (Number.isFinite(ms)) tsSeconds = ms / 1000;
+  }
+  if (tsSeconds === null) return null;
   const ageSec = Math.max(0, Math.floor(Date.now() / 1000 - tsSeconds));
   if (ageSec < 10) return t("now");
   if (ageSec < 60) return t("seconds_ago").replace("{n}", String(ageSec));

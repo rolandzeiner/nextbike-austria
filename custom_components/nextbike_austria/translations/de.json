@@ -28,8 +28,7 @@
       "cannot_connect": "Die nextbike-GBFS-Schnittstelle ist nicht erreichbar. Bitte Internetverbindung prüfen und erneut versuchen.",
       "invalid_system": "Unbekanntes nextbike-System.",
       "query_too_short": "Bitte mindestens 2 Zeichen eingeben.",
-      "no_matches": "Keine Stationen gefunden — bitte mit einem anderen Suchbegriff erneut versuchen.",
-      "invalid_station": "Die Station ist nicht mehr im Feed. Bitte eine andere Station wählen."
+      "no_matches": "Keine Stationen gefunden — bitte mit einem anderen Suchbegriff erneut versuchen."
     },
     "abort": {
       "already_configured": "Diese Station wird bereits verfolgt.",
@@ -41,7 +40,7 @@
     "step": {
       "init": {
         "title": "Nextbike Austria – Optionen",
-        "description": "Abfrage und optionales E-Bike-Batterietracking konfigurieren.",
+        "description": "Abfrage und optionales E-Bike-Batterietracking konfigurieren. Um System oder Station dieses Eintrags zu ändern, **Neukonfigurieren** verwenden.",
         "data": {
           "scan_interval": "Aktualisierungsintervall (Sekunden)",
           "track_e_bike_range": "E-Bike-Batteriestand tracken"

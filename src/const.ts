@@ -1,6 +1,8 @@
 // Must match CARD_VERSION in custom_components/nextbike_austria/const.py
 // byte-for-byte — drift causes an infinite reload-banner loop.
-export const CARD_VERSION = "1.1.0";
+// Python's CARD_VERSION is aliased to INTEGRATION_VERSION (read from
+// manifest.json), so a manifest bump is what to mirror here.
+export const CARD_VERSION = "1.2.0-beta.1";
 
 // System-specific brand tints for the header accent. Pulled from each
 // operator's public brand guides; falls back to theme primary otherwise.
@@ -11,15 +13,6 @@ export const SYSTEM_ACCENT: Record<string, string> = {
   nextbike_vt: "#009D58", // VVT REGIORAD green
   nextbike_al: "#E30613", // Linz red
   nextbike_ka: "#FFC20E", // Klagenfurt yellow
-};
-
-export const SYSTEM_LABEL: Record<string, string> = {
-  nextbike_wr: "Wien",
-  nextbike_la: "Niederösterreich",
-  nextbike_si: "Innsbruck",
-  nextbike_vt: "Tirol",
-  nextbike_al: "Linz",
-  nextbike_ka: "Klagenfurt",
 };
 
 // Known e-bike vehicle_type_ids across Austrian nextbike systems. Canonical

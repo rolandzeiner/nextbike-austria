@@ -1,28 +1,25 @@
 """Tests for the top-level ``custom_components.nextbike_austria`` setup.
 
 Covers the surface ``__init__.py`` exposes that isn't exercised by the
-config-flow or coordinator tests:
+config-flow, coordinator, or card_registration tests:
 
 * the ``nextbike_austria/card_version`` WebSocket command,
-* ``async_unload_entry`` happy path,
-* ``_async_register_card`` static-path + Lovelace-resource branches.
+* ``async_unload_entry`` happy path + per-system client cleanup,
+* ``async_remove_entry`` honouring the LAST-entry guard.
 """
 from __future__ import annotations
 
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.nextbike_austria import (
-    _async_register_card,
     _websocket_card_version,
+    async_remove_entry,
 )
 from custom_components.nextbike_austria.const import (
-    CARD_URL,
     CARD_VERSION,
     CONF_STATION_ID,
     CONF_STATION_NAME,
@@ -31,41 +28,41 @@ from custom_components.nextbike_austria.const import (
 )
 
 from ._fakes import FakeClient
+from .conftest import BASE_ENTRY_DATA, station_snapshot
 
-_BASE_DATA = {
-    CONF_SYSTEM_ID: "nextbike_wr",
-    CONF_STATION_ID: "68577989",
-    CONF_STATION_NAME: "Hoher Markt",
-    CONF_SCAN_INTERVAL: 60,
-}
-
-_STATION_SNAPSHOT = {
-    "station_id": "68577989",
-    "name": "Hoher Markt",
-    "capacity": 25,
-    "num_bikes_available": 5,
-    "num_docks_available": 20,
-    "is_installed": True,
-    "is_renting": True,
-    "is_returning": True,
-    "last_reported": 1_776_780_838,
-    "vehicle_types_available": [],
-}
+# Setup-path tests don't care about per-vehicle counts — pin to the
+# baseline factory with a non-empty bikes count + capacity overrides
+# so the entity reaches LOADED state without coordinator complaints.
+_STATION_SNAPSHOT = station_snapshot(
+    num_bikes_available=5,
+    num_docks_available=20,
+    vehicle_types_available=[],
+)
 
 
-def _make_entry() -> MockConfigEntry:
+def _make_entry(
+    *,
+    station_id: str = "68577989",
+    station_name: str = "Hoher Markt",
+    system_id: str = "nextbike_wr",
+) -> MockConfigEntry:
     return MockConfigEntry(
         domain=DOMAIN,
-        data=_BASE_DATA,
+        data={
+            **BASE_ENTRY_DATA,
+            CONF_SYSTEM_ID: system_id,
+            CONF_STATION_ID: station_id,
+            CONF_STATION_NAME: station_name,
+        },
         options={},
-        title="Hoher Markt",
-        unique_id="nextbike_wr_68577989",
+        title=station_name,
+        unique_id=f"{system_id}_{station_id}",
     )
 
 
-def _patch_client() -> Any:
+def _patch_client(station_id: str = "68577989") -> Any:
     fake = FakeClient()
-    fake.set_stations({"68577989": _STATION_SNAPSHOT})
+    fake.set_stations({station_id: _STATION_SNAPSHOT})
     return patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
         return_value=fake,
@@ -118,109 +115,67 @@ async def test_async_unload_entry_returns_true(hass: HomeAssistant) -> None:
     assert entry.state is ConfigEntryState.NOT_LOADED
 
 
-# ---------------------------------------------------------------------
-# _async_register_card
-# ---------------------------------------------------------------------
-
-
-def _stub_static(hass: HomeAssistant) -> AsyncMock:
-    """Replace ``hass.http.async_register_static_paths`` with an AsyncMock."""
-    static = AsyncMock()
-    hass.http = MagicMock(spec_set=("async_register_static_paths",))
-    hass.http.async_register_static_paths = static
-    return static
-
-
-def _build_lovelace(items: list[dict[str, Any]], mode: str = "storage") -> MagicMock:
-    """Build a fake Lovelace store exposing the surface ``_async_register_card`` needs."""
-    resources = MagicMock()
-    resources.async_load = AsyncMock()
-    resources.async_items = MagicMock(return_value=list(items))
-    resources.async_create_item = AsyncMock()
-    resources.async_update_item = AsyncMock()
-    resources.async_delete_item = AsyncMock()
-    lovelace = MagicMock()
-    lovelace.mode = mode
-    lovelace.resources = resources
-    return lovelace
-
-
-async def test_register_card_creates_resource_when_absent(hass: HomeAssistant) -> None:
-    """Storage-mode + no existing resource → async_create_item is called once."""
-    static = _stub_static(hass)
-    lovelace = _build_lovelace([])
-    hass.data["lovelace"] = lovelace
-
-    await _async_register_card(hass)
-
-    static.assert_awaited_once()
-    lovelace.resources.async_create_item.assert_awaited_once()
-    created = lovelace.resources.async_create_item.await_args.args[0]
-    assert created["url"] == f"{CARD_URL}?v={CARD_VERSION}"
-    assert created["res_type"] == "module"
-
-
-async def test_register_card_updates_outdated_resource(hass: HomeAssistant) -> None:
-    """An existing resource with a stale ?v=… is upserted to the current version."""
-    _stub_static(hass)
-    stale = {"id": "abc", "url": f"{CARD_URL}?v=0.0.0", "res_type": "module"}
-    lovelace = _build_lovelace([stale])
-    hass.data["lovelace"] = lovelace
-
-    await _async_register_card(hass)
-
-    lovelace.resources.async_update_item.assert_awaited_once_with(
-        "abc",
-        {"res_type": "module", "url": f"{CARD_URL}?v={CARD_VERSION}"},
-    )
-    lovelace.resources.async_create_item.assert_not_awaited()
-
-
-async def test_register_card_skips_when_already_current(hass: HomeAssistant) -> None:
-    """Existing resource matching ``CARD_URL?v=CARD_VERSION`` → no writes."""
-    _stub_static(hass)
-    current = {
-        "id": "abc",
-        "url": f"{CARD_URL}?v={CARD_VERSION}",
-        "res_type": "module",
-    }
-    lovelace = _build_lovelace([current])
-    hass.data["lovelace"] = lovelace
-
-    await _async_register_card(hass)
-
-    lovelace.resources.async_update_item.assert_not_awaited()
-    lovelace.resources.async_create_item.assert_not_awaited()
-
-
-async def test_register_card_noop_in_yaml_mode(hass: HomeAssistant) -> None:
-    """YAML-mode Lovelace must not be mutated — user manages the resource."""
-    _stub_static(hass)
-    lovelace = _build_lovelace([], mode="yaml")
-    hass.data["lovelace"] = lovelace
-
-    await _async_register_card(hass)
-
-    lovelace.resources.async_create_item.assert_not_awaited()
-    lovelace.resources.async_update_item.assert_not_awaited()
-
-
-async def test_register_card_warns_when_card_missing(
-    hass: HomeAssistant, tmp_path: Any, caplog: pytest.LogCaptureFixture
+async def test_unload_drops_shared_client_when_last_entry_for_system(
+    hass: HomeAssistant,
 ) -> None:
-    """A missing card JS path logs a warning instead of raising."""
-    bad_path = tmp_path / "missing.js"
+    """Per-system shared client is dropped when the LAST entry for that system unloads."""
+    entry = _make_entry()
+    entry.add_to_hass(hass)
 
-    # Make the chained ``Path(__file__).parent / "www" / CARD_FILENAME`` end
-    # at a real ``pathlib.Path`` that doesn't exist on disk.
-    with patch("custom_components.nextbike_austria.Path") as path_cls:
-        path_cls.return_value.parent.__truediv__.return_value.__truediv__.return_value = (
-            bad_path
-        )
-        caplog.clear()
-        with caplog.at_level("WARNING"):
-            await _async_register_card(hass)
+    with _patch_client():
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+        # Simulate a real shared-client cache entry so we can assert it
+        # gets cleaned up. (The patched _get_shared_client bypasses the
+        # `systems` dict during setup, so seed it now.)
+        hass.data.setdefault(DOMAIN, {}).setdefault("systems", {})[
+            "nextbike_wr"
+        ] = object()
 
-    assert any(
-        "Card JS not found" in rec.message for rec in caplog.records
-    ), "expected warning when card JS file is missing"
+        assert await hass.config_entries.async_unload(entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert "nextbike_wr" not in hass.data.get(DOMAIN, {}).get("systems", {})
+
+
+# ---------------------------------------------------------------------
+# async_remove_entry — LAST-entry guard
+# ---------------------------------------------------------------------
+
+
+async def test_remove_entry_unregisters_card_when_last(hass: HomeAssistant) -> None:
+    """Removing the LAST entry unregisters the Lovelace resource."""
+    entry = _make_entry()
+    entry.add_to_hass(hass)
+
+    fake_unregister = AsyncMock()
+    with patch(
+        "custom_components.nextbike_austria.JSModuleRegistration"
+    ) as cls:
+        cls.return_value.async_unregister = fake_unregister
+        await async_remove_entry(hass, entry)
+
+    fake_unregister.assert_awaited_once()
+
+
+async def test_remove_entry_keeps_card_when_others_remain(
+    hass: HomeAssistant,
+) -> None:
+    """Removing one of two entries must NOT unregister the resource."""
+    entry_a = _make_entry()
+    entry_a.add_to_hass(hass)
+    entry_b = _make_entry(
+        station_id="68586882",
+        station_name="Hauptbahnhof S U",
+    )
+    entry_b.add_to_hass(hass)
+
+    fake_unregister = AsyncMock()
+    with patch(
+        "custom_components.nextbike_austria.JSModuleRegistration"
+    ) as cls:
+        cls.return_value.async_unregister = fake_unregister
+        # Remove entry_a; entry_b remains.
+        await async_remove_entry(hass, entry_a)
+
+    fake_unregister.assert_not_awaited()

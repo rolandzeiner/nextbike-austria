@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 import pytest
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import UpdateFailed
@@ -26,13 +25,7 @@ from custom_components.nextbike_austria.coordinator import (
 )
 
 from ._fakes import CtxResp, FakeClient
-
-BASE_ENTRY_DATA = {
-    CONF_SYSTEM_ID: "nextbike_wr",
-    CONF_STATION_ID: "68577989",
-    CONF_STATION_NAME: "Hoher Markt",
-    CONF_SCAN_INTERVAL: 60,
-}
+from .conftest import BASE_ENTRY_DATA, station_snapshot as _conftest_station_snapshot
 
 
 def _make_entry(data: dict[str, Any] | None = None) -> MockConfigEntry:
@@ -47,24 +40,13 @@ def _make_entry(data: dict[str, Any] | None = None) -> MockConfigEntry:
 
 
 def _station_snapshot(sid: str = "68577989") -> dict[str, Any]:
-    """A representative merged station_information + station_status row."""
-    return {
-        "station_id": sid,
-        "name": "Hoher Markt",
-        "lat": 48.210666,
-        "lon": 16.372983,
-        "capacity": 25,
-        "num_bikes_available": 29,
-        "num_docks_available": 0,
-        "is_installed": True,
-        "is_renting": True,
-        "is_returning": True,
-        "last_reported": 1_776_780_838,
-        "vehicle_types_available": [
-            {"vehicle_type_id": "192", "count": 23},
-            {"vehicle_type_id": "183", "count": 2},
-        ],
-    }
+    """A representative merged station_information + station_status row.
+
+    Coordinator tests want lat/lon present so the merged-snapshot path
+    is exercised; the conftest baseline keeps them off for tests that
+    don't care.
+    """
+    return _conftest_station_snapshot(sid, lat=48.210666, lon=16.372983)
 
 
 def _make_session(resp_or_session: Any) -> Any:
