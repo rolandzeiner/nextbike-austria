@@ -66,6 +66,28 @@ _MIN_QUERY_LENGTH = 2
 _HTTP_TIMEOUT = aiohttp.ClientTimeout(total=10)
 
 
+def _scan_interval_field(default: int) -> dict[Any, Any]:
+    """Return the voluptuous schema fragment for the scan-interval field.
+
+    Both the create-entry path (``async_step_select_station``) and the
+    options flow (``async_step_init``) need the same Number selector
+    bounded by ``MIN_POLL_SECONDS`` / ``MAX_POLL_SECONDS``. Hoisting it
+    keeps the two definitions byte-identical so a bound change moves
+    both at once.
+    """
+    return {
+        vol.Required(CONF_SCAN_INTERVAL, default=default): NumberSelector(
+            NumberSelectorConfig(
+                min=MIN_POLL_SECONDS,
+                max=MAX_POLL_SECONDS,
+                step=15,
+                unit_of_measurement="s",
+                mode=NumberSelectorMode.BOX,
+            )
+        ),
+    }
+
+
 async def _fetch_stations(hass: HomeAssistant, system_id: str) -> list[dict[str, Any]]:
     """Fetch the station catalogue for a system.
 
@@ -159,6 +181,13 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             system_id = user_input.get(CONF_SYSTEM_ID)
+            # Defence-in-depth: ``SelectSelector(options=options)`` already
+            # validates against the SYSTEM_IDS allowlist at the voluptuous
+            # layer, so this branch is unreachable in normal operation.
+            # Kept (with the matching ``invalid_system`` translation key)
+            # so a future refactor that loosens the selector — or wires a
+            # new entry point — surfaces a localised error instead of an
+            # unguarded exception.
             if system_id not in SYSTEM_IDS:
                 errors[CONF_SYSTEM_ID] = "invalid_system"
             else:
@@ -291,17 +320,7 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
                             mode=SelectSelectorMode.LIST,
                         )
                     ),
-                    vol.Required(
-                        CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=MIN_POLL_SECONDS,
-                            max=MAX_POLL_SECONDS,
-                            step=15,
-                            unit_of_measurement="s",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
+                    **_scan_interval_field(DEFAULT_SCAN_INTERVAL),
                 }
             ),
             errors=errors,
@@ -371,17 +390,7 @@ class NextbikeAustriaOptionsFlow(OptionsFlow):
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Required(
-                        CONF_SCAN_INTERVAL, default=default_interval
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=MIN_POLL_SECONDS,
-                            max=MAX_POLL_SECONDS,
-                            step=15,
-                            unit_of_measurement="s",
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
+                    **_scan_interval_field(default_interval),
                     vol.Required(
                         CONF_TRACK_E_BIKE_RANGE, default=default_track
                     ): bool,

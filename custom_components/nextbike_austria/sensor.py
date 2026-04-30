@@ -145,6 +145,14 @@ class _BikesAvailableSensor(_BaseStationSensor):
             "station_id": self.coordinator.station_id,
             "system_id": self.coordinator.system_id,
             "system_label": _SYSTEM_LABELS.get(self.coordinator.system_id, ""),
+            # Clean station name (= entry title set by the config flow)
+            # so the card can render the device label without resorting
+            # to a regex strip of the localised entity-name suffix HA
+            # appends from `_attr_has_entity_name=True + translation_key`.
+            # Adding a new locale (it_IT, fr_FR, …) would otherwise leave
+            # the suffix unstripped on the card; the entry title is
+            # locale-agnostic.
+            "station_display_name": self._entry.title,
             "capacity": data.get("capacity"),
             "num_docks_available": data.get("num_docks_available"),
             "is_virtual_station": data.get("is_virtual_station"),
@@ -185,6 +193,10 @@ class _BikesAvailableSensor(_BaseStationSensor):
         # sample lands.
         if "_vehicle_type_names" in data:
             attrs["vehicle_type_names"] = data["_vehicle_type_names"]
+        # E-bike vehicle-type ids — surfaced unconditionally so the
+        # card stops mirroring the propulsion-type resolution.
+        if "_ebike_type_ids" in data:
+            attrs["e_bike_vehicle_type_ids"] = data["_ebike_type_ids"]
         return attrs
 
 

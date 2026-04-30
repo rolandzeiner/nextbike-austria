@@ -9,6 +9,17 @@ export interface HassEntityAttributes {
   station_id?: string;
   system_id?: string;
   system_label?: string;
+  /** Clean station name from the integration's config-entry title.
+   *  Locale-agnostic (HA core's `_attr_has_entity_name + translation_key`
+   *  concat for `friendly_name` is locale-dependent and would otherwise
+   *  force the card into regex-stripping every supported language). */
+  station_display_name?: string;
+  /** Live e-bike vehicle-type ids as resolved by the Python coordinator
+   *  from `propulsion_type ∈ {electric_assist, electric}` against
+   *  vehicle_types.json. Single source of truth — the card prefers this
+   *  attribute over its hardcoded fallback so a new pedelec type id
+   *  upstream is counted correctly without a card-side bundle bump. */
+  e_bike_vehicle_type_ids?: string[];
   capacity?: number | null;
   num_docks_available?: number | null;
   vehicle_types_available?: Array<{

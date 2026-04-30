@@ -191,6 +191,19 @@ class JSModuleRegistration:
                     {"res_type": "module", "url": versioned_url},
                 )
             except Exception as update_err:  # noqa: BLE001
+                # Broad catch is deliberate. ResourceStorageCollection's
+                # async_update_item can fail with HomeAssistantError,
+                # KeyError (item evicted between async_items() and the
+                # update call), or other exceptions whose precise class
+                # has shifted across HA core versions. The recovery path
+                # is the same regardless of cause: drop the existing row
+                # and recreate, which costs a fresh resource id but
+                # produces the same observable state for the dashboard
+                # (resource at CARD_URL with the current ?v=). Narrowing
+                # the catch risks regressions on a future HA version that
+                # raises a different concrete class for the same failure
+                # mode. The dashboard never holds these ids externally,
+                # so the id churn is invisible to users.
                 _LOGGER.debug(
                     "async_update_item failed (%s), trying delete+recreate",
                     update_err,
