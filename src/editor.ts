@@ -1,28 +1,60 @@
+// Schema-driven Lovelace editor for the Nextbike Austria card.
+//
+// Design notes
+// ------------
+// * The editor uses ``<ha-form>`` exclusively — no bespoke Lit widgets.
+//   ha-form is the canonical HA editor component: it picks up the
+//   active theme, supports the standard label/helper localisation
+//   chain, and keeps a11y / forced-colors / focus-visible behaviour
+//   in lockstep with HA core.
+//
+// * **Editor `_config` lifecycle gotcha** — custom-card editors do
+//   NOT receive a re-`setConfig()` after dispatching `config-changed`.
+//   The form-handler must therefore set ``this._config = next`` *before*
+//   firing the event; otherwise the next render reads stale state and
+//   the form reverts to the pre-change value. (Pure ``fireEvent``-only
+//   is the HA-core editor pattern but custom editors break under it.)
+//
+// * **`expandable` + `flatten: true`** — without ``flatten``, ha-form
+//   scopes inner-schema values under ``data[name]`` and the card's
+//   flat-key reads silently default. Every expandable in this file
+//   ships ``flatten: true``; the ``HaFormExpandableSchema`` interface
+//   in ``types.ts`` declares the field explicitly so a future
+//   maintainer can't add a nested expandable by accident.
+//
+// * **Storage shape** — saved configs use
+//   ``entities: Array<{ entity: string }>`` (legacy promotion path
+//   from the original scalar ``entity`` form). ha-form's entity
+//   selector with ``multiple: true`` emits a flat ``string[]``. We
+//   translate at the editor's value-changed boundary so the on-disk
+//   shape stays backwards-compatible with existing dashboards.
+
 import { LitElement, html, nothing, type TemplateResult, type CSSResultGroup } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
-import type { HomeAssistant, NextbikeAustriaCardConfig } from "./types";
-import { et } from "./localize/localize";
+import type {
+  HaFormSchema,
+  HomeAssistant,
+  NextbikeAustriaCardConfig,
+  NextbikeStationEntry,
+} from "./types";
 import { editorStyles } from "./editor-styles";
-import {
-  findNextbikeEntities,
-  normaliseConfig,
-  cleanStationName,
-} from "./utils";
+import { et } from "./localize/localize";
+import { normaliseConfig } from "./utils";
 
-// Key of a boolean column on the config — drives both editor toggle rows
-// and the setConfig round-trip.
-type BoolField =
-  | "show_rack"
-  | "show_legend"
-  | "show_ebikes"
-  | "show_battery"
-  | "show_docks"
-  | "show_flags"
-  | "show_timestamp"
-  | "show_rent_button"
-  | "hide_header"
-  | "hide_attribution";
+/** Local minimal `fireEvent` shim — same shape as the helper from
+ *  custom-card-helpers (which the rest of the bundle deliberately
+ *  avoids depending on for a single function). `bubbles: true` +
+ *  `composed: true` are required so the event crosses our shadow
+ *  boundary and reaches the dashboard's card-editor listener. */
+function fireEvent<T>(node: HTMLElement, type: string, detail: T): void {
+  const event = new CustomEvent(type, {
+    detail,
+    bubbles: true,
+    composed: true,
+  });
+  node.dispatchEvent(event);
+}
 
 @customElement("nextbike-austria-card-editor")
 export class NextbikeAustriaCardEditor extends LitElement {
@@ -39,185 +71,147 @@ export class NextbikeAustriaCardEditor extends LitElement {
     this._config = normaliseConfig(config);
   }
 
-  private _et(key: string): string {
+  /** Translate `key` against the active HA language. Tiny shortcut
+   *  around the editor-namespaced localize helper to keep render call
+   *  sites tidy. */
+  private _t(key: string): string {
     return et(this.hass, key);
   }
 
-  private _fire(): void {
-    // bubbles + composed required so the event crosses our shadow boundary
-    // and reaches the dashboard's card editor listener.
-    this.dispatchEvent(
-      new CustomEvent("config-changed", {
-        detail: { config: { ...this._config } },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+  /** Build the ha-form schema. Called per render so option labels
+   *  pick up the current `hass.language`. */
+  private _schema(): ReadonlyArray<HaFormSchema> {
+    return [
+      {
+        // Filter to nextbike-austria sensors only — picking an
+        // unrelated `sensor.*` would render an empty card.
+        // `multiple: true` is what enables station picking. Output
+        // is a flat string[] which we translate to the storage
+        // `Array<{entity}>` shape in _onFormChanged.
+        name: "entities",
+        required: true,
+        selector: {
+          entity: {
+            domain: "sensor",
+            integration: "nextbike_austria",
+            multiple: true,
+          },
+        },
+      },
+      {
+        name: "layout",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "stacked", label: this._t("layout_stacked") },
+              { value: "tabs", label: this._t("layout_tabs") },
+            ],
+          },
+        },
+      },
+      {
+        // `flatten: true` is non-negotiable. Without it, every toggle
+        // below would write to `data.display.<name>` and the card's
+        // flat config-key reads (`this._config.show_rack`) would
+        // silently default. The HaFormExpandableSchema interface
+        // declares `flatten?: boolean` explicitly so this can't be
+        // forgotten in a future schema edit.
+        type: "expandable",
+        name: "display",
+        title: this._t("section_display"),
+        flatten: true,
+        schema: [
+          { name: "hide_header", selector: { boolean: {} } },
+          { name: "show_rack", selector: { boolean: {} } },
+          { name: "show_legend", selector: { boolean: {} } },
+          { name: "show_battery", selector: { boolean: {} } },
+          { name: "show_ebikes", selector: { boolean: {} } },
+          { name: "show_docks", selector: { boolean: {} } },
+          { name: "show_flags", selector: { boolean: {} } },
+          { name: "show_timestamp", selector: { boolean: {} } },
+          { name: "show_rent_button", selector: { boolean: {} } },
+          { name: "hide_attribution", selector: { boolean: {} } },
+        ],
+      },
+    ];
   }
 
-  private _toggleStation = (eid: string): void => {
-    const list = [...(this._config.entities || [])];
-    const idx = list.findIndex((s) => s.entity === eid);
-    const next =
-      idx >= 0
-        ? list.filter((_, i) => i !== idx)
-        : [...list, { entity: eid }];
-    this._config = { ...this._config, entities: next };
-    this._fire();
+  /** Field-label resolver. Three-step chain:
+   *  1. HA core's own translations for common field names ("entities",
+   *     "name", "icon"). `hass.localize` returns "" on miss, not the
+   *     lookup key, so a falsy check is the correct miss signal.
+   *  2. The card's editor-namespaced bundle (`editor.<field>`).
+   *  3. Last resort: raw field name (still functional, dev sees the gap). */
+  private _computeLabel = (field: { name: string }): string => {
+    const haKey = `ui.panel.lovelace.editor.card.generic.${field.name}`;
+    const ha = this.hass?.localize?.(haKey);
+    if (ha) return ha;
+    const localised = this._t(field.name);
+    if (localised !== field.name) return localised;
+    return field.name;
   };
 
-  private _setBool = (field: BoolField, value: boolean): void => {
-    this._config = { ...this._config, [field]: value };
-    this._fire();
+  /** Helper-text resolver. Only surfaces a helper when an
+   *  `editor.<field>_helper` key actually exists in the bundle —
+   *  otherwise ha-form's empty helper line eats vertical space. */
+  private _computeHelper = (field: { name: string }): string | undefined => {
+    const key = `${field.name}_helper`;
+    const localised = this._t(key);
+    return localised === key ? undefined : localised;
   };
 
-  private _setLayout = (layout: "stacked" | "tabs"): void => {
-    if (layout !== "stacked" && layout !== "tabs") return;
-    this._config = { ...this._config, layout };
-    this._fire();
+  /** Translate the saved-config shape to ha-form's input shape.
+   *  ha-form's entity selector with `multiple: true` reads/emits a
+   *  flat string[]; the storage shape carries `Array<{entity}>` for
+   *  backwards compat with dashboards predating ha-form. */
+  private _formData(): Record<string, unknown> {
+    const entities = (this._config.entities ?? [])
+      .map((s) => s.entity)
+      .filter((e): e is string => typeof e === "string" && e.length > 0);
+    return {
+      ...this._config,
+      entities,
+    };
+  }
+
+  private _onFormChanged = (
+    ev: CustomEvent<{ value: Record<string, unknown> }>,
+  ): void => {
+    const value = ev.detail.value;
+    const rawEntities = value["entities"];
+    const entityList: NextbikeStationEntry[] = Array.isArray(rawEntities)
+      ? rawEntities
+          .filter((s): s is string => typeof s === "string" && s.length > 0)
+          .map((entity) => ({ entity }))
+      : [];
+    // Pipe through normaliseConfig so the boolean coercion + layout
+    // narrowing stay consistent with the card's setConfig path.
+    const next = normaliseConfig({
+      ...(value as Partial<NextbikeAustriaCardConfig>),
+      entities: entityList,
+    });
+    // CRITICAL: set _config BEFORE fireEvent. Custom editors don't
+    // receive a re-setConfig after config-changed, so a fireEvent-only
+    // path leaves _config stale and the next render reverts the form
+    // to its pre-change value.
+    this._config = next;
+    fireEvent(this, "config-changed", { config: next });
   };
 
   protected render(): TemplateResult | typeof nothing {
-    // Don't gate the whole editor on `!this.hass` — HA assigns hass
-    // before setConfig in practice, but the race exists. Render the
-    // scaffolding always; only the entity-list block needs hass.
-    const available = this.hass ? findNextbikeEntities(this.hass) : [];
-    // Stable alphabetical sort by station label so the chip layout
-    // stops shuffling on every dashboard reload (Object.keys order is
-    // non-deterministic across HA restarts).
-    available.sort((a, b) => {
-      const la = String(this.hass?.states[a]?.attributes?.friendly_name || a);
-      const lb = String(this.hass?.states[b]?.attributes?.friendly_name || b);
-      return la.localeCompare(lb);
-    });
-    const selected = this._config.entities || [];
-    const selectedIds = new Set(selected.map((s) => s.entity));
-    const layout = this._config.layout === "tabs" ? "tabs" : "stacked";
-    // show_rack defaults to on; legend + battery only make sense when the
-    // rack is rendered (card already gates both inside _renderRack), so
-    // the editor hides the sub-toggles in lockstep to remove visual dead
-    // space. Config values for the hidden toggles are preserved so turning
-    // show_rack back on restores the user's prior sub-settings.
-    const rackOn = this._config.show_rack !== false;
-
+    if (!this.hass) return nothing;
     return html`
       <div class="editor">
-        <div class="editor-section">
-          <div class="section-header">${this._et("section_stations")}</div>
-          <div class="editor-hint">${this._et("stations_hint")}</div>
-          <div class="chips">
-            ${available.length
-              ? available.map((eid) => this._renderStationChip(eid, selectedIds))
-              : html`<div class="editor-hint">${this._et("no_sensors_available")}</div>`}
-          </div>
-        </div>
-
-        <div class="editor-section">
-          <div class="section-header">${this._et("section_display")}</div>
-          <div class="toggle-row">
-            <span style="font-size:13px;">${this._et("layout_label")}</span>
-            <div class="layout-buttons">
-              <button
-                type="button"
-                class=${layout === "stacked" ? "active" : ""}
-                aria-pressed=${layout === "stacked" ? "true" : "false"}
-                @click=${() => this._setLayout("stacked")}
-              >
-                ${this._et("layout_stacked")}
-              </button>
-              <button
-                type="button"
-                class=${layout === "tabs" ? "active" : ""}
-                aria-pressed=${layout === "tabs" ? "true" : "false"}
-                @click=${() => this._setLayout("tabs")}
-              >
-                ${this._et("layout_tabs")}
-              </button>
-            </div>
-          </div>
-          ${this._renderHideToggle("hide_header")}
-          ${this._renderToggle("show_rack")}
-          ${rackOn
-            ? html`
-                <div class="sub-toggles">
-                  ${this._renderToggle("show_legend")}
-                  ${this._renderToggle("show_battery")}
-                </div>
-              `
-            : nothing}
-          ${this._renderToggle("show_ebikes")}
-          ${this._renderToggle("show_docks")}
-          ${this._renderToggle("show_flags")}
-          ${this._renderToggle("show_timestamp")}
-          ${this._renderToggle("show_rent_button")}
-          ${this._renderHideToggle("hide_attribution")}
-        </div>
-      </div>
-    `;
-  }
-
-  private _renderStationChip(
-    eid: string,
-    selectedIds: Set<string>,
-  ): TemplateResult {
-    const a = this.hass?.states[eid]?.attributes;
-    const friendlyRaw = a?.friendly_name;
-    const hasFriendlyName =
-      typeof friendlyRaw === "string" && friendlyRaw.length > 0;
-    const friendly = hasFriendlyName ? friendlyRaw : eid;
-    const stopName = cleanStationName(friendly);
-    const isSel = selectedIds.has(eid);
-    return html`
-      <button
-        type="button"
-        class="chip ${isSel ? "selected" : ""}"
-        aria-pressed=${isSel ? "true" : "false"}
-        @click=${() => this._toggleStation(eid)}
-      >
-        ${hasFriendlyName
-          ? html`<span class="stop-name" lang="de">${stopName}</span>`
-          : html`<span class="stop-name">${stopName}</span>`}
-        <span class="eid">${eid.split(".")[1] || eid}</span>
-      </button>
-    `;
-  }
-
-  private _renderToggle(
-    field: Exclude<BoolField, "hide_header" | "hide_attribution">,
-  ): TemplateResult {
-    const id = `nb-toggle-${field}`;
-    const checked = (this._config[field] as boolean | undefined) !== false;
-    return html`
-      <div class="toggle-row">
-        <label for=${id}>${this._et(field)}</label>
-        <ha-switch
-          id=${id}
-          ?checked=${checked}
-          @change=${(e: Event) =>
-            this._setBool(field, (e.target as HTMLInputElement).checked)}
-        ></ha-switch>
-      </div>
-    `;
-  }
-
-  // Inverted toggles (hide_*) — default false, on = hide. Generic so
-  // any "hide_X" field follows the same wiring without copy-paste.
-  private _renderHideToggle(
-    field: "hide_header" | "hide_attribution",
-  ): TemplateResult {
-    const on = this._config[field] === true;
-    const id = `nb-toggle-${field}`;
-    return html`
-      <div class="toggle-row">
-        <label for=${id}>${this._et(field)}</label>
-        <ha-switch
-          id=${id}
-          ?checked=${on}
-          @change=${(e: Event) =>
-            this._setBool(field, (e.target as HTMLInputElement).checked)}
-        ></ha-switch>
+        <ha-form
+          .hass=${this.hass}
+          .data=${this._formData()}
+          .schema=${this._schema()}
+          .computeLabel=${this._computeLabel}
+          .computeHelper=${this._computeHelper}
+          @value-changed=${this._onFormChanged}
+        ></ha-form>
       </div>
     `;
   }
 }
-
