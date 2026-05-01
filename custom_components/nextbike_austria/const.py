@@ -42,7 +42,13 @@ ATTRIBUTION: Final = "Data: nextbike GmbH, CC0-1.0"
 # reach out to *this* integration specifically rather than blanket-blocking
 # the HA UA for everyone. HA convention: "HomeAssistant/{ver} {slug}/{ver}".
 # Matches the same scheme used by wiener_linien_austria and tankstellen_austria.
-USER_AGENT: Final = f"HomeAssistant/{_HA_VERSION} {DOMAIN}/{INTEGRATION_VERSION}"
+# The trailing "(+<repo-url>)" comment follows RFC-9110 product-token-comment
+# convention so the upstream operator has a direct contact point for abuse /
+# coordination without having to find the repo by guessing.
+USER_AGENT: Final = (
+    f"HomeAssistant/{_HA_VERSION} {DOMAIN}/{INTEGRATION_VERSION} "
+    f"(+https://github.com/rolandzeiner/nextbike-austria)"
+)
 
 # Lovelace card version — pinned to ``INTEGRATION_VERSION`` so the
 # manifest is the single source of truth. ``src/const.ts`` carries the
