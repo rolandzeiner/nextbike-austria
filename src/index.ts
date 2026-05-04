@@ -1,4 +1,3 @@
-import { CARD_VERSION } from "./const";
 import "./card";
 import type { WindowWithCustomCards } from "./types";
 
@@ -14,9 +13,3 @@ win.customCards.push({
   preview: true,
   documentationURL: "https://github.com/rolandzeiner/nextbike-austria",
 });
-
-console.info(
-  `%c  NEXTBIKE-AUSTRIA-CARD  %c  v${CARD_VERSION}  `,
-  "color: #DC2026; font-weight: bold; background: black",
-  "color: white; background: dimgray",
-);
