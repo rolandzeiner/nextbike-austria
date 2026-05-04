@@ -56,6 +56,7 @@ Commit the updated `.ambr` file alongside the code change so the diff is reviewa
 pytest tests/ -v
 mypy --strict --ignore-missing-imports custom_components/nextbike_austria
 ruff check .
+npx tsc --noEmit
 npm run build
 ```
 

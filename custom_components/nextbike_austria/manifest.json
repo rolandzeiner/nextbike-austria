@@ -9,6 +9,7 @@
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/rolandzeiner/nextbike-austria/issues",
+  "loggers": ["custom_components.nextbike_austria"],
   "requirements": [],
   "version": "1.2.1"
 }
