@@ -87,6 +87,11 @@ export class NextbikeAustriaCard extends LitElement {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    // Drop the per-render memo BEFORE Lit calls render() so each cycle
+    // recomputes `_resolveEntities()` exactly once and threads the
+    // cached result through render + shouldUpdate. Without this,
+    // `findNextbikeEntities` walks `hass.states` 3× per render.
+    this._resolvedEntitiesMemo = null;
     if (changed.has("hass") && this.hass && !this._versionChecked) {
       this._versionChecked = true;
       void this._checkCardVersion();
@@ -102,6 +107,10 @@ export class NextbikeAustriaCard extends LitElement {
       }
     }
   }
+
+  // Render-scoped memo for `_resolveEntities`. Cleared at the top of
+  // every `willUpdate` so each Lit cycle gets a fresh value.
+  private _resolvedEntitiesMemo: NextbikeStationEntry[] | null = null;
 
   // Performance gate — every entity state change in HA fires a hass
   // update. Without this, we re-render on every change anywhere in the
@@ -175,13 +184,28 @@ export class NextbikeAustriaCard extends LitElement {
   private _resolveEntities(
     hass: HomeAssistant | undefined = this.hass,
   ): NextbikeStationEntry[] {
+    // Memoised when called for the default `hass` (the common case
+    // inside render() / shouldUpdate). Custom-hass callers (e.g.
+    // shouldUpdate's `oldHass` comparison branch) bypass the cache so
+    // they read the right state map.
+    if (hass === this.hass && this._resolvedEntitiesMemo !== null) {
+      return this._resolvedEntitiesMemo;
+    }
     const picked = Array.isArray(this._config?.entities)
       ? this._config.entities.filter((s) => hass?.states[s.entity])
       : [];
-    if (picked.length) return picked;
-    const available = findNextbikeEntities(hass);
-    const first = available[0];
-    return first ? [{ entity: first }] : [];
+    let result: NextbikeStationEntry[];
+    if (picked.length) {
+      result = picked;
+    } else {
+      const available = findNextbikeEntities(hass);
+      const first = available[0];
+      result = first ? [{ entity: first }] : [];
+    }
+    if (hass === this.hass) {
+      this._resolvedEntitiesMemo = result;
+    }
+    return result;
   }
 
   protected render(): TemplateResult | typeof nothing {
@@ -551,12 +575,11 @@ export class NextbikeAustriaCard extends LitElement {
     const bikesVis = Math.min(bikes, capacity);
     // Reserved + disabled slots each eat into what would otherwise
     // render as empty docks. Order: bikes, reserved, disabled, empty.
-    const reservedVis = Math.min(
-      Number.isFinite(reservedCount) ? reservedCount : 0,
-      Math.max(0, totalSlots - bikesVis),
-    );
+    // Inputs are coerced to `number | 0` at the boundary (line 353/358),
+    // so the previous `Number.isFinite` guards here were dead code.
+    const reservedVis = Math.min(reservedCount, Math.max(0, totalSlots - bikesVis));
     const disabledVis = Math.min(
-      Number.isFinite(disabledCount) ? disabledCount : 0,
+      disabledCount,
       Math.max(0, totalSlots - bikesVis - reservedVis),
     );
     const hasEbikes = typeof ebikes === "number" && Number.isFinite(ebikes) && ebikes > 0;
@@ -566,16 +589,17 @@ export class NextbikeAustriaCard extends LitElement {
       typeof batteryPct === "number" &&
       batterySamples > 0;
     const perBike = showBattery && Array.isArray(batteryList) ? batteryList : [];
-    const ebikeFallbackType = firstEbikeTypeName(
-      vehicleTypesAvailable,
-      vehicleTypeNames,
-      ebikeIds,
-    );
-    const classicSequence = expandClassicTypes(
-      vehicleTypesAvailable,
-      vehicleTypeNames,
-      ebikeIds,
-    );
+    // Skip the vehicle-type lookup when no e-bikes flow AND no docks
+    // would be rendered — `firstEbikeTypeName` / `expandClassicTypes`
+    // walk `vehicleTypesAvailable` and don't need to fire when the
+    // result is unused.
+    const needsTypeLookup = hasEbikes || totalSlots > 0;
+    const ebikeFallbackType = needsTypeLookup
+      ? firstEbikeTypeName(vehicleTypesAvailable, vehicleTypeNames, ebikeIds)
+      : null;
+    const classicSequence = needsTypeLookup
+      ? expandClassicTypes(vehicleTypesAvailable, vehicleTypeNames, ebikeIds)
+      : [];
     let classicCursor = 0;
 
     const slots: TemplateResult[] = [];

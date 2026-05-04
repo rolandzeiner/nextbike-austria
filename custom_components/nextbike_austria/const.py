@@ -8,21 +8,20 @@ validation / future-proofing.
 """
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Final, TypedDict
 
 from homeassistant.const import __version__ as _HA_VERSION
 
 DOMAIN: Final = "nextbike_austria"
 
-# Integration version — read from manifest.json at module import so the
-# string can never drift from HACS's authoritative source. Sync read of a
-# ~600-byte file happens once per process; the manifest is required for
-# HACS anyway. Release workflow: bump only manifest.json "version".
-INTEGRATION_VERSION: Final = json.loads(
-    (Path(__file__).parent / "manifest.json").read_text(encoding="utf-8")
-)["version"]
+# Integration version — pinned as a string literal here. Reading
+# `manifest.json` at import time is sync I/O on the event loop, which
+# HA core's import-time blocking-call detector flags. Drift between
+# this constant and `manifest.json` is caught by
+# `tests/test_manifest_version.py`, which asserts byte-for-byte
+# equality. Release workflow: bump BOTH this constant AND
+# `manifest.json["version"]` (and `src/const.ts`) to the same string.
+INTEGRATION_VERSION: Final = "1.2.1"
 
 # Config entry keys
 CONF_SYSTEM_ID: Final = "system_id"

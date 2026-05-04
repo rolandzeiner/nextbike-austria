@@ -353,6 +353,19 @@ export const cardStyles: CSSResultGroup = css`
     box-shadow: inset 0 0 0 1px
       color-mix(in srgb, var(--secondary-text-color) 28%, transparent);
   }
+  /* Reserved + disabled palettes are mirrored on .slot and
+     .legend-swatch (a single source for the colour-mix incantation
+     keeps slot + legend visually identical regardless of which one
+     gets a future tweak). The dock-internal icon sizing differs (11px
+     in slots vs 9px in legend swatches), so that bit stays per-class. */
+  :host {
+    --nb-reserved-bg: color-mix(in srgb, var(--secondary-text-color) 10%, transparent);
+    --nb-reserved-border: color-mix(in srgb, var(--secondary-text-color) 50%, transparent);
+    --nb-reserved-fg: var(--secondary-text-color);
+    --nb-disabled-bg: color-mix(in srgb, #ffa726 16%, transparent);
+    --nb-disabled-border: color-mix(in srgb, #ffa726 60%, transparent);
+    --nb-disabled-fg: #e65100;
+  }
   .slot.reserved,
   .slot.disabled {
     display: inline-flex;
@@ -362,18 +375,17 @@ export const cardStyles: CSSResultGroup = css`
   .slot.reserved {
     /* Reserved: bike present but held for another user. Neutral grey
        lock icon — distinct from disabled (amber wrench). */
-    background: color-mix(in srgb, var(--secondary-text-color) 10%, transparent);
-    box-shadow: inset 0 0 0 1px
-      color-mix(in srgb, var(--secondary-text-color) 50%, transparent);
-    color: var(--secondary-text-color);
+    background: var(--nb-reserved-bg);
+    box-shadow: inset 0 0 0 1px var(--nb-reserved-border);
+    color: var(--nb-reserved-fg);
   }
   .slot.reserved ha-icon {
     --mdc-icon-size: 11px;
   }
   .slot.disabled {
-    background: color-mix(in srgb, #ffa726 16%, transparent);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, #ffa726 60%, transparent);
-    color: #e65100;
+    background: var(--nb-disabled-bg);
+    box-shadow: inset 0 0 0 1px var(--nb-disabled-border);
+    color: var(--nb-disabled-fg);
   }
   .slot.disabled ha-icon {
     --mdc-icon-size: 11px;
@@ -432,10 +444,9 @@ export const cardStyles: CSSResultGroup = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: color-mix(in srgb, var(--secondary-text-color) 10%, transparent);
-    box-shadow: inset 0 0 0 1px
-      color-mix(in srgb, var(--secondary-text-color) 50%, transparent);
-    color: var(--secondary-text-color);
+    background: var(--nb-reserved-bg);
+    box-shadow: inset 0 0 0 1px var(--nb-reserved-border);
+    color: var(--nb-reserved-fg);
   }
   .legend-swatch.reserved ha-icon {
     --mdc-icon-size: 9px;
@@ -444,9 +455,9 @@ export const cardStyles: CSSResultGroup = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: color-mix(in srgb, #ffa726 16%, transparent);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, #ffa726 60%, transparent);
-    color: #e65100;
+    background: var(--nb-disabled-bg);
+    box-shadow: inset 0 0 0 1px var(--nb-disabled-border);
+    color: var(--nb-disabled-fg);
   }
   .legend-swatch.disabled ha-icon {
     --mdc-icon-size: 9px;
