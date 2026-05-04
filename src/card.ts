@@ -188,7 +188,6 @@ export class NextbikeAustriaCard extends LitElement {
     if (!this.hass || !this._config) return nothing;
     const stations = this._resolveEntities();
     const useTabs = this._config.layout === "tabs" && stations.length >= 2;
-    // _activeTab clamp moved to willUpdate() — keeping render() pure.
 
     const attribution =
       stations
@@ -328,7 +327,7 @@ export class NextbikeAustriaCard extends LitElement {
     const ebikes = countEbikesAvailable(a);
     // Battery state only present when the options flow has
     // `track_e_bike_range` enabled AND upstream reported
-    // `current_range_meters` for ≥1 e-bike at this station.
+    // `current_fuel_percent` for ≥1 e-bike at this station.
     const batteryPct =
       typeof a.e_bike_avg_battery_pct === "number"
         ? a.e_bike_avg_battery_pct

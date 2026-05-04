@@ -1,7 +1,3 @@
-// Minimal HomeAssistant shape — the card only reads `states`, `language`,
-// `localize`, and `callWS`. Keeping it local avoids pulling in
-// custom-card-helpers as another dependency for a handful of fields.
-
 export interface HassEntityAttributes {
   friendly_name?: string;
   attribution?: string;

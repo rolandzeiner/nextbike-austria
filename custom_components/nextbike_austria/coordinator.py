@@ -124,12 +124,9 @@ class SharedSystemClient:
     def ebike_type_ids(self) -> list[str]:
         """Return the resolved e-bike vehicle-type id set, sorted.
 
-        Single source of truth for the bundled card. Without this
-        accessor the card would have to mirror the EBIKE_PROPULSIONS
-        resolution by hardcoding a known-id allowlist (the way the
-        bundle did pre-v1.2.0), and a new pedelec id upstream would
-        silently undercount on the rack render until someone bumped
-        the bundle.
+        Single source of truth for the bundled card so a new pedelec
+        id upstream is counted on the rack render without a JS bundle
+        bump.
         """
         return sorted(self._ebike_type_ids)
 
@@ -152,18 +149,7 @@ class SharedSystemClient:
         return self._battery_by_station.get(station_id)
 
     async def async_fetch_battery(self, *, force: bool = False) -> None:
-        """Refresh the per-bike battery cache, respecting a longer TTL.
-
-        ``free_bike_status.json`` is ~1.2 MB raw for the biggest system
-        (Wien) but only ~75 KB on the wire under ``Accept-Encoding: gzip``
-        (~17× compression). Battery state doesn't change by the second
-        either, so polling every 20 minutes (``BATTERY_FETCH_TTL_SECONDS``)
-        keeps bandwidth modest while still catching the kind of change a
-        dashboard cares about.
-        Coverage is low on nextbike's side — currently ~8% of e-bikes
-        report ``current_range_meters`` at all — so many stations may end
-        up with zero battery samples.
-        """
+        """Refresh the per-bike battery cache on the ``BATTERY_FETCH_TTL_SECONDS`` cadence."""
         async with self._battery_lock:
             now = time.monotonic()
             if (
@@ -226,11 +212,10 @@ class SharedSystemClient:
                 if b.get("is_reserved"):
                     reserved_by_station.setdefault(sid, []).append(type_name)
 
-                # Battery level: prefer `current_fuel_percent` (direct
-                # 0–1 value) over dividing `current_range_meters` by
-                # `vehicle_types.max_range_meters`. Coverage is identical
-                # (~8.6% on Wien) but this path needs no max-range
-                # lookup and has no division-by-zero risk.
+                # Prefer `current_fuel_percent` (direct 0–1 value) over
+                # dividing `current_range_meters` by `vehicle_types.
+                # max_range_meters` — same coverage upstream, no
+                # max-range lookup, no division-by-zero risk.
                 fuel = b.get("current_fuel_percent")
                 if isinstance(fuel, (int, float)) and 0.0 <= fuel <= 1.0:
                     battery_by_station.setdefault(sid, []).append(

@@ -42,7 +42,13 @@ ATTRIBUTION: Final = "Data: nextbike GmbH, CC0-1.0"
 # reach out to *this* integration specifically rather than blanket-blocking
 # the HA UA for everyone. HA convention: "HomeAssistant/{ver} {slug}/{ver}".
 # Matches the same scheme used by wiener_linien_austria and tankstellen_austria.
-USER_AGENT: Final = f"HomeAssistant/{_HA_VERSION} {DOMAIN}/{INTEGRATION_VERSION}"
+# The trailing "(+<repo-url>)" comment follows RFC-9110 product-token-comment
+# convention so the upstream operator has a direct contact point for abuse /
+# coordination without having to find the repo by guessing.
+USER_AGENT: Final = (
+    f"HomeAssistant/{_HA_VERSION} {DOMAIN}/{INTEGRATION_VERSION} "
+    f"(+https://github.com/rolandzeiner/nextbike-austria)"
+)
 
 # Lovelace card version — pinned to ``INTEGRATION_VERSION`` so the
 # manifest is the single source of truth. ``src/const.ts`` carries the
@@ -64,17 +70,13 @@ DEFAULT_SCAN_INTERVAL: Final = 60  # seconds
 MIN_POLL_SECONDS: Final = 60       # never below the feed's TTL
 MAX_POLL_SECONDS: Final = 900      # 15 min — bikes move fast enough that stale data is useless
 
-# Battery-range fetch cadence. `free_bike_status.json` is ~1.2 MB raw for
-# Wien but ~75 KB on the wire under `Accept-Encoding: gzip` (16.7×
-# compression — measured April 2026). The GBFS feed advertises ttl=60s,
-# so the API permits anything from 60 s upward; we settle on 20 min as
-# the sweet spot — battery state changes slowly, but 20 min gives users
-# 1.5× fresher samples than the previous 30 min while still being a
-# polite cadence for an opt-in feed. Approx ~5.3 MB/day / ~160 MB/month
-# per opted-in Austrian system on the wire (vs. the ~2.6 GB/month it
-# would be at this cadence without compression). Only fetched when at
-# least one tracked entry has `track_e_bike_range` enabled in its
-# options.
+# Battery-range fetch cadence. `free_bike_status.json` is ~1.2 MB raw
+# for Wien but ~75 KB on the wire under `Accept-Encoding: gzip`. The
+# GBFS feed advertises ttl=60s, so the API permits anything from 60 s
+# upward; 20 min keeps the bandwidth profile polite (~5.3 MB/day per
+# opted-in Austrian system) for an opt-in feed where battery state
+# changes slowly. Only fetched when at least one tracked entry has
+# `track_e_bike_range` enabled in its options.
 BATTERY_FETCH_TTL_SECONDS: Final = 1200
 
 # GBFS endpoint base. Each Austrian system (see AUSTRIAN_SYSTEMS below)
@@ -95,13 +97,12 @@ class SystemInfo(TypedDict):
 
 
 # Known Austrian nextbike systems, in the order they appear in the picker.
-# Verified against https://api.nextbike.net/maps/nextbike-live.json and the
-# per-system GBFS endpoints on 2026-04-21. To add a new system:
+# To add a new system:
 #   1. Confirm its GBFS feed exists at `{GBFS_BASE}/{system_id}/gbfs.json`.
 #   2. Append a SystemInfo entry here.
 #   3. Add translation entries for the system's display in strings.json.
-#   4. Add the system to `SYSTEM_ACCENT` and `SYSTEM_LABEL` in
-#      src/const.ts so the Lovelace card's per-system theming works.
+#   4. Add the system to `SYSTEM_ACCENT` in src/const.ts so the
+#      Lovelace card's per-system theming works.
 AUSTRIAN_SYSTEMS: Final[tuple[SystemInfo, ...]] = (
     {"id": "nextbike_wr", "name": "Wien — WienMobil Rad", "region": "Wien"},
     {"id": "nextbike_la", "name": "Niederösterreich", "region": "Niederösterreich"},

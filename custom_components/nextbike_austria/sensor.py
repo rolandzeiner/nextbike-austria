@@ -86,6 +86,21 @@ class _BaseStationSensor(
     # buckets clear via Settings → System → Statistics.
     _attr_native_unit_of_measurement = "bikes"
 
+    # Excluded from the recorder (declared on the base so all subclasses
+    # inherit; only _BikesAvailableSensor actually publishes them):
+    # - last_reported: ISO timestamp from upstream that rotates on every
+    #   poll cycle. Pure churn; the card reads it live.
+    # - vehicle_types_available: per-type {id, count} list that rotates on
+    #   every rental/return. The aggregated counts are already the sensor
+    #   *states* (bikes/docks/ebikes) — keeping the breakdown in history
+    #   isn't why anyone installed nextbike.
+    # - e_bike_battery_list: per-bike battery percentages, list rotates on
+    #   every rental + every battery sample. Aggregated avg/min/max are
+    #   recorded — those carry the real battery-health trend.
+    _unrecorded_attributes = frozenset(
+        {"last_reported", "vehicle_types_available", "e_bike_battery_list"}
+    )
+
     # Subclasses set these:
     _translation_key: str
     _unique_key: str
@@ -135,7 +150,7 @@ class _BikesAvailableSensor(_BaseStationSensor):
 
         E-bike battery stats are only present when the options flow has
         ``track_e_bike_range`` enabled AND upstream reported
-        ``current_range_meters`` for at least one e-bike at this station
+        ``current_fuel_percent`` for at least one e-bike at this station
         in the last ~20 minutes. Keys are omitted otherwise rather than
         published as ``None`` — templates can check with
         ``if 'e_bike_avg_battery_pct' in states.xxx.attributes``.
