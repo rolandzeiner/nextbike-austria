@@ -1,7 +1,5 @@
 # Contributing to Nextbike Austria
 
-Thanks for taking the time to look. This file is the single answer to "how do I work on this repo?" — read it once and you'll have everything you need.
-
 ## Dev setup
 
 ```bash
@@ -21,15 +19,20 @@ npm run build           # produces custom_components/nextbike_austria/www/nextbi
 
 ## Card-version sync
 
-`src/const.ts` `CARD_VERSION` and `custom_components/nextbike_austria/const.py` `CARD_VERSION` **must stay byte-identical** — `tests/test_card_version.py` enforces it. Bump both in the same commit. If they drift, users get an infinite reload-banner loop.
+Python's `CARD_VERSION` is aliased to `INTEGRATION_VERSION` (read from `manifest.json` "version"). Bump in lockstep, same commit:
 
-`README.md` badge + `manifest.json` stay at the clean (non-beta) version; `const.py` + the TS constant can carry a `-beta-N` suffix during development.
+1. `custom_components/nextbike_austria/manifest.json` → `"version"`
+2. `src/const.ts` → `CARD_VERSION`
+
+`tests/test_card_version.py` enforces byte-identical match. Drift triggers an infinite reload-banner loop on the user side.
+
+`manifest.json` stays at the clean (non-beta) version; the TS constant can carry a `-beta-N` suffix during development (in which case bump `manifest.json` to the same beta to keep them aligned).
 
 ## Tooling & config
 
-- `pyproject.toml` — source of truth for ruff (target-version, line-length), mypy (strict, ignore_missing_imports, files), and coverage config. Change rules here, not in CI flags.
-- `pytest.ini` — pytest config and the **`--cov-fail-under=90` coverage gate**. `pytest tests/` automatically runs with coverage; CI fails fast if a new commit drops coverage below the gate. Current measurement sits ~97%.
-- `ATTRIBUTION` — canonical data-source statement (nextbike GBFS, CC0-1.0) and licence terms; matches the `attribution` attribute every sensor emits. Update when the upstream feed shape or licence changes (and keep `const.ATTRIBUTION` in sync).
+- `pyproject.toml` — ruff, mypy, coverage. Change rules here, not in CI flags.
+- `pytest.ini` — pytest config and the **`--cov-fail-under=90` coverage gate** (current measurement ~97%).
+- `ATTRIBUTION` — data-source statement; keep `const.ATTRIBUTION` in sync when this changes.
 
 View per-file coverage locally:
 
