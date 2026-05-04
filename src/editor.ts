@@ -1,33 +1,23 @@
-// Schema-driven Lovelace editor for the Nextbike Austria card.
+// Gotchas:
 //
-// Design notes
-// ------------
-// * The editor uses ``<ha-form>`` exclusively — no bespoke Lit widgets.
-//   ha-form is the canonical HA editor component: it picks up the
-//   active theme, supports the standard label/helper localisation
-//   chain, and keeps a11y / forced-colors / focus-visible behaviour
-//   in lockstep with HA core.
-//
-// * **Editor `_config` lifecycle gotcha** — custom-card editors do
-//   NOT receive a re-`setConfig()` after dispatching `config-changed`.
-//   The form-handler must therefore set ``this._config = next`` *before*
-//   firing the event; otherwise the next render reads stale state and
-//   the form reverts to the pre-change value. (Pure ``fireEvent``-only
-//   is the HA-core editor pattern but custom editors break under it.)
+// * **Editor `_config` lifecycle** — custom-card editors do NOT
+//   receive a re-`setConfig()` after dispatching `config-changed`.
+//   The form-handler must set ``this._config = next`` *before*
+//   firing the event; otherwise the next render reads stale state
+//   and the form reverts to the pre-change value.
 //
 // * **`expandable` + `flatten: true`** — without ``flatten``, ha-form
 //   scopes inner-schema values under ``data[name]`` and the card's
-//   flat-key reads silently default. Every expandable in this file
-//   ships ``flatten: true``; the ``HaFormExpandableSchema`` interface
-//   in ``types.ts`` declares the field explicitly so a future
+//   flat-key reads silently default. The ``HaFormExpandableSchema``
+//   interface in ``types.ts`` declares the field explicitly so a future
 //   maintainer can't add a nested expandable by accident.
 //
 // * **Storage shape** — saved configs use
 //   ``entities: Array<{ entity: string }>`` (legacy promotion path
 //   from the original scalar ``entity`` form). ha-form's entity
-//   selector with ``multiple: true`` emits a flat ``string[]``. We
-//   translate at the editor's value-changed boundary so the on-disk
-//   shape stays backwards-compatible with existing dashboards.
+//   selector with ``multiple: true`` emits a flat ``string[]``; we
+//   translate at the value-changed boundary to keep the on-disk shape
+//   backwards-compatible with existing dashboards.
 
 import { LitElement, html, nothing, type TemplateResult, type CSSResultGroup } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
@@ -42,11 +32,9 @@ import { editorStyles } from "./editor-styles";
 import { et } from "./localize/localize";
 import { normaliseConfig } from "./utils";
 
-/** Local minimal `fireEvent` shim — same shape as the helper from
- *  custom-card-helpers (which the rest of the bundle deliberately
- *  avoids depending on for a single function). `bubbles: true` +
- *  `composed: true` are required so the event crosses our shadow
- *  boundary and reaches the dashboard's card-editor listener. */
+/** `bubbles: true` + `composed: true` are required so the event
+ *  crosses our shadow boundary and reaches the dashboard's
+ *  card-editor listener. */
 function fireEvent<T>(node: HTMLElement, type: string, detail: T): void {
   const event = new CustomEvent(type, {
     detail,
@@ -71,9 +59,6 @@ export class NextbikeAustriaCardEditor extends LitElement {
     this._config = normaliseConfig(config);
   }
 
-  /** Translate `key` against the active HA language. Tiny shortcut
-   *  around the editor-namespaced localize helper to keep render call
-   *  sites tidy. */
   private _t(key: string): string {
     return et(this.hass, key);
   }

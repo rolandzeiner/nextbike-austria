@@ -34,7 +34,7 @@ If your city uses nextbike under a different `system_id`, open an issue — addi
 - **Optional e-bike battery + reservation tracking**: per-station battery aggregates (avg / min / max %), sorted per-bike battery list, reserved-bike counts, and out-of-service (disabled) bike counts. Off by default — bandwidth profile in [Data Updates](#data-updates).
 - **Direct rental link** via the `rental_uri` attribute (`https://nxtb.it/p/{id}` deep-links into the nextbike app).
 - **Station-gone repair flow**: if the operator retires a station mid-operation, a Repairs notification surfaces and auto-clears when the station reappears or the entry is removed.
-- **Diagnostics download** with redacted coordinates, full station snapshot, and coordinator state.
+- **Diagnostics download** with redacted coordinates, station / coordinator state summary, and counts derived from the live snapshot. The snapshot body itself stays out so issue bodies don't leak which station you're tracking.
 
 ## Screenshots
 

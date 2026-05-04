@@ -7,9 +7,8 @@ import type {
 
 // Fallback set of e-bike vehicle-type ids for users on a Python
 // coordinator that pre-dates the `e_bike_vehicle_type_ids` sensor
-// attribute (added in v1.2.0). Live installs read the set from the
-// sensor and this constant is only the safety net during the
-// integration-vs-bundle version transition.
+// attribute. Live installs read the set from the sensor; this
+// constant is only the safety net for a Python-old/JS-new bundle pair.
 const DEFAULT_EBIKE_IDS: ReadonlySet<string> = new Set(["143", "183", "200"]);
 
 /** Resolve the active e-bike vehicle-type id set for a station's

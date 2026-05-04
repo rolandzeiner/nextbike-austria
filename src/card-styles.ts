@@ -257,7 +257,7 @@ export const cardStyles: CSSResultGroup = css`
     text-transform: uppercase;
   }
 
-  /* ── Chips (formerly "pills") ───────────────────────────────────── */
+  /* ── Chips ──────────────────────────────────────────────────────── */
   .chip-row {
     display: inline-flex;
     flex-wrap: wrap;
