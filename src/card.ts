@@ -41,7 +41,7 @@ import "./editor";
 
 @customElement("nextbike-austria-card")
 export class NextbikeAustriaCard extends LitElement {
-  static styles: CSSResultGroup = cardStyles;
+  static override styles: CSSResultGroup = cardStyles;
 
   @property({ attribute: false }) public hass?: HomeAssistant;
 
@@ -208,7 +208,7 @@ export class NextbikeAustriaCard extends LitElement {
     return result;
   }
 
-  protected render(): TemplateResult | typeof nothing {
+  protected override render(): TemplateResult | typeof nothing {
     if (!this.hass || !this._config) return nothing;
     const stations = this._resolveEntities();
     const useTabs = this._config.layout === "tabs" && stations.length >= 2;
