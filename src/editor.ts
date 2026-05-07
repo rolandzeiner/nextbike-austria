@@ -185,7 +185,12 @@ export class NextbikeAustriaCardEditor extends LitElement {
   };
 
   protected override render(): TemplateResult | typeof nothing {
-    if (!this.hass) return nothing;
+    // Gate on `_config` only, not `hass`. ha-form gracefully renders an
+    // empty shell when its `.hass` property is undefined, and HA can call
+    // setConfig before the editor sees its first hass — blocking on
+    // `!this.hass` would race the first-paint and flash an empty editor
+    // for a frame on slow dashboards.
+    if (!this._config) return nothing;
     return html`
       <div class="editor">
         <ha-form

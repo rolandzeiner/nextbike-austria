@@ -151,9 +151,12 @@ def _station_label(station: dict[str, Any]) -> str:
 class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle the multi-step config flow for Nextbike Austria."""
 
-    # Bump + add async_migrate_entry when entry.data shape changes.
+    # Bump VERSION + add async_migrate_entry when entry.data shape changes
+    # in a non-additive way (renames, removals, type changes). MINOR_VERSION
+    # bumps for additive changes that older HA versions can still load.
     # Tracks the config-entry schema, NOT the integration release version.
     VERSION = 1
+    MINOR_VERSION = 1
 
     def __init__(self) -> None:
         """Init in-flight selections."""
