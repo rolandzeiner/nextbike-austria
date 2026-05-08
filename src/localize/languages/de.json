@@ -31,6 +31,7 @@
   "battery_unknown": "Batterie unbekannt",
   "version_update": "Nextbike Austria wurde auf v{v} aktualisiert — bitte neu laden",
   "version_reload": "Neu laden",
+  "version_reload_stuck": "Neu laden hat die neue Version nicht übernommen. Schließen Sie diesen Browser-Tab und öffnen Sie das Dashboard erneut, oder löschen Sie die Website-Daten für Home Assistant in den Browser-Einstellungen.",
   "editor": {
     "entities_helper": "Eine oder mehrere Nextbike-Austria-Sensoren auswählen. Über Einstellungen → Geräte & Dienste lassen sich weitere Stationen hinzufügen.",
     "section_display": "Anzeige",

@@ -69,6 +69,18 @@ DEFAULT_SCAN_INTERVAL: Final = 60  # seconds
 MIN_POLL_SECONDS: Final = 60       # never below the feed's TTL
 MAX_POLL_SECONDS: Final = 900      # 15 min — bikes move fast enough that stale data is useless
 
+# Exponential-backoff cap for consecutive `_async_update_data` failures.
+# Cap at 1 h: bike data is real-time-sensitive (a station empties in
+# minutes, a refill happens in seconds), so a 12-h-style cap (like
+# tankstellen) would be useless — the integration is effectively offline
+# during a multi-hour GBFS outage anyway. 1 h gives enough back-off to
+# avoid hammering a flapping CDN while still recovering quickly when the
+# feed returns. First failure stays at the user-configured cadence
+# (transient hiccups shouldn't slow down the loop); from the second
+# failure onwards the interval doubles each tick, capped here, until
+# the next success resets it.
+BACKOFF_CAP_SECONDS: Final = 3600
+
 # Battery-range fetch cadence. `free_bike_status.json` is ~1.2 MB raw
 # for Wien but ~75 KB on the wire under `Accept-Encoding: gzip`. The
 # GBFS feed advertises ttl=60s, so the API permits anything from 60 s

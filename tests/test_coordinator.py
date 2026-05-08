@@ -12,6 +12,8 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from homeassistant.const import CONF_SCAN_INTERVAL
+
 from custom_components.nextbike_austria.const import (
     CONF_STATION_ID,
     CONF_STATION_NAME,
@@ -152,6 +154,68 @@ async def test_transport_error_raises_update_failed(hass: HomeAssistant) -> None
         with pytest.raises(UpdateFailed) as excinfo:
             await coordinator._async_update_data()
     assert excinfo.value.translation_key == "api_timeout"
+
+
+async def test_consecutive_failures_apply_exponential_backoff(
+    hass: HomeAssistant,
+) -> None:
+    """Sustained outages double update_interval each tick, capped, then reset.
+
+    First failure stays at the user-configured cadence; from the second
+    onwards interval doubles and is capped at BACKOFF_CAP_SECONDS (1 h).
+    A success resets back to the normal interval. Without this gate, an
+    extended GBFS outage would burn 60 retries/h at the default 60-s
+    cadence.
+    """
+    from datetime import timedelta
+
+    from custom_components.nextbike_austria.const import BACKOFF_CAP_SECONDS
+
+    entry = _make_entry({CONF_SCAN_INTERVAL: 60})
+    entry.add_to_hass(hass)
+
+    fake = FakeClient()
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=fake,
+    ):
+        coordinator = NextbikeStationCoordinator(hass, entry)
+        normal = coordinator._normal_interval
+        assert normal == timedelta(seconds=60)
+        assert coordinator.update_interval == normal
+
+        fake.set_error(GBFSError("api_connection_error", error_type="x", error="x"))
+
+        # 1st failure: still at normal cadence (transient hiccup)
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
+        assert coordinator._consecutive_failures == 1
+        assert coordinator.update_interval == normal
+
+        # 2nd failure: 120 s (×2)
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
+        assert coordinator._consecutive_failures == 2
+        assert coordinator.update_interval == timedelta(seconds=120)
+
+        # 3rd failure: 240 s (×4)
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
+        assert coordinator.update_interval == timedelta(seconds=240)
+
+        # Recovery: a single success snaps back to normal
+        fake.set_error(None)
+        fake.set_stations({"68577989": _station_snapshot()})
+        await coordinator._async_update_data()
+        assert coordinator._consecutive_failures == 0
+        assert coordinator.update_interval == normal
+
+        # Cap exercise: drive the counter high enough to clamp
+        fake.set_error(GBFSError("api_connection_error", error_type="x", error="x"))
+        for _ in range(20):
+            with pytest.raises(UpdateFailed):
+                await coordinator._async_update_data()
+        assert coordinator.update_interval.total_seconds() == BACKOFF_CAP_SECONDS
 
 
 async def test_setup_retry_on_first_refresh_failure(hass: HomeAssistant) -> None:

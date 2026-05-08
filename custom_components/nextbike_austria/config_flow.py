@@ -57,6 +57,7 @@ from .const import (
     USER_AGENT,
     gbfs_feed_url,
 )
+from .http import base_request_headers
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -99,11 +100,7 @@ async def _fetch_stations(hass: HomeAssistant, system_id: str) -> list[dict[str,
     try:
         async with session.get(
             url,
-            headers={
-                "User-Agent": USER_AGENT,
-                "Accept": "application/json",
-                "Accept-Encoding": "gzip",
-            },
+            headers=base_request_headers(USER_AGENT),
             timeout=_HTTP_TIMEOUT,
         ) as resp:
             resp.raise_for_status()

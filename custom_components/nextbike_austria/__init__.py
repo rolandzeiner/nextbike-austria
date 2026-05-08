@@ -41,6 +41,18 @@ async def _websocket_card_version(
     updates the integration but the user is still running a tab that
     cached the old bundle, this probe lets the card surface a reload
     banner instead of silently misbehaving.
+
+    Note on framing: this is a **residual safety net**, NOT the primary
+    cache-busting mechanism. The primary mechanism is the versioned
+    resource URL — the card is registered at ``/<domain>/card.js?v={version}``
+    so the URL itself changes on every release and the browser's normal
+    cache key invalidates. ~95% of users get the new bundle on the next
+    reload via that path with zero special UX. This WS probe + banner
+    catches the ~5% with stuck Service Workers, aggressive CDN caches,
+    or browsers ignoring ``?v=`` invalidation. It pairs with the
+    sessionStorage stuck-reload anti-loop on the card side
+    (PORTFOLIO_LIFTABLES.md item 44) so the residual case doesn't
+    itself loop. See PORTFOLIO_LIFTABLES.md item 20.
     """
     connection.send_result(msg["id"], {"version": CARD_VERSION})
 

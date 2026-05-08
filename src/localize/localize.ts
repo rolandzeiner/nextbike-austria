@@ -11,17 +11,17 @@ interface Dict {
   [key: string]: string | Dict;
 }
 
-const TRANSLATIONS: Record<string, Dict> = {
+// `en` is imported and assigned at module load — the `en` slot in
+// TRANSLATIONS is statically guaranteed to exist. Using `as const
+// satisfies` keeps the type honest (TypeScript knows `en` is a real key)
+// while still letting the `[lang]` index access elsewhere be widened by
+// `noUncheckedIndexedAccess`. No runtime fallback needed for the
+// English path; non-English paths fall back to `TRANSLATIONS.en`
+// directly, which the `satisfies` clause guarantees is `Dict`.
+const TRANSLATIONS = {
   en: en as Dict,
   de: de as Dict,
-};
-
-// Static guarantee: `en` is declared as a top-level import + populated in
-// the `TRANSLATIONS` map at module load. `noUncheckedIndexedAccess`
-// widens every index access to `… | undefined`, so we narrow once here
-// for the lookup chain. Empty-object fallback covers the impossible-but-
-// typed case of the `en` slot being absent.
-const EN_DICT: Dict = TRANSLATIONS.en ?? {};
+} as const satisfies Record<string, Dict>;
 
 export function pickLang(hass: HomeAssistant | undefined): "de" | "en" {
   const hl = hass?.language || "en";
@@ -43,8 +43,8 @@ function resolvePath(dict: Dict, path: string[]): string | undefined {
 export function t(hass: HomeAssistant | undefined, key: string): string {
   const lang = pickLang(hass);
   return (
-    resolvePath(TRANSLATIONS[lang] ?? EN_DICT, [key]) ??
-    resolvePath(EN_DICT, [key]) ??
+    resolvePath(TRANSLATIONS[lang] ?? TRANSLATIONS.en, [key]) ??
+    resolvePath(TRANSLATIONS.en, [key]) ??
     key
   );
 }
@@ -53,8 +53,8 @@ export function t(hass: HomeAssistant | undefined, key: string): string {
 export function et(hass: HomeAssistant | undefined, key: string): string {
   const lang = pickLang(hass);
   return (
-    resolvePath(TRANSLATIONS[lang] ?? EN_DICT, ["editor", key]) ??
-    resolvePath(EN_DICT, ["editor", key]) ??
+    resolvePath(TRANSLATIONS[lang] ?? TRANSLATIONS.en, ["editor", key]) ??
+    resolvePath(TRANSLATIONS.en, ["editor", key]) ??
     key
   );
 }

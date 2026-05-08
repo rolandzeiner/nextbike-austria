@@ -34,6 +34,7 @@ from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
+    BACKOFF_CAP_SECONDS,
     BATTERY_FETCH_TTL_SECONDS,
     CONF_STATION_ID,
     CONF_SYSTEM_ID,
@@ -45,6 +46,7 @@ from .const import (
     USER_AGENT,
     gbfs_feed_url,
 )
+from .http import base_request_headers
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -78,6 +80,27 @@ class SharedSystemClient:
     to ``async_fetch()`` returns the current merged snapshot, hitting the
     network at most once per `_GBFS_TTL_SECONDS` regardless of how many
     coordinators call.
+
+    Note on what this is and isn't:
+    - This is NOT a custom aiohttp session — that's already provided by
+      ``aiohttp_client.async_get_clientsession(hass)`` (see ``self._session``
+      below) and reused process-wide by HA core. The shared session by
+      itself is not the value-add here.
+    - The novel primitives this class provides are:
+      (a) **Cross-entry request coalescing** via ``self._lock`` — N
+          station coordinators in the same GBFS system share ONE fetch
+          per cooldown window; concurrent callers all await the same
+          in-flight task and get the cached result.
+      (b) **TTL-collapsed staleness** — we serve from the cached snapshot
+          while ``now - self._last_fetch < _GBFS_TTL_SECONDS`` and only
+          re-fetch on TTL expiry.
+      (c) **Last-reference cleanup ordering** in ``__init__.py``'s
+          ``async_unload_entry`` — pop this client from
+          ``hass.data[DOMAIN]["systems"]`` only on the
+          ``non-zero → zero`` entry-count transition, and pop *before*
+          platform-unload so a sibling's in-flight refresh can't
+          re-create it.
+    See PORTFOLIO_LIFTABLES.md item 14 for the lift-this-pattern shape.
     """
 
     def __init__(self, hass: HomeAssistant, system_id: str) -> None:
@@ -324,15 +347,11 @@ class SharedSystemClient:
         whole feed being unusable for a single escaping bug.
         """
         url = gbfs_feed_url(self._system_id, feed)
-        headers = {
-            "User-Agent": USER_AGENT,
-            "Accept": "application/json",
-            # GBFS feeds compress dramatically (station_status: 65 KB → 3 KB,
-            # station_information: 84 KB → 11 KB). aiohttp decompresses
-            # transparently; without this header the server falls back to
-            # identity and we pay the full wire cost on every tick.
-            "Accept-Encoding": "gzip",
-        }
+        # `base_request_headers` provides UA + Accept + Accept-Encoding gzip
+        # (verified 2026-05-08: GBFS station_status 66 KB → 3 KB compressed,
+        # 21x reduction). The conditional-GET `If-Modified-Since` header is
+        # added on top per-feed so a 304 short-circuits to the cached payload.
+        headers = base_request_headers(USER_AGENT)
         cached = self._payload_cache.get(feed)
         if (last_mod := self._last_modified.get(feed)) is not None and cached is not None:
             headers["If-Modified-Since"] = last_mod
@@ -424,12 +443,21 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._track_battery: bool = bool(data.get(CONF_TRACK_E_BIKE_RANGE, False))
 
         scan = int(data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+        normal_interval = timedelta(seconds=scan)
+
+        # Exponential-backoff state. `_normal_interval` is immutable as the
+        # user-configured cadence; `self.update_interval` is what HA
+        # actually reads on each tick, and we mutate that one to slow down
+        # during sustained outages. See `_note_failure` / `_note_success`.
+        self._consecutive_failures = 0
+        self._normal_interval = normal_interval
+
         super().__init__(
             hass,
             _LOGGER,
             config_entry=entry,
             name=f"{DOMAIN}_{self._station_id}",
-            update_interval=timedelta(seconds=scan),
+            update_interval=normal_interval,
             # Absorb request storms (options-flow save, manual reload,
             # dashboard edit-mode flip) so the GBFS feed isn't pulled
             # multiple times in quick succession during routine UI activity.
@@ -474,6 +502,7 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         try:
             await self._client.async_fetch()
         except GBFSError as err:
+            self._note_failure()
             raise UpdateFailed(
                 translation_domain=DOMAIN,
                 translation_key=err.translation_key,
@@ -498,6 +527,7 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 station_id=self._station_id,
                 system_id=self._system_id,
             )
+            self._note_failure()
             raise UpdateFailed(
                 translation_domain=DOMAIN,
                 translation_key="station_gone",
@@ -508,6 +538,7 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             )
 
         self._clear_degraded_issue("station_gone")
+        self._note_success()
 
         # Always carry the live e-bike type-id set. The card mirrors
         # this onto its rack render so a new pedelec id upstream is
@@ -579,3 +610,33 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         ir.async_delete_issue(
             self.hass, DOMAIN, f"{translation_key}_{self._entry.entry_id}"
         )
+
+    def _note_success(self) -> None:
+        """Reset the consecutive-failure counter and restore normal cadence."""
+        if self._consecutive_failures == 0:
+            return
+        self._consecutive_failures = 0
+        if self.update_interval != self._normal_interval:
+            self.update_interval = self._normal_interval
+
+    def _note_failure(self) -> None:
+        """Bump the consecutive-failure counter and apply exponential backoff.
+
+        First failure stays at the user-configured cadence (transient
+        hiccups shouldn't slow down the loop). From the second failure
+        onwards the update interval doubles each tick, capped at
+        BACKOFF_CAP_SECONDS (1 h) so a sustained GBFS outage settles
+        into a slow poll instead of hammering nextbike's CDN every
+        60 s × 60 = 60 retries/h. The next successful tick resets it.
+        """
+        self._consecutive_failures += 1
+        if self._consecutive_failures < 2:
+            return
+        normal_secs = self._normal_interval.total_seconds()
+        backoff_secs = min(
+            normal_secs * (2 ** (self._consecutive_failures - 1)),
+            BACKOFF_CAP_SECONDS,
+        )
+        new_interval = timedelta(seconds=backoff_secs)
+        if self.update_interval != new_interval:
+            self.update_interval = new_interval

@@ -24,10 +24,10 @@ export const cardStyles: CSSResultGroup = css`
     /* Semantic state tokens layered over HA's official semantic palette
        so theme authors can recolour the whole portfolio in one place;
        hard-coded fallbacks for older HA versions. */
-    --nb-rt:      var(--ha-color-success, #43a047);
-    --nb-warning: var(--ha-color-warning, #ffa000);
-    --nb-error:   var(--ha-color-error,   #db4437);
-    --nb-info:    var(--ha-color-info,    #1565c0);
+    --nb-rt:      var(--success-color, #43a047);
+    --nb-warning: var(--warning-color, #ffa000);
+    --nb-error:   var(--error-color,   #db4437);
+    --nb-info:    var(--info-color,    #1565c0);
 
     /* Spacing / radius / sizing — layered over the HA Design System
        so the card moves with HA when tokens evolve. Hard-coded values
