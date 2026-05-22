@@ -23,7 +23,7 @@ const TRANSLATIONS = {
   de: de as Dict,
 } as const satisfies Record<string, Dict>;
 
-export function pickLang(hass: HomeAssistant | undefined): "de" | "en" {
+function pickLang(hass: HomeAssistant | undefined): "de" | "en" {
   const hl = hass?.language || "en";
   return hl.startsWith("de") ? "de" : "en";
 }

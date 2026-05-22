@@ -113,7 +113,8 @@ class SharedSystemClient:
         self._stations_by_id: dict[str, dict[str, Any]] = {}
         # vehicle_types_available in station_status returns vehicle_type_id
         # strings; vehicle_types.json tells us their propulsion. Built once
-        # on first fetch (nearly static) and refreshed on catalogue changes.
+        # on first fetch (nearly static) and kept for the process lifetime —
+        # an HA restart picks up an upstream catalogue change.
         self._vehicle_types: dict[str, dict[str, Any]] = {}
         self._ebike_type_ids: frozenset[str] = frozenset()
         # Per-station battery aggregates computed from free_bike_status.
@@ -627,7 +628,7 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         onwards the update interval doubles each tick, capped at
         BACKOFF_CAP_SECONDS (1 h) so a sustained GBFS outage settles
         into a slow poll instead of hammering nextbike's CDN every
-        60 s × 60 = 60 retries/h. The next successful tick resets it.
+        60 s — i.e. 60 retries/h. The next successful tick resets it.
         """
         self._consecutive_failures += 1
         if self._consecutive_failures < 2:

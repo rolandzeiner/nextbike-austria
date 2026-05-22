@@ -8,7 +8,7 @@
 // - Pure functions: no `this`, take what they need as arguments,
 //   return a TemplateResult or a Promise. The card keeps its own
 //   reactive state (@state _versionMismatch) and calls these helpers
-//   from render() / firstUpdated().
+//   from render() / willUpdate().
 // - Localisation goes through the card's `t(hass, key)` shape so
 //   the helper does not own a hidden module-level language state.
 //   The localize helper API is grandfathered for nextbike — pass it
@@ -48,7 +48,7 @@ export async function checkCardVersionWS(
  * refusing to invalidate) and short-circuit instead of looping the
  * banner forever — see `wasReloadAttemptedFor` below.
  */
-export function reloadAfterCacheWipe(forVersion?: string | null): void {
+function reloadAfterCacheWipe(forVersion?: string | null): void {
   try {
     window.caches?.keys?.().then((keys) => {
       keys.forEach((k) => window.caches?.delete?.(k));
@@ -80,7 +80,7 @@ export function reloadAfterCacheWipe(forVersion?: string | null): void {
  * is the right scope: after closing and reopening, the user gets a
  * fresh reload attempt.
  */
-export function wasReloadAttemptedFor(version: string | null): boolean {
+function wasReloadAttemptedFor(version: string | null): boolean {
   if (!version) return false;
   try {
     return (

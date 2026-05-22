@@ -18,7 +18,7 @@ DOMAIN: Final = "nextbike_austria"
 # `manifest.json` at import time is sync I/O on the event loop, which
 # HA core's import-time blocking-call detector flags. Drift between
 # this constant and `manifest.json` is caught by
-# `tests/test_manifest_version.py`, which asserts byte-for-byte
+# `tests/test_card_version.py`, which asserts byte-for-byte
 # equality. Release workflow: bump BOTH this constant AND
 # `manifest.json["version"]` (and `src/const.ts`) to the same string.
 INTEGRATION_VERSION: Final = "1.2.1"
@@ -94,8 +94,7 @@ BATTERY_FETCH_TTL_SECONDS: Final = 1200
 # publishes at `{GBFS_BASE}/{system_id}/{lang}/{feed}.json`.
 GBFS_BASE: Final = "https://gbfs.nextbike.net/maps/gbfs/v2"
 
-# Per-system discovery URL. `system_information` is the smallest feed so
-# we use it as the "is this system alive?" probe in the config flow.
+# Language segment in the per-feed GBFS URL path (see `gbfs_feed_url`).
 GBFS_LANG: Final = "en"
 
 

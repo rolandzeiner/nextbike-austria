@@ -147,7 +147,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigEn
     double-fetching for one tick.
     """
     # The about-to-be-unloaded coordinator carries the system_id we own.
-    system_id = entry.runtime_data.system_id
+    # Guard the read: if first_refresh raised ConfigEntryNotReady, setup
+    # never assigned runtime_data, so a bare `.system_id` on a
+    # partially-set-up entry would raise AttributeError.
+    coordinator = entry.runtime_data
+    if coordinator is None:
+        return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    system_id = coordinator.system_id
     other_entries_for_system = [
         e
         for e in hass.config_entries.async_entries(DOMAIN)

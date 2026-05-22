@@ -44,16 +44,19 @@ def _epoch_to_iso(value: Any) -> str | None:
 
     GBFS publishes `last_reported` as an integer epoch second; HA template
     consumers and the Lovelace card both prefer ISO-8601, so convert at the
-    attribute boundary. Non-numeric or missing values yield None instead of
-    raising — upstream payload shape drift shouldn't take the sensor down.
+    attribute boundary. Non-numeric, missing, or out-of-range values yield
+    None instead of raising — upstream payload shape drift shouldn't take
+    the sensor down.
     """
     if value is None:
         return None
     try:
         ts = float(value)
-    except (TypeError, ValueError):
+        return dt_util.utc_from_timestamp(ts).isoformat()
+    except (TypeError, ValueError, OverflowError, OSError):
+        # OverflowError / OSError: an absurd epoch (e.g. a garbage
+        # 99999999999999) is out of range for the platform's time_t.
         return None
-    return dt_util.utc_from_timestamp(ts).isoformat()
 
 
 async def async_setup_entry(
@@ -117,9 +120,10 @@ class _BikesAvailableSensor(_BaseStationSensor):
     _translation_key = "bikes_available"
     _unique_key = "bikes"
 
-    # Excluded from the recorder — only this sensor publishes these
-    # attributes; the docks / ebikes subclasses don't, so the frozenset
-    # was over-broad on the base class.
+    # Excluded from the recorder — only _BikesAvailableSensor publishes
+    # these attributes, so the _unrecorded_attributes set belongs here
+    # rather than on the shared base class the docks / ebikes sensors
+    # also derive from.
     # - last_reported: ISO timestamp from upstream that rotates on every
     #   poll cycle. Pure churn; the card reads it live.
     # - vehicle_types_available: per-type {id, count} list that rotates on

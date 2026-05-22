@@ -129,14 +129,23 @@ export class NextbikeAustriaCard extends LitElement {
     const oldHass = changed.get("hass") as HomeAssistant | undefined;
     if (!oldHass) return true; // first hass — render
     if (!this.hass) return false;
-    const stations = this._resolveEntities(this.hass);
+    // memoize=false: this pre-cycle call must neither read nor seed the
+    // render-scoped memo. shouldUpdate can return false (no willUpdate,
+    // no memo-clear), so a value seeded here would outlive its cycle.
+    const stations = this._resolveEntities(this.hass, false);
     return stations.some(
       (s) => oldHass.states[s.entity] !== this.hass!.states[s.entity],
     );
   }
 
   public getCardSize(): number {
-    const n = (this._config?.entities || []).length || 1;
+    // Size from the resolved station list — entities filtered to those
+    // that actually exist, plus the single-station auto-detect fallback
+    // — so the masonry height contract matches what render() paints.
+    // Before the first hass arrives, fall back to the configured count.
+    const n = this.hass
+      ? this._resolveEntities().length || 1
+      : this._config.entities.length || 1;
     return Math.min(12, 3 + n * 3);
   }
 
@@ -183,12 +192,17 @@ export class NextbikeAustriaCard extends LitElement {
 
   private _resolveEntities(
     hass: HomeAssistant | undefined = this.hass,
+    memoize = true,
   ): NextbikeStationEntry[] {
-    // Memoised when called for the default `hass` (the common case
-    // inside render() / shouldUpdate). Custom-hass callers (e.g.
-    // shouldUpdate's `oldHass` comparison branch) bypass the cache so
-    // they read the right state map.
-    if (hass === this.hass && this._resolvedEntitiesMemo !== null) {
+    // Memoised per render cycle when called for the card's current
+    // `hass` (the common case in willUpdate / render). The memo is
+    // owned by the willUpdate→render path, which clears it at the top
+    // of every cycle. `shouldUpdate` passes memoize=false so its
+    // pre-cycle call neither reads a stale value nor seeds one that
+    // could outlive a cycle it then declines to render. Custom-hass
+    // callers also bypass the cache so they read the right state map.
+    const useMemo = memoize && hass === this.hass;
+    if (useMemo && this._resolvedEntitiesMemo !== null) {
       return this._resolvedEntitiesMemo;
     }
     const picked = Array.isArray(this._config?.entities)
@@ -202,7 +216,7 @@ export class NextbikeAustriaCard extends LitElement {
       const first = available[0];
       result = first ? [{ entity: first }] : [];
     }
-    if (hass === this.hass) {
+    if (useMemo) {
       this._resolvedEntitiesMemo = result;
     }
     return result;
@@ -342,9 +356,11 @@ export class NextbikeAustriaCard extends LitElement {
       return html`<div class="empty-state" role="status">${this._t("no_entities_unavailable")}</div>`;
     }
     const a = state.attributes || ({} as HassEntityAttributes);
-    const bikes = Number.isFinite(parseInt(state.state, 10))
-      ? parseInt(state.state, 10)
-      : 0;
+    // Clamp at the boundary: a malformed negative sensor state would
+    // otherwise drive `bikesVis` negative in _renderRack and run the
+    // empty-slot loop one slot too long.
+    const parsedBikes = parseInt(state.state, 10);
+    const bikes = Number.isFinite(parsedBikes) ? Math.max(0, parsedBikes) : 0;
     const capacity = typeof a.capacity === "number" ? a.capacity : null;
     const docks =
       typeof a.num_docks_available === "number" ? a.num_docks_available : null;
@@ -575,8 +591,8 @@ export class NextbikeAustriaCard extends LitElement {
     const bikesVis = Math.min(bikes, capacity);
     // Reserved + disabled slots each eat into what would otherwise
     // render as empty docks. Order: bikes, reserved, disabled, empty.
-    // Inputs are coerced to `number | 0` at the boundary (line 353/358),
-    // so the previous `Number.isFinite` guards here were dead code.
+    // reservedCount / disabledCount are already coerced to a finite
+    // number (0 on miss) by _renderStation, so no guard is needed here.
     const reservedVis = Math.min(reservedCount, Math.max(0, totalSlots - bikesVis));
     const disabledVis = Math.min(
       disabledCount,

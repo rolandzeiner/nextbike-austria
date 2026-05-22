@@ -188,7 +188,12 @@ export function relativeTime(
   // still surface raw epoch seconds. Accept both shapes.
   let tsSeconds: number | null = null;
   if (typeof ts === "number" && Number.isFinite(ts)) {
-    tsSeconds = ts;
+    // Numeric inputs are epoch seconds, but guard the legacy/YAML path
+    // against an accidental epoch-milliseconds value: anything past 1e11
+    // is the year 5138 in seconds (impossible) yet only ~1973 in ms, so
+    // treat it as ms. Without this an ms value drives `ageSec` hugely
+    // negative and `Math.max(0, …)` clamps the label to "just now".
+    tsSeconds = ts > 1e11 ? ts / 1000 : ts;
   } else if (typeof ts === "string" && ts.length > 0) {
     const ms = Date.parse(ts);
     if (Number.isFinite(ms)) tsSeconds = ms / 1000;
