@@ -213,3 +213,16 @@ export function relativeTime(
 export function cleanStationName(rawName: string): string {
   return String(rawName).replace(/\s+(Bikes available|Räder verfügbar)$/, "");
 }
+
+// Prefer the locale-agnostic display name surfaced by the sensor; fall
+// back to stripping HA's friendly-name suffix (or the entity id when no
+// friendly_name) for users on an older Python integration version.
+export function resolveDisplayName(
+  attrs: HassEntityAttributes | undefined,
+  fallbackEntity: string,
+): string {
+  const display = attrs?.station_display_name;
+  if (typeof display === "string" && display) return display;
+  const friendly = attrs?.friendly_name;
+  return cleanStationName(typeof friendly === "string" && friendly ? friendly : fallbackEntity);
+}

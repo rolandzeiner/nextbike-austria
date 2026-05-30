@@ -67,10 +67,14 @@ async def async_get_config_entry_diagnostics(
     vehicle_types_count = 0
     battery_samples = 0
     if isinstance(data, dict):
-        if isinstance(data.get("num_bikes_available"), int):
-            bikes_count = data["num_bikes_available"]
-        if isinstance(data.get("num_docks_available"), int):
-            docks_count = data["num_docks_available"]
+        # `bool` is a subclass of `int`, so a stray GBFS boolean would
+        # pass an `isinstance(..., int)` guard — reject bools explicitly.
+        bikes_raw = data.get("num_bikes_available")
+        if isinstance(bikes_raw, int) and not isinstance(bikes_raw, bool):
+            bikes_count = bikes_raw
+        docks_raw = data.get("num_docks_available")
+        if isinstance(docks_raw, int) and not isinstance(docks_raw, bool):
+            docks_count = docks_raw
         vt_avail = data.get("vehicle_types_available")
         if isinstance(vt_avail, list):
             vehicle_types_count = len(vt_avail)

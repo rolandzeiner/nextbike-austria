@@ -142,7 +142,11 @@ class _BikesAvailableSensor(_BaseStationSensor):
         """Return the bike count from the latest coordinator snapshot."""
         data = self.coordinator.data or {}
         value = data.get("num_bikes_available")
-        return int(value) if isinstance(value, int) else None
+        # `bool` is a subclass of `int`, so a stray GBFS boolean would
+        # otherwise coerce to 0/1 — reject it explicitly.
+        if isinstance(value, bool) or not isinstance(value, int):
+            return None
+        return int(value)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -251,7 +255,11 @@ class _DocksAvailableSensor(_BaseStationSensor):
         if "capacity" not in data:
             return None
         value = data.get("num_docks_available")
-        return int(value) if isinstance(value, int) else None
+        # `bool` is a subclass of `int`, so a stray GBFS boolean would
+        # otherwise coerce to 0/1 — reject it explicitly.
+        if isinstance(value, bool) or not isinstance(value, int):
+            return None
+        return int(value)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

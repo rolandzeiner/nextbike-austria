@@ -29,7 +29,7 @@ import {
   expandClassicTypes,
   batteryColor,
   relativeTime,
-  cleanStationName,
+  resolveDisplayName,
   getEbikeIds,
   safeHttpsUri,
 } from "./utils";
@@ -274,13 +274,7 @@ export class NextbikeAustriaCard extends LitElement {
         ${stations.map((s, i) => {
           const a = this.hass?.states[s.entity]?.attributes || {};
           const hasFriendlyName = typeof a.friendly_name === "string" && a.friendly_name.length > 0;
-          // Prefer the locale-agnostic display name surfaced by the
-          // sensor; fall back to stripping HA's friendly-name suffix
-          // for users on an older Python integration version.
-          const displayName =
-            typeof a.station_display_name === "string" && a.station_display_name
-              ? a.station_display_name
-              : cleanStationName(a.friendly_name || s.entity);
+          const displayName = resolveDisplayName(a, s.entity);
           const label = displayName;
           const selected = i === this._activeTab;
           // WCAG 3.1.2 Language of Parts: station names come from the
@@ -409,12 +403,7 @@ export class NextbikeAustriaCard extends LitElement {
       systemId.replace(/^nextbike_/, "");
     const rentUri = safeHttpsUri(a.rental_uri);
     const hasFriendlyName = typeof a.friendly_name === "string" && a.friendly_name.length > 0;
-    // Locale-agnostic display name (config-entry title) when the
-    // sensor surfaces it; regex-strip fallback for old coordinators.
-    const title =
-      typeof a.station_display_name === "string" && a.station_display_name
-        ? a.station_display_name
-        : cleanStationName(a.friendly_name || stopCfg.entity);
+    const title = resolveDisplayName(a, stopCfg.entity);
     // mapUrl is built from numeric lat/lon so the literal is always
     // https://, but pipe it through the same trust-boundary guard as
     // the rental URI so a future contributor can't add a stop-URL
