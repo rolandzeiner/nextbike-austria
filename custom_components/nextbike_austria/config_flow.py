@@ -289,7 +289,7 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
                     f"{self._system_id}_{station_id}"
                 )
                 self._abort_if_unique_id_mismatch()
-                return self.async_update_reload_and_abort(
+                return self.async_update_and_abort(
                     self._reconfigure_entry,
                     data=data,
                 )
@@ -297,7 +297,7 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(
                 f"{self._system_id}_{station_id}"
             )
-            self._abort_if_unique_id_configured()
+            self._abort_if_unique_id_configured(reload_on_update=False)
             return self.async_create_entry(title=station_name, data=data)
 
         options: list[SelectOptionDict] = [
