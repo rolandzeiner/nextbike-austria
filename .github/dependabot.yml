@@ -4,7 +4,7 @@ updates:
     directory: /
     target-branch: dev
     schedule:
-      interval: weekly
+      interval: monthly
     open-pull-requests-limit: 5
     groups:
       actions:
@@ -14,15 +14,8 @@ updates:
     directory: /
     target-branch: dev
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-
-  - package-ecosystem: npm
-    directory: /
-    target-branch: dev
-    schedule:
-      interval: weekly
+      interval: monthly
     open-pull-requests-limit: 5
     groups:
-      card-deps:
+      python-dev:
         patterns: ["*"]
