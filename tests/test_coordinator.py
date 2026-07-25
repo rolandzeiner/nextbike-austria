@@ -2,18 +2,16 @@
 
 from __future__ import annotations
 
-import asyncio
-from typing import Any
+from typing import Any, ClassVar
 from unittest.mock import patch
 
 import pytest
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from pytest_homeassistant_custom_component.common import MockConfigEntry
-
-from homeassistant.const import CONF_SCAN_INTERVAL
 
 from custom_components.nextbike_austria.const import (
     CONF_STATION_ID,
@@ -28,7 +26,8 @@ from custom_components.nextbike_austria.coordinator import (
 )
 
 from ._fakes import CtxResp, FakeClient
-from .conftest import BASE_ENTRY_DATA, station_snapshot as _conftest_station_snapshot
+from .conftest import BASE_ENTRY_DATA
+from .conftest import station_snapshot as _conftest_station_snapshot
 
 
 def _make_entry(data: dict[str, Any] | None = None) -> MockConfigEntry:
@@ -248,7 +247,7 @@ async def test_shared_client_translates_timeout(hass: HomeAssistant) -> None:
 
     class _FakeSession:
         def get(self, *args: Any, **kwargs: Any) -> CtxResp:
-            return CtxResp(raise_on_enter=asyncio.TimeoutError())
+            return CtxResp(raise_on_enter=TimeoutError())
 
     _seed_session(client, _FakeSession())
     with pytest.raises(GBFSError) as excinfo:
@@ -264,7 +263,7 @@ async def test_shared_client_translates_http_error(hass: HomeAssistant) -> None:
 
     class _FakeResp:
         status = 500
-        headers: dict[str, str] = {}
+        headers: ClassVar[dict[str, str]] = {}
 
         def raise_for_status(self) -> None:
             raise _aiohttp.ClientResponseError(
@@ -303,7 +302,7 @@ async def test_shared_client_translates_invalid_json(hass: HomeAssistant) -> Non
 
     class _FakeResp:
         status = 200
-        headers: dict[str, str] = {}
+        headers: ClassVar[dict[str, str]] = {}
 
         def raise_for_status(self) -> None:
             return None
@@ -323,7 +322,7 @@ async def test_shared_client_rejects_non_dict_body(hass: HomeAssistant) -> None:
 
     class _FakeResp:
         status = 200
-        headers: dict[str, str] = {}
+        headers: ClassVar[dict[str, str]] = {}
 
         def raise_for_status(self) -> None:
             return None
@@ -646,7 +645,9 @@ async def test_fetch_json_uses_conditional_get(hass: HomeAssistant) -> None:
 
     class _FirstResp:
         status = 200
-        headers = {"Last-Modified": "Wed, 21 Apr 2026 12:00:00 GMT"}
+        headers: ClassVar[dict[str, str]] = {
+            "Last-Modified": "Wed, 21 Apr 2026 12:00:00 GMT"
+        }
 
         def raise_for_status(self) -> None:
             return None
@@ -656,7 +657,7 @@ async def test_fetch_json_uses_conditional_get(hass: HomeAssistant) -> None:
 
     class _NotModifiedResp:
         status = 304
-        headers: dict[str, str] = {}
+        headers: ClassVar[dict[str, str]] = {}
 
         def raise_for_status(self) -> None:
             return None

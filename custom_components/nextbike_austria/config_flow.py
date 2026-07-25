@@ -16,13 +16,11 @@ the quality scale.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import Any
 
 import aiohttp
 import voluptuous as vol
-
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -106,7 +104,7 @@ async def _fetch_stations(hass: HomeAssistant, system_id: str) -> list[dict[str,
         ) as resp:
             resp.raise_for_status()
             body = await resp.json(content_type=None)
-    except (asyncio.TimeoutError, aiohttp.ClientError, ValueError) as err:
+    except (TimeoutError, aiohttp.ClientError, ValueError) as err:
         _LOGGER.warning("Station-catalogue fetch failed for %s: %s", system_id, err)
         return []
     if not isinstance(body, dict):

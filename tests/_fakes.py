@@ -35,7 +35,7 @@ class CtxResp:
             raise self._raise_on_enter
         return self._resp
 
-    async def __aexit__(self, *exc: Any) -> None:
+    async def __aexit__(self, *exc: object) -> None:
         return None
 
 

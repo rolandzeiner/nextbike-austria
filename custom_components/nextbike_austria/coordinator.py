@@ -25,7 +25,6 @@ from datetime import timedelta
 from typing import Any
 
 import aiohttp
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
@@ -372,7 +371,7 @@ class SharedSystemClient:
                 resp.raise_for_status()
                 text = await resp.text()
                 new_last_mod = resp.headers.get("Last-Modified")
-        except asyncio.TimeoutError as err:
+        except TimeoutError as err:
             raise GBFSError("api_timeout", seconds="15") from err
         except aiohttp.ClientResponseError as err:
             raise GBFSError(
@@ -499,7 +498,7 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         ``async_unload_entry``'s job since the client is shared across
         coordinators for the same system.
         """
-        return None
+        return
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch fresh data via the shared client and extract our station."""
