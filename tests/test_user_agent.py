@@ -6,6 +6,7 @@ the SharedSystemClient `_fetch_json` (per-tick GBFS feed refresh) and
 config_flow `_fetch_stations` (live station-catalogue probe during entry
 creation).
 """
+
 from __future__ import annotations
 
 from unittest.mock import patch

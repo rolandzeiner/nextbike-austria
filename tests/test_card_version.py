@@ -10,6 +10,7 @@ also trips this test. Python's ``CARD_VERSION`` is wired to
 ``INTEGRATION_VERSION`` in ``const.py``; the assertion below catches
 both halves of the chain in one go.
 """
+
 from __future__ import annotations
 
 import json
@@ -47,9 +48,7 @@ def test_card_version_matches_manifest_and_ts() -> None:
     manifest_version = json.loads(_MANIFEST.read_text(encoding="utf-8"))["version"]
     text = _SRC_CONST_TS.read_text(encoding="utf-8")
     match = _RX.search(text)
-    assert match, (
-        f"CARD_VERSION literal not found in {_SRC_CONST_TS} — regex stale?"
-    )
+    assert match, f"CARD_VERSION literal not found in {_SRC_CONST_TS} — regex stale?"
     assert INTEGRATION_VERSION == manifest_version, (
         "Python INTEGRATION_VERSION drifted from manifest.json; "
         f"got INTEGRATION_VERSION={INTEGRATION_VERSION!r}, "

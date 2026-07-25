@@ -6,6 +6,7 @@ can be derived without fetching the discovery doc every poll; we use the
 predictable pattern directly and keep the discovery URL only for
 validation / future-proofing.
 """
+
 from __future__ import annotations
 
 from typing import Final, TypedDict
@@ -66,8 +67,10 @@ CARD_FILENAME: Final = "nextbike-austria-card.js"
 # stretch it. GBFS TTL is a contract: faster polling returns the same
 # cached data, so there is no benefit and small bandwidth cost.
 DEFAULT_SCAN_INTERVAL: Final = 60  # seconds
-MIN_POLL_SECONDS: Final = 60       # never below the feed's TTL
-MAX_POLL_SECONDS: Final = 900      # 15 min — bikes move fast enough that stale data is useless
+MIN_POLL_SECONDS: Final = 60  # never below the feed's TTL
+MAX_POLL_SECONDS: Final = (
+    900  # 15 min — bikes move fast enough that stale data is useless
+)
 
 # Exponential-backoff cap for consecutive `_async_update_data` failures.
 # Cap at 1 h: bike data is real-time-sensitive (a station empties in

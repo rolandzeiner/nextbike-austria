@@ -4,6 +4,7 @@ Mirrors the linz-linien-austria test_card_registration.py shape — the
 storage-vs-yaml duck-typing path, the retry-loop cap, and the
 async_unregister teardown.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -153,20 +154,16 @@ async def test_register_warns_when_card_missing(
     _stub_static(hass)
     bad_path = tmp_path / "missing.js"
 
-    with patch(
-        "custom_components.nextbike_austria.card_registration.Path"
-    ) as path_cls:
-        path_cls.return_value.parent.__truediv__.return_value.__truediv__.return_value = (
-            bad_path
-        )
+    with patch("custom_components.nextbike_austria.card_registration.Path") as path_cls:
+        path_cls.return_value.parent.__truediv__.return_value.__truediv__.return_value = bad_path
         caplog.clear()
         with caplog.at_level("WARNING"):
             reg = JSModuleRegistration(hass)
             await reg.async_register()
 
-    assert any(
-        "Card JS not found" in rec.message for rec in caplog.records
-    ), "expected warning when card JS file is missing"
+    assert any("Card JS not found" in rec.message for rec in caplog.records), (
+        "expected warning when card JS file is missing"
+    )
 
 
 async def test_register_skips_when_http_unavailable(hass: HomeAssistant) -> None:

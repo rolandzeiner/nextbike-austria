@@ -16,6 +16,7 @@ Composes with the existing `If-Modified-Since` conditional-GET path in
 the coordinator (item 7): when the feed hasn't changed the CDN returns
 304 with no body; when it has changed we get the gzipped body.
 """
+
 from __future__ import annotations
 
 

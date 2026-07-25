@@ -11,6 +11,7 @@ out-of-service" patterns into search-indexed issue bodies.
 Same shape as linz-linien-austria's diagnostics for portfolio
 consistency.
 """
+
 from __future__ import annotations
 
 from typing import Any

@@ -1,4 +1,5 @@
 """Tests for the Nextbike Austria config flow."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -205,7 +206,7 @@ async def test_invalid_system_rejected(hass: HomeAssistant) -> None:
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {CONF_SYSTEM_ID: "nextbike_nonsense"}
         )
-    except (vol.Invalid, vol.MultipleInvalid):
+    except vol.Invalid, vol.MultipleInvalid:
         return
     # Selector accepted the value → the handler's own guard must reject.
     assert result["type"] == FlowResultType.FORM
@@ -355,7 +356,7 @@ def test_match_stations_prefix_beats_substring() -> None:
     from custom_components.nextbike_austria.config_flow import _match_stations
 
     stations = [
-        {"station_id": "1", "name": "OperNring"},   # substring match
+        {"station_id": "1", "name": "OperNring"},  # substring match
         {"station_id": "2", "name": "Oper / Karlsplatz"},  # prefix match
         {"station_id": "3", "name": ""},  # skipped (empty name)
     ]
@@ -470,5 +471,3 @@ async def test_reconfigure_to_different_station_aborts_on_mismatch(
     # silently overwrite the original entry's identity.
     assert result["type"] == FlowResultType.ABORT
     assert result["reason"] != "reconfigure_successful"
-
-

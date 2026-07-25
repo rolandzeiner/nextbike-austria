@@ -1,4 +1,5 @@
 """Tests for the Nextbike Austria coordinator."""
+
 from __future__ import annotations
 
 import asyncio
@@ -224,7 +225,9 @@ async def test_setup_retry_on_first_refresh_failure(hass: HomeAssistant) -> None
     entry.add_to_hass(hass)
 
     fake = FakeClient()
-    fake.set_error(GBFSError("api_connection_error", error_type="ClientError", error="boom"))
+    fake.set_error(
+        GBFSError("api_connection_error", error_type="ClientError", error="boom")
+    )
     with patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
         return_value=fake,
@@ -405,8 +408,16 @@ async def test_shared_client_is_memoized_per_system(hass: HomeAssistant) -> None
 def _seed_vehicle_types(client: SharedSystemClient) -> None:
     """Seed two known vehicle types via the production refresh path."""
     client._vehicle_types = {  # type: ignore[assignment]
-        "183": {"vehicle_type_id": "183", "propulsion_type": "electric_assist", "name": "E-Bike"},
-        "192": {"vehicle_type_id": "192", "propulsion_type": "human", "name": "Classic Bike"},
+        "183": {
+            "vehicle_type_id": "183",
+            "propulsion_type": "electric_assist",
+            "name": "E-Bike",
+        },
+        "192": {
+            "vehicle_type_id": "192",
+            "propulsion_type": "human",
+            "name": "Classic Bike",
+        },
     }
 
 
@@ -420,11 +431,26 @@ async def test_battery_fetch_aggregates_per_station(hass: HomeAssistant) -> None
         return {
             "data": {
                 "bikes": [
-                    {"station_id": "A", "vehicle_type_id": "183", "current_fuel_percent": 0.5},
-                    {"station_id": "A", "vehicle_type_id": "183", "current_fuel_percent": 1.0},
+                    {
+                        "station_id": "A",
+                        "vehicle_type_id": "183",
+                        "current_fuel_percent": 0.5,
+                    },
+                    {
+                        "station_id": "A",
+                        "vehicle_type_id": "183",
+                        "current_fuel_percent": 1.0,
+                    },
                     {"station_id": "A", "vehicle_type_id": "192"},  # ignored
-                    {"station_id": "B", "vehicle_type_id": "183", "current_fuel_percent": 0.25},
-                    {"vehicle_type_id": "183", "current_fuel_percent": 0.4},  # no station_id
+                    {
+                        "station_id": "B",
+                        "vehicle_type_id": "183",
+                        "current_fuel_percent": 0.25,
+                    },
+                    {
+                        "vehicle_type_id": "183",
+                        "current_fuel_percent": 0.4,
+                    },  # no station_id
                 ]
             }
         }
@@ -462,8 +488,18 @@ async def test_battery_fetch_tracks_disabled_bikes(hass: HomeAssistant) -> None:
                 "bikes": [
                     {"station_id": "A", "vehicle_type_id": "192", "is_disabled": True},
                     {"station_id": "A", "vehicle_type_id": "183", "is_disabled": True},
-                    {"station_id": "A", "vehicle_type_id": "192", "is_reserved": True, "is_disabled": True},
-                    {"station_id": "B", "vehicle_type_id": "192", "is_reserved": True, "is_disabled": False},
+                    {
+                        "station_id": "A",
+                        "vehicle_type_id": "192",
+                        "is_reserved": True,
+                        "is_disabled": True,
+                    },
+                    {
+                        "station_id": "B",
+                        "vehicle_type_id": "192",
+                        "is_reserved": True,
+                        "is_disabled": False,
+                    },
                     {"vehicle_type_id": "192", "is_disabled": True},
                 ]
             }
@@ -492,11 +528,35 @@ async def test_battery_fetch_tracks_reserved_bikes(hass: HomeAssistant) -> None:
         return {
             "data": {
                 "bikes": [
-                    {"station_id": "A", "vehicle_type_id": "192", "is_reserved": True, "is_disabled": False},
-                    {"station_id": "A", "vehicle_type_id": "183", "is_reserved": True, "is_disabled": False},
-                    {"station_id": "A", "vehicle_type_id": "192", "is_reserved": True, "is_disabled": True},
-                    {"station_id": "B", "vehicle_type_id": "192", "is_reserved": False, "is_disabled": False},
-                    {"vehicle_type_id": "183", "is_reserved": True, "is_disabled": False},
+                    {
+                        "station_id": "A",
+                        "vehicle_type_id": "192",
+                        "is_reserved": True,
+                        "is_disabled": False,
+                    },
+                    {
+                        "station_id": "A",
+                        "vehicle_type_id": "183",
+                        "is_reserved": True,
+                        "is_disabled": False,
+                    },
+                    {
+                        "station_id": "A",
+                        "vehicle_type_id": "192",
+                        "is_reserved": True,
+                        "is_disabled": True,
+                    },
+                    {
+                        "station_id": "B",
+                        "vehicle_type_id": "192",
+                        "is_reserved": False,
+                        "is_disabled": False,
+                    },
+                    {
+                        "vehicle_type_id": "183",
+                        "is_reserved": True,
+                        "is_disabled": False,
+                    },
                 ]
             }
         }
@@ -525,7 +585,11 @@ async def test_battery_fetch_respects_ttl(hass: HomeAssistant) -> None:
         return {
             "data": {
                 "bikes": [
-                    {"station_id": "A", "vehicle_type_id": "183", "current_fuel_percent": 0.5},
+                    {
+                        "station_id": "A",
+                        "vehicle_type_id": "183",
+                        "current_fuel_percent": 0.5,
+                    },
                 ]
             }
         }
@@ -684,7 +748,10 @@ async def test_coordinator_merges_battery_when_opt_on(hass: HomeAssistant) -> No
     assert coordinator.data["_e_bike_max_battery_pct"] == 95.0
     assert coordinator.data["_e_bike_range_samples"] == 4
     assert coordinator.data["_e_bike_battery_list"] == per_bike_list
-    assert coordinator.data["_vehicle_type_names"] == {"183": "E-Bike", "192": "Classic Bike"}
+    assert coordinator.data["_vehicle_type_names"] == {
+        "183": "E-Bike",
+        "192": "Classic Bike",
+    }
     assert fake.battery_calls == 1
 
 

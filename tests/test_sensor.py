@@ -1,4 +1,5 @@
 """Tests for the Nextbike Austria sensor platform."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -257,9 +258,7 @@ async def test_docks_unavailable_when_capacity_unpublished(
 ) -> None:
     """NÖ-style station: docks reads 'unknown', bikes stays at 0."""
     station = _station_without_capacity()
-    entry = _make_entry(
-        "244370510", "St. Pölten / Bildungscampus", "nextbike_la"
-    )
+    entry = _make_entry("244370510", "St. Pölten / Bildungscampus", "nextbike_la")
     entry.add_to_hass(hass)
 
     with patch(

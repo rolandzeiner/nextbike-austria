@@ -5,6 +5,7 @@ Hoisted out of the individual test modules so divergence stays impossible
 ``SharedSystemClient`` / ``aiohttp.ClientResponse`` so tests inject data
 through the production seams instead of poking private attributes.
 """
+
 from __future__ import annotations
 
 from typing import Any

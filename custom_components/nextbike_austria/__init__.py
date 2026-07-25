@@ -1,4 +1,5 @@
 """Nextbike Austria integration."""
+
 from __future__ import annotations
 
 import logging
@@ -26,9 +27,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 
-@websocket_command(
-    {vol.Required("type"): "nextbike_austria/card_version"}
-)
+@websocket_command({vol.Required("type"): "nextbike_austria/card_version"})
 @async_response
 async def _websocket_card_version(
     hass: HomeAssistant,
@@ -96,7 +95,9 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigEntry) -> bool:
+async def async_setup_entry(
+    hass: HomeAssistant, entry: NextbikeAustriaConfigEntry
+) -> bool:
     """Set up Nextbike Austria from a config entry."""
     coordinator = NextbikeStationCoordinator(hass, entry)
     # HA auto-invokes coordinator._async_setup() inside this call before the
@@ -126,12 +127,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigEnt
     return True
 
 
-async def _async_reload_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigEntry) -> None:
+async def _async_reload_entry(
+    hass: HomeAssistant, entry: NextbikeAustriaConfigEntry
+) -> None:
     """Reload the config entry when options are updated."""
     await hass.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigEntry) -> bool:
+async def async_unload_entry(
+    hass: HomeAssistant, entry: NextbikeAustriaConfigEntry
+) -> bool:
     """Unload a config entry.
 
     Drops the per-system ``SharedSystemClient`` from ``hass.data`` only
@@ -162,9 +167,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigEn
         and e.runtime_data.system_id == system_id
     ]
     if not other_entries_for_system:
-        systems: dict[str, Any] = (
-            hass.data.get(DOMAIN, {}).get("systems") or {}
-        )
+        systems: dict[str, Any] = hass.data.get(DOMAIN, {}).get("systems") or {}
         systems.pop(system_id, None)
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 

@@ -14,6 +14,7 @@ Architecture:
 GBFS has no credentials; the `reauthentication-flow` quality-scale rule is
 therefore exempt and there is no 401/403 branch here.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -354,7 +355,9 @@ class SharedSystemClient:
         # added on top per-feed so a 304 short-circuits to the cached payload.
         headers = base_request_headers(USER_AGENT)
         cached = self._payload_cache.get(feed)
-        if (last_mod := self._last_modified.get(feed)) is not None and cached is not None:
+        if (
+            last_mod := self._last_modified.get(feed)
+        ) is not None and cached is not None:
             headers["If-Modified-Since"] = last_mod
         status: int | None = None
         text: str | None = None
