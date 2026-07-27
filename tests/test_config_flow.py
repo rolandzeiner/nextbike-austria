@@ -206,7 +206,7 @@ async def test_invalid_system_rejected(hass: HomeAssistant) -> None:
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {CONF_SYSTEM_ID: "nextbike_nonsense"}
         )
-    except vol.Invalid, vol.MultipleInvalid:
+    except (vol.Invalid, vol.MultipleInvalid):
         return
     # Selector accepted the value → the handler's own guard must reject.
     assert result["type"] == FlowResultType.FORM

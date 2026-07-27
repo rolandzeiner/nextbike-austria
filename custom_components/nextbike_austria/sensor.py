@@ -54,7 +54,7 @@ def _epoch_to_iso(value: Any) -> str | None:
     try:
         ts = float(value)
         return dt_util.utc_from_timestamp(ts).isoformat()
-    except TypeError, ValueError, OverflowError, OSError:
+    except (TypeError, ValueError, OverflowError, OSError):
         # OverflowError / OSError: an absurd epoch (e.g. a garbage
         # 99999999999999) is out of range for the platform's time_t.
         return None
