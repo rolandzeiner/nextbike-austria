@@ -35,6 +35,7 @@ If your city uses nextbike under a different `system_id`, open an issue — addi
 - **Direct rental link** via the `rental_uri` attribute (`https://nxtb.it/p/{id}` deep-links into the nextbike app).
 - **Station-gone repair flow**: if the operator retires a station mid-operation, a Repairs notification surfaces and auto-clears when the station reappears or the entry is removed.
 - **Diagnostics download** with redacted coordinates, station / coordinator state summary, and counts derived from the live snapshot. The snapshot body itself stays out so issue bodies don't leak which station you're tracking.
+- **Entity-first card picker**: picking one of the integration's sensors when adding a dashboard card suggests the bundled card, already configured. Needs Home Assistant 2026.6; older versions are unaffected.
 
 ## Screenshots
 

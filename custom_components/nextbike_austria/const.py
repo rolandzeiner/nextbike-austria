@@ -22,7 +22,7 @@ DOMAIN: Final = "nextbike_austria"
 # `tests/test_card_version.py`, which asserts byte-for-byte
 # equality. Release workflow: bump BOTH this constant AND
 # `manifest.json["version"]` (and `src/const.ts`) to the same string.
-INTEGRATION_VERSION: Final = "1.2.1"
+INTEGRATION_VERSION: Final = "1.3.0"
 
 # Config entry keys
 CONF_SYSTEM_ID: Final = "system_id"
