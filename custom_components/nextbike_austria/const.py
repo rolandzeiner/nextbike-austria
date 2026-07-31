@@ -9,20 +9,29 @@ validation / future-proofing.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Final, TypedDict
 
 from homeassistant.const import __version__ as _HA_VERSION
 
 DOMAIN: Final = "nextbike_austria"
 
-# Integration version — pinned as a string literal here. Reading
-# `manifest.json` at import time is sync I/O on the event loop, which
-# HA core's import-time blocking-call detector flags. Drift between
-# this constant and `manifest.json` is caught by
-# `tests/test_card_version.py`, which asserts byte-for-byte
-# equality. Release workflow: bump BOTH this constant AND
-# `manifest.json["version"]` (and `src/const.ts`) to the same string.
-INTEGRATION_VERSION: Final = "1.3.0"
+# Integration version — read from `manifest.json` at import so there is
+# exactly one source of truth. manifest.json is what HACS reads; a literal
+# here only adds a second place to forget on release day, which is precisely
+# what happened cutting v1.3.0 (caught by `tests/test_card_version.py`).
+#
+# This is safe on the event loop, despite what the previous comment here
+# claimed. HA imports integrations via `async_add_import_executor_job`
+# (`Integration.import_executor` defaults to True), so the module body runs on
+# an import-executor thread, and `util.loop.protect_loop` only checks when
+# `threading.get_ident() == loop_thread_id`. Even on the loop, `open` is
+# registered with `strict=False`, so it would warn rather than raise.
+# Verified against home-assistant/core 2026.7.4.
+INTEGRATION_VERSION: Final = json.loads(
+    (Path(__file__).parent / "manifest.json").read_text(encoding="utf-8")
+)["version"]
 
 # Config entry keys
 CONF_SYSTEM_ID: Final = "system_id"
