@@ -188,7 +188,12 @@ export function relativeTime(
   // still surface raw epoch seconds. Accept both shapes.
   let tsSeconds: number | null = null;
   if (typeof ts === "number" && Number.isFinite(ts)) {
-    tsSeconds = ts;
+    // Numeric inputs are epoch seconds, but guard the legacy/YAML path
+    // against an accidental epoch-milliseconds value: anything past 1e11
+    // is the year 5138 in seconds (impossible) yet only ~1973 in ms, so
+    // treat it as ms. Without this an ms value drives `ageSec` hugely
+    // negative and `Math.max(0, …)` clamps the label to "just now".
+    tsSeconds = ts > 1e11 ? ts / 1000 : ts;
   } else if (typeof ts === "string" && ts.length > 0) {
     const ms = Date.parse(ts);
     if (Number.isFinite(ms)) tsSeconds = ms / 1000;
@@ -207,4 +212,17 @@ export function relativeTime(
 // `has_entity_name=True` + translation_key. We want the clean device name.
 export function cleanStationName(rawName: string): string {
   return String(rawName).replace(/\s+(Bikes available|Räder verfügbar)$/, "");
+}
+
+// Prefer the locale-agnostic display name surfaced by the sensor; fall
+// back to stripping HA's friendly-name suffix (or the entity id when no
+// friendly_name) for users on an older Python integration version.
+export function resolveDisplayName(
+  attrs: HassEntityAttributes | undefined,
+  fallbackEntity: string,
+): string {
+  const display = attrs?.station_display_name;
+  if (typeof display === "string" && display) return display;
+  const friendly = attrs?.friendly_name;
+  return cleanStationName(typeof friendly === "string" && friendly ? friendly : fallbackEntity);
 }

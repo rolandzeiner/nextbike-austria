@@ -13,6 +13,7 @@ is available via the shared client but would inflate the entity count and
 attribute size. If a user needs it, they can template against
 ``extra_state_attributes["rental_uri"]`` or query the diagnostics dump.
 """
+
 from __future__ import annotations
 
 import logging
@@ -44,16 +45,19 @@ def _epoch_to_iso(value: Any) -> str | None:
 
     GBFS publishes `last_reported` as an integer epoch second; HA template
     consumers and the Lovelace card both prefer ISO-8601, so convert at the
-    attribute boundary. Non-numeric or missing values yield None instead of
-    raising — upstream payload shape drift shouldn't take the sensor down.
+    attribute boundary. Non-numeric, missing, or out-of-range values yield
+    None instead of raising — upstream payload shape drift shouldn't take
+    the sensor down.
     """
     if value is None:
         return None
     try:
         ts = float(value)
-    except (TypeError, ValueError):
+        return dt_util.utc_from_timestamp(ts).isoformat()
+    except (TypeError, ValueError, OverflowError, OSError):
+        # OverflowError / OSError: an absurd epoch (e.g. a garbage
+        # 99999999999999) is out of range for the platform's time_t.
         return None
-    return dt_util.utc_from_timestamp(ts).isoformat()
 
 
 async def async_setup_entry(
@@ -72,9 +76,7 @@ async def async_setup_entry(
     )
 
 
-class _BaseStationSensor(
-    CoordinatorEntity[NextbikeStationCoordinator], SensorEntity
-):
+class _BaseStationSensor(CoordinatorEntity[NextbikeStationCoordinator], SensorEntity):
     """Shared scaffolding for all per-station sensors."""
 
     _attr_has_entity_name = True
@@ -85,21 +87,6 @@ class _BaseStationSensor(
     # state_class stops new long-term statistics; existing orphan
     # buckets clear via Settings → System → Statistics.
     _attr_native_unit_of_measurement = "bikes"
-
-    # Excluded from the recorder (declared on the base so all subclasses
-    # inherit; only _BikesAvailableSensor actually publishes them):
-    # - last_reported: ISO timestamp from upstream that rotates on every
-    #   poll cycle. Pure churn; the card reads it live.
-    # - vehicle_types_available: per-type {id, count} list that rotates on
-    #   every rental/return. The aggregated counts are already the sensor
-    #   *states* (bikes/docks/ebikes) — keeping the breakdown in history
-    #   isn't why anyone installed nextbike.
-    # - e_bike_battery_list: per-bike battery percentages, list rotates on
-    #   every rental + every battery sample. Aggregated avg/min/max are
-    #   recorded — those carry the real battery-health trend.
-    _unrecorded_attributes = frozenset(
-        {"last_reported", "vehicle_types_available", "e_bike_battery_list"}
-    )
 
     # Subclasses set these:
     _translation_key: str
@@ -132,12 +119,33 @@ class _BikesAvailableSensor(_BaseStationSensor):
     _translation_key = "bikes_available"
     _unique_key = "bikes"
 
+    # Excluded from the recorder — only _BikesAvailableSensor publishes
+    # these attributes, so the _unrecorded_attributes set belongs here
+    # rather than on the shared base class the docks / ebikes sensors
+    # also derive from.
+    # - last_reported: ISO timestamp from upstream that rotates on every
+    #   poll cycle. Pure churn; the card reads it live.
+    # - vehicle_types_available: per-type {id, count} list that rotates on
+    #   every rental/return. The aggregated counts are already the sensor
+    #   *states* (bikes/docks/ebikes) — keeping the breakdown in history
+    #   isn't why anyone installed nextbike.
+    # - e_bike_battery_list: per-bike battery percentages, list rotates on
+    #   every rental + every battery sample. Aggregated avg/min/max are
+    #   recorded — those carry the real battery-health trend.
+    _unrecorded_attributes = frozenset(
+        {"last_reported", "vehicle_types_available", "e_bike_battery_list"}
+    )
+
     @property
     def native_value(self) -> int | None:
         """Return the bike count from the latest coordinator snapshot."""
         data = self.coordinator.data or {}
         value = data.get("num_bikes_available")
-        return int(value) if isinstance(value, int) else None
+        # `bool` is a subclass of `int`, so a stray GBFS boolean would
+        # otherwise coerce to 0/1 — reject it explicitly.
+        if isinstance(value, bool) or not isinstance(value, int):
+            return None
+        return int(value)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -246,7 +254,11 @@ class _DocksAvailableSensor(_BaseStationSensor):
         if "capacity" not in data:
             return None
         value = data.get("num_docks_available")
-        return int(value) if isinstance(value, int) else None
+        # `bool` is a subclass of `int`, so a stray GBFS boolean would
+        # otherwise coerce to 0/1 — reject it explicitly.
+        if isinstance(value, bool) or not isinstance(value, int):
+            return None
+        return int(value)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

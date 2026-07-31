@@ -46,7 +46,7 @@ function fireEvent<T>(node: HTMLElement, type: string, detail: T): void {
 
 @customElement("nextbike-austria-card-editor")
 export class NextbikeAustriaCardEditor extends LitElement {
-  static styles: CSSResultGroup = editorStyles;
+  static override styles: CSSResultGroup = editorStyles;
 
   @property({ attribute: false }) public hass?: HomeAssistant;
 
@@ -184,8 +184,13 @@ export class NextbikeAustriaCardEditor extends LitElement {
     fireEvent(this, "config-changed", { config: next });
   };
 
-  protected render(): TemplateResult | typeof nothing {
-    if (!this.hass) return nothing;
+  protected override render(): TemplateResult | typeof nothing {
+    // Gate on `_config` only, not `hass`. ha-form gracefully renders an
+    // empty shell when its `.hass` property is undefined, and HA can call
+    // setConfig before the editor sees its first hass — blocking on
+    // `!this.hass` would race the first-paint and flash an empty editor
+    // for a frame on slow dashboards.
+    if (!this._config) return nothing;
     return html`
       <div class="editor">
         <ha-form

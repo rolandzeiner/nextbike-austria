@@ -13,15 +13,14 @@ No credentials involved — nextbike's GBFS is unauthenticated — so there is
 no `async_step_reauth`, and `reauthentication-flow` is marked exempt in
 the quality scale.
 """
+
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import Any
 
 import aiohttp
 import voluptuous as vol
-
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -57,6 +56,7 @@ from .const import (
     USER_AGENT,
     gbfs_feed_url,
 )
+from .http import base_request_headers
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -99,16 +99,12 @@ async def _fetch_stations(hass: HomeAssistant, system_id: str) -> list[dict[str,
     try:
         async with session.get(
             url,
-            headers={
-                "User-Agent": USER_AGENT,
-                "Accept": "application/json",
-                "Accept-Encoding": "gzip",
-            },
+            headers=base_request_headers(USER_AGENT),
             timeout=_HTTP_TIMEOUT,
         ) as resp:
             resp.raise_for_status()
             body = await resp.json(content_type=None)
-    except (asyncio.TimeoutError, aiohttp.ClientError, ValueError) as err:
+    except (TimeoutError, aiohttp.ClientError, ValueError) as err:
         _LOGGER.warning("Station-catalogue fetch failed for %s: %s", system_id, err)
         return []
     if not isinstance(body, dict):
@@ -151,9 +147,12 @@ def _station_label(station: dict[str, Any]) -> str:
 class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle the multi-step config flow for Nextbike Austria."""
 
-    # Bump + add async_migrate_entry when entry.data shape changes.
+    # Bump VERSION + add async_migrate_entry when entry.data shape changes
+    # in a non-additive way (renames, removals, type changes). MINOR_VERSION
+    # bumps for additive changes that older HA versions can still load.
     # Tracks the config-entry schema, NOT the integration release version.
     VERSION = 1
+    MINOR_VERSION = 1
 
     def __init__(self) -> None:
         """Init in-flight selections."""
@@ -248,7 +247,9 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
-            description_placeholders={"system_name": self._system_name_for_description()},
+            description_placeholders={
+                "system_name": self._system_name_for_description()
+            },
         )
 
     # ------------------------------------------------------------------
@@ -272,9 +273,7 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
             station = next(
                 s for s in self._matches if str(s.get("station_id")) == str(choice)
             )
-            interval = int(
-                user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-            )
+            interval = int(user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
             station_id = str(station.get("station_id"))
             station_name = str(station.get("name") or station_id)
             data: dict[str, Any] = {
@@ -285,19 +284,15 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
             }
 
             if self._reconfigure_entry is not None:
-                await self.async_set_unique_id(
-                    f"{self._system_id}_{station_id}"
-                )
+                await self.async_set_unique_id(f"{self._system_id}_{station_id}")
                 self._abort_if_unique_id_mismatch()
-                return self.async_update_reload_and_abort(
+                return self.async_update_and_abort(
                     self._reconfigure_entry,
                     data=data,
                 )
 
-            await self.async_set_unique_id(
-                f"{self._system_id}_{station_id}"
-            )
-            self._abort_if_unique_id_configured()
+            await self.async_set_unique_id(f"{self._system_id}_{station_id}")
+            self._abort_if_unique_id_configured(reload_on_update=False)
             return self.async_create_entry(title=station_name, data=data)
 
         options: list[SelectOptionDict] = [
@@ -370,9 +365,7 @@ class NextbikeAustriaOptionsFlow(OptionsFlow):
         """Handle options."""
         config = {**self.config_entry.data, **self.config_entry.options}
         if user_input is not None:
-            interval = int(
-                user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-            )
+            interval = int(user_input.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
             return self.async_create_entry(
                 data={
                     CONF_SCAN_INTERVAL: interval,
@@ -382,18 +375,14 @@ class NextbikeAustriaOptionsFlow(OptionsFlow):
                 }
             )
 
-        default_interval = int(
-            config.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-        )
+        default_interval = int(config.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
         default_track = bool(config.get(CONF_TRACK_E_BIKE_RANGE, False))
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
                     **_scan_interval_field(default_interval),
-                    vol.Required(
-                        CONF_TRACK_E_BIKE_RANGE, default=default_track
-                    ): bool,
+                    vol.Required(CONF_TRACK_E_BIKE_RANGE, default=default_track): bool,
                 }
             ),
         )

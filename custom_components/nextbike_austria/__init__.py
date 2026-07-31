@@ -1,4 +1,5 @@
 """Nextbike Austria integration."""
+
 from __future__ import annotations
 
 import logging
@@ -26,9 +27,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 
-@websocket_command(
-    {vol.Required("type"): "nextbike_austria/card_version"}
-)
+@websocket_command({vol.Required("type"): "nextbike_austria/card_version"})
 @async_response
 async def _websocket_card_version(
     hass: HomeAssistant,
@@ -41,6 +40,18 @@ async def _websocket_card_version(
     updates the integration but the user is still running a tab that
     cached the old bundle, this probe lets the card surface a reload
     banner instead of silently misbehaving.
+
+    Note on framing: this is a **residual safety net**, NOT the primary
+    cache-busting mechanism. The primary mechanism is the versioned
+    resource URL — the card is registered at ``/<domain>/card.js?v={version}``
+    so the URL itself changes on every release and the browser's normal
+    cache key invalidates. ~95% of users get the new bundle on the next
+    reload via that path with zero special UX. This WS probe + banner
+    catches the ~5% with stuck Service Workers, aggressive CDN caches,
+    or browsers ignoring ``?v=`` invalidation. It pairs with the
+    sessionStorage stuck-reload anti-loop on the card side
+    (PORTFOLIO_LIFTABLES.md item 44) so the residual case doesn't
+    itself loop. See PORTFOLIO_LIFTABLES.md item 20.
     """
     connection.send_result(msg["id"], {"version": CARD_VERSION})
 
@@ -55,13 +66,21 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
     # WS commands registered here survive integration removal — HA's
-    # websocket_api has no public deregister hook. Same caveat as the
-    # static path registration in card_registration.py: pragmatic given
-    # the API surface, harmless in practice (a stray handler that no
-    # caller invokes once the bundle is gone). Behaviour on duplicate
-    # registration is HA core internal; we never reach that branch
-    # since `async_setup` only runs once per HA startup.
-    async_register_command(hass, _websocket_card_version)
+    # websocket_api has no public deregister hook. We guard the
+    # registration with a domain-data flag so a HACS dev-reinstall in
+    # the same Python process doesn't trip ValueError("Command already
+    # registered") and abort `async_setup`. ValueError is also caught
+    # defensively in case a future HA version changes the dedupe
+    # contract.
+    domain_data = hass.data[DOMAIN]
+    if not domain_data.get("ws_registered"):
+        try:
+            async_register_command(hass, _websocket_card_version)
+        except ValueError:
+            # HA core internals already have a handler under our key —
+            # treat as success and move on.
+            pass
+        domain_data["ws_registered"] = True
 
     registration = JSModuleRegistration(hass)
 
@@ -76,7 +95,9 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigEntry) -> bool:
+async def async_setup_entry(
+    hass: HomeAssistant, entry: NextbikeAustriaConfigEntry
+) -> bool:
     """Set up Nextbike Austria from a config entry."""
     coordinator = NextbikeStationCoordinator(hass, entry)
     # HA auto-invokes coordinator._async_setup() inside this call before the
@@ -106,12 +127,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigEnt
     return True
 
 
-async def _async_reload_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigEntry) -> None:
+async def _async_reload_entry(
+    hass: HomeAssistant, entry: NextbikeAustriaConfigEntry
+) -> None:
     """Reload the config entry when options are updated."""
     await hass.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigEntry) -> bool:
+async def async_unload_entry(
+    hass: HomeAssistant, entry: NextbikeAustriaConfigEntry
+) -> bool:
     """Unload a config entry.
 
     Drops the per-system ``SharedSystemClient`` from ``hass.data`` only
@@ -119,12 +144,21 @@ async def async_unload_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigEn
     for the same Austrian system share one client to collapse GBFS
     fetches, so removing it while siblings still need it would cost a
     fresh fetch on every poll.
+
+    Pop ordering: the shared-client slot is popped BEFORE
+    ``async_unload_platforms`` runs. Otherwise a sibling coordinator's
+    in-flight ``_async_update_data`` could complete after we pop and
+    re-create a new client through ``_get_shared_client``,
+    double-fetching for one tick.
     """
-    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if not unloaded:
-        return False
     # The about-to-be-unloaded coordinator carries the system_id we own.
-    system_id = entry.runtime_data.system_id
+    # Guard the read: if first_refresh raised ConfigEntryNotReady, setup
+    # never assigned runtime_data, so a bare `.system_id` on a
+    # partially-set-up entry would raise AttributeError.
+    coordinator = entry.runtime_data
+    if coordinator is None:
+        return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    system_id = coordinator.system_id
     other_entries_for_system = [
         e
         for e in hass.config_entries.async_entries(DOMAIN)
@@ -133,11 +167,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: NextbikeAustriaConfigEn
         and e.runtime_data.system_id == system_id
     ]
     if not other_entries_for_system:
-        systems: dict[str, Any] = (
-            hass.data.get(DOMAIN, {}).get("systems") or {}
-        )
+        systems: dict[str, Any] = hass.data.get(DOMAIN, {}).get("systems") or {}
         systems.pop(system_id, None)
-    return True
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_entry(

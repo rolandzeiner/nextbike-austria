@@ -20,13 +20,16 @@ type-only import + ``cast`` below narrow it for the storage-only
 mutation calls without a runtime dependency on the typed class
 existing on every HA version.
 """
+
 from __future__ import annotations
 
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from homeassistant.components.http import StaticPathConfig
+from homeassistant.components.http import (  # type: ignore[attr-defined,unused-ignore]
+    StaticPathConfig,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_call_later
 
@@ -96,9 +99,7 @@ class JSModuleRegistration:
         # component does not bootstrap `http` automatically). Skip instead of
         # crashing when absent — production installs always have it loaded.
         if getattr(self.hass, "http", None) is None:
-            _LOGGER.debug(
-                "http component not available; skipping card registration"
-            )
+            _LOGGER.debug("http component not available; skipping card registration")
             return
         await self._async_register_path()
         if self.lovelace is not None and self._is_storage_mode():
@@ -164,9 +165,7 @@ class JSModuleRegistration:
                 attempts,
                 _LOVELACE_LOAD_RETRY_MAX,
             )
-            async_call_later(
-                self.hass, _LOVELACE_LOAD_RETRY_INTERVAL_S, _check_loaded
-            )
+            async_call_later(self.hass, _LOVELACE_LOAD_RETRY_INTERVAL_S, _check_loaded)
 
         await _check_loaded(0)
 
@@ -215,9 +214,7 @@ class JSModuleRegistration:
             _LOGGER.info("Updated Lovelace resource to %s", versioned_url)
             return
 
-        await resources.async_create_item(
-            {"res_type": "module", "url": versioned_url}
-        )
+        await resources.async_create_item({"res_type": "module", "url": versioned_url})
         _LOGGER.info("Registered Lovelace resource %s", versioned_url)
 
     async def async_unregister(self) -> None:

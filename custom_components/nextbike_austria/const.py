@@ -6,23 +6,23 @@ can be derived without fetching the discovery doc every poll; we use the
 predictable pattern directly and keep the discovery URL only for
 validation / future-proofing.
 """
+
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Final, TypedDict
 
 from homeassistant.const import __version__ as _HA_VERSION
 
 DOMAIN: Final = "nextbike_austria"
 
-# Integration version — read from manifest.json at module import so the
-# string can never drift from HACS's authoritative source. Sync read of a
-# ~600-byte file happens once per process; the manifest is required for
-# HACS anyway. Release workflow: bump only manifest.json "version".
-INTEGRATION_VERSION: Final = json.loads(
-    (Path(__file__).parent / "manifest.json").read_text(encoding="utf-8")
-)["version"]
+# Integration version — pinned as a string literal here. Reading
+# `manifest.json` at import time is sync I/O on the event loop, which
+# HA core's import-time blocking-call detector flags. Drift between
+# this constant and `manifest.json` is caught by
+# `tests/test_card_version.py`, which asserts byte-for-byte
+# equality. Release workflow: bump BOTH this constant AND
+# `manifest.json["version"]` (and `src/const.ts`) to the same string.
+INTEGRATION_VERSION: Final = "1.3.0"
 
 # Config entry keys
 CONF_SYSTEM_ID: Final = "system_id"
@@ -67,8 +67,22 @@ CARD_FILENAME: Final = "nextbike-austria-card.js"
 # stretch it. GBFS TTL is a contract: faster polling returns the same
 # cached data, so there is no benefit and small bandwidth cost.
 DEFAULT_SCAN_INTERVAL: Final = 60  # seconds
-MIN_POLL_SECONDS: Final = 60       # never below the feed's TTL
-MAX_POLL_SECONDS: Final = 900      # 15 min — bikes move fast enough that stale data is useless
+MIN_POLL_SECONDS: Final = 60  # never below the feed's TTL
+MAX_POLL_SECONDS: Final = (
+    900  # 15 min — bikes move fast enough that stale data is useless
+)
+
+# Exponential-backoff cap for consecutive `_async_update_data` failures.
+# Cap at 1 h: bike data is real-time-sensitive (a station empties in
+# minutes, a refill happens in seconds), so a 12-h-style cap (like
+# tankstellen) would be useless — the integration is effectively offline
+# during a multi-hour GBFS outage anyway. 1 h gives enough back-off to
+# avoid hammering a flapping CDN while still recovering quickly when the
+# feed returns. First failure stays at the user-configured cadence
+# (transient hiccups shouldn't slow down the loop); from the second
+# failure onwards the interval doubles each tick, capped here, until
+# the next success resets it.
+BACKOFF_CAP_SECONDS: Final = 3600
 
 # Battery-range fetch cadence. `free_bike_status.json` is ~1.2 MB raw
 # for Wien but ~75 KB on the wire under `Accept-Encoding: gzip`. The
@@ -83,8 +97,7 @@ BATTERY_FETCH_TTL_SECONDS: Final = 1200
 # publishes at `{GBFS_BASE}/{system_id}/{lang}/{feed}.json`.
 GBFS_BASE: Final = "https://gbfs.nextbike.net/maps/gbfs/v2"
 
-# Per-system discovery URL. `system_information` is the smallest feed so
-# we use it as the "is this system alive?" probe in the config flow.
+# Language segment in the per-feed GBFS URL path (see `gbfs_feed_url`).
 GBFS_LANG: Final = "en"
 
 

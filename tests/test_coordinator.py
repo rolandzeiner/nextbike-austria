@@ -1,12 +1,13 @@
 """Tests for the Nextbike Austria coordinator."""
+
 from __future__ import annotations
 
-import asyncio
-from typing import Any
+from typing import Any, ClassVar
 from unittest.mock import patch
 
 import pytest
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import UpdateFailed
@@ -25,7 +26,8 @@ from custom_components.nextbike_austria.coordinator import (
 )
 
 from ._fakes import CtxResp, FakeClient
-from .conftest import BASE_ENTRY_DATA, station_snapshot as _conftest_station_snapshot
+from .conftest import BASE_ENTRY_DATA
+from .conftest import station_snapshot as _conftest_station_snapshot
 
 
 def _make_entry(data: dict[str, Any] | None = None) -> MockConfigEntry:
@@ -154,13 +156,77 @@ async def test_transport_error_raises_update_failed(hass: HomeAssistant) -> None
     assert excinfo.value.translation_key == "api_timeout"
 
 
+async def test_consecutive_failures_apply_exponential_backoff(
+    hass: HomeAssistant,
+) -> None:
+    """Sustained outages double update_interval each tick, capped, then reset.
+
+    First failure stays at the user-configured cadence; from the second
+    onwards interval doubles and is capped at BACKOFF_CAP_SECONDS (1 h).
+    A success resets back to the normal interval. Without this gate, an
+    extended GBFS outage would burn 60 retries/h at the default 60-s
+    cadence.
+    """
+    from datetime import timedelta
+
+    from custom_components.nextbike_austria.const import BACKOFF_CAP_SECONDS
+
+    entry = _make_entry({CONF_SCAN_INTERVAL: 60})
+    entry.add_to_hass(hass)
+
+    fake = FakeClient()
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=fake,
+    ):
+        coordinator = NextbikeStationCoordinator(hass, entry)
+        normal = coordinator._normal_interval
+        assert normal == timedelta(seconds=60)
+        assert coordinator.update_interval == normal
+
+        fake.set_error(GBFSError("api_connection_error", error_type="x", error="x"))
+
+        # 1st failure: still at normal cadence (transient hiccup)
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
+        assert coordinator._consecutive_failures == 1
+        assert coordinator.update_interval == normal
+
+        # 2nd failure: 120 s (×2)
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
+        assert coordinator._consecutive_failures == 2
+        assert coordinator.update_interval == timedelta(seconds=120)
+
+        # 3rd failure: 240 s (×4)
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
+        assert coordinator.update_interval == timedelta(seconds=240)
+
+        # Recovery: a single success snaps back to normal
+        fake.set_error(None)
+        fake.set_stations({"68577989": _station_snapshot()})
+        await coordinator._async_update_data()
+        assert coordinator._consecutive_failures == 0
+        assert coordinator.update_interval == normal
+
+        # Cap exercise: drive the counter high enough to clamp
+        fake.set_error(GBFSError("api_connection_error", error_type="x", error="x"))
+        for _ in range(20):
+            with pytest.raises(UpdateFailed):
+                await coordinator._async_update_data()
+        assert coordinator.update_interval.total_seconds() == BACKOFF_CAP_SECONDS
+
+
 async def test_setup_retry_on_first_refresh_failure(hass: HomeAssistant) -> None:
     """First-refresh failure leaves the entry in SETUP_RETRY."""
     entry = _make_entry()
     entry.add_to_hass(hass)
 
     fake = FakeClient()
-    fake.set_error(GBFSError("api_connection_error", error_type="ClientError", error="boom"))
+    fake.set_error(
+        GBFSError("api_connection_error", error_type="ClientError", error="boom")
+    )
     with patch(
         "custom_components.nextbike_austria.coordinator._get_shared_client",
         return_value=fake,
@@ -181,7 +247,7 @@ async def test_shared_client_translates_timeout(hass: HomeAssistant) -> None:
 
     class _FakeSession:
         def get(self, *args: Any, **kwargs: Any) -> CtxResp:
-            return CtxResp(raise_on_enter=asyncio.TimeoutError())
+            return CtxResp(raise_on_enter=TimeoutError())
 
     _seed_session(client, _FakeSession())
     with pytest.raises(GBFSError) as excinfo:
@@ -197,7 +263,7 @@ async def test_shared_client_translates_http_error(hass: HomeAssistant) -> None:
 
     class _FakeResp:
         status = 500
-        headers: dict[str, str] = {}
+        headers: ClassVar[dict[str, str]] = {}
 
         def raise_for_status(self) -> None:
             raise _aiohttp.ClientResponseError(
@@ -236,7 +302,7 @@ async def test_shared_client_translates_invalid_json(hass: HomeAssistant) -> Non
 
     class _FakeResp:
         status = 200
-        headers: dict[str, str] = {}
+        headers: ClassVar[dict[str, str]] = {}
 
         def raise_for_status(self) -> None:
             return None
@@ -256,7 +322,7 @@ async def test_shared_client_rejects_non_dict_body(hass: HomeAssistant) -> None:
 
     class _FakeResp:
         status = 200
-        headers: dict[str, str] = {}
+        headers: ClassVar[dict[str, str]] = {}
 
         def raise_for_status(self) -> None:
             return None
@@ -341,8 +407,16 @@ async def test_shared_client_is_memoized_per_system(hass: HomeAssistant) -> None
 def _seed_vehicle_types(client: SharedSystemClient) -> None:
     """Seed two known vehicle types via the production refresh path."""
     client._vehicle_types = {  # type: ignore[assignment]
-        "183": {"vehicle_type_id": "183", "propulsion_type": "electric_assist", "name": "E-Bike"},
-        "192": {"vehicle_type_id": "192", "propulsion_type": "human", "name": "Classic Bike"},
+        "183": {
+            "vehicle_type_id": "183",
+            "propulsion_type": "electric_assist",
+            "name": "E-Bike",
+        },
+        "192": {
+            "vehicle_type_id": "192",
+            "propulsion_type": "human",
+            "name": "Classic Bike",
+        },
     }
 
 
@@ -356,11 +430,26 @@ async def test_battery_fetch_aggregates_per_station(hass: HomeAssistant) -> None
         return {
             "data": {
                 "bikes": [
-                    {"station_id": "A", "vehicle_type_id": "183", "current_fuel_percent": 0.5},
-                    {"station_id": "A", "vehicle_type_id": "183", "current_fuel_percent": 1.0},
+                    {
+                        "station_id": "A",
+                        "vehicle_type_id": "183",
+                        "current_fuel_percent": 0.5,
+                    },
+                    {
+                        "station_id": "A",
+                        "vehicle_type_id": "183",
+                        "current_fuel_percent": 1.0,
+                    },
                     {"station_id": "A", "vehicle_type_id": "192"},  # ignored
-                    {"station_id": "B", "vehicle_type_id": "183", "current_fuel_percent": 0.25},
-                    {"vehicle_type_id": "183", "current_fuel_percent": 0.4},  # no station_id
+                    {
+                        "station_id": "B",
+                        "vehicle_type_id": "183",
+                        "current_fuel_percent": 0.25,
+                    },
+                    {
+                        "vehicle_type_id": "183",
+                        "current_fuel_percent": 0.4,
+                    },  # no station_id
                 ]
             }
         }
@@ -398,8 +487,18 @@ async def test_battery_fetch_tracks_disabled_bikes(hass: HomeAssistant) -> None:
                 "bikes": [
                     {"station_id": "A", "vehicle_type_id": "192", "is_disabled": True},
                     {"station_id": "A", "vehicle_type_id": "183", "is_disabled": True},
-                    {"station_id": "A", "vehicle_type_id": "192", "is_reserved": True, "is_disabled": True},
-                    {"station_id": "B", "vehicle_type_id": "192", "is_reserved": True, "is_disabled": False},
+                    {
+                        "station_id": "A",
+                        "vehicle_type_id": "192",
+                        "is_reserved": True,
+                        "is_disabled": True,
+                    },
+                    {
+                        "station_id": "B",
+                        "vehicle_type_id": "192",
+                        "is_reserved": True,
+                        "is_disabled": False,
+                    },
                     {"vehicle_type_id": "192", "is_disabled": True},
                 ]
             }
@@ -428,11 +527,35 @@ async def test_battery_fetch_tracks_reserved_bikes(hass: HomeAssistant) -> None:
         return {
             "data": {
                 "bikes": [
-                    {"station_id": "A", "vehicle_type_id": "192", "is_reserved": True, "is_disabled": False},
-                    {"station_id": "A", "vehicle_type_id": "183", "is_reserved": True, "is_disabled": False},
-                    {"station_id": "A", "vehicle_type_id": "192", "is_reserved": True, "is_disabled": True},
-                    {"station_id": "B", "vehicle_type_id": "192", "is_reserved": False, "is_disabled": False},
-                    {"vehicle_type_id": "183", "is_reserved": True, "is_disabled": False},
+                    {
+                        "station_id": "A",
+                        "vehicle_type_id": "192",
+                        "is_reserved": True,
+                        "is_disabled": False,
+                    },
+                    {
+                        "station_id": "A",
+                        "vehicle_type_id": "183",
+                        "is_reserved": True,
+                        "is_disabled": False,
+                    },
+                    {
+                        "station_id": "A",
+                        "vehicle_type_id": "192",
+                        "is_reserved": True,
+                        "is_disabled": True,
+                    },
+                    {
+                        "station_id": "B",
+                        "vehicle_type_id": "192",
+                        "is_reserved": False,
+                        "is_disabled": False,
+                    },
+                    {
+                        "vehicle_type_id": "183",
+                        "is_reserved": True,
+                        "is_disabled": False,
+                    },
                 ]
             }
         }
@@ -461,7 +584,11 @@ async def test_battery_fetch_respects_ttl(hass: HomeAssistant) -> None:
         return {
             "data": {
                 "bikes": [
-                    {"station_id": "A", "vehicle_type_id": "183", "current_fuel_percent": 0.5},
+                    {
+                        "station_id": "A",
+                        "vehicle_type_id": "183",
+                        "current_fuel_percent": 0.5,
+                    },
                 ]
             }
         }
@@ -518,7 +645,9 @@ async def test_fetch_json_uses_conditional_get(hass: HomeAssistant) -> None:
 
     class _FirstResp:
         status = 200
-        headers = {"Last-Modified": "Wed, 21 Apr 2026 12:00:00 GMT"}
+        headers: ClassVar[dict[str, str]] = {
+            "Last-Modified": "Wed, 21 Apr 2026 12:00:00 GMT"
+        }
 
         def raise_for_status(self) -> None:
             return None
@@ -528,7 +657,7 @@ async def test_fetch_json_uses_conditional_get(hass: HomeAssistant) -> None:
 
     class _NotModifiedResp:
         status = 304
-        headers: dict[str, str] = {}
+        headers: ClassVar[dict[str, str]] = {}
 
         def raise_for_status(self) -> None:
             return None
@@ -620,7 +749,10 @@ async def test_coordinator_merges_battery_when_opt_on(hass: HomeAssistant) -> No
     assert coordinator.data["_e_bike_max_battery_pct"] == 95.0
     assert coordinator.data["_e_bike_range_samples"] == 4
     assert coordinator.data["_e_bike_battery_list"] == per_bike_list
-    assert coordinator.data["_vehicle_type_names"] == {"183": "E-Bike", "192": "Classic Bike"}
+    assert coordinator.data["_vehicle_type_names"] == {
+        "183": "E-Bike",
+        "192": "Classic Bike",
+    }
     assert fake.battery_calls == 1
 
 

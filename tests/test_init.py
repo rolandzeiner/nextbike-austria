@@ -7,6 +7,7 @@ config-flow, coordinator, or card_registration tests:
 * ``async_unload_entry`` happy path + per-system client cleanup,
 * ``async_remove_entry`` honouring the LAST-entry guard.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -128,9 +129,9 @@ async def test_unload_drops_shared_client_when_last_entry_for_system(
         # Simulate a real shared-client cache entry so we can assert it
         # gets cleaned up. (The patched _get_shared_client bypasses the
         # `systems` dict during setup, so seed it now.)
-        hass.data.setdefault(DOMAIN, {}).setdefault("systems", {})[
-            "nextbike_wr"
-        ] = object()
+        hass.data.setdefault(DOMAIN, {}).setdefault("systems", {})["nextbike_wr"] = (
+            object()
+        )
 
         assert await hass.config_entries.async_unload(entry.entry_id)
         await hass.async_block_till_done()
@@ -149,9 +150,7 @@ async def test_remove_entry_unregisters_card_when_last(hass: HomeAssistant) -> N
     entry.add_to_hass(hass)
 
     fake_unregister = AsyncMock()
-    with patch(
-        "custom_components.nextbike_austria.JSModuleRegistration"
-    ) as cls:
+    with patch("custom_components.nextbike_austria.JSModuleRegistration") as cls:
         cls.return_value.async_unregister = fake_unregister
         await async_remove_entry(hass, entry)
 
@@ -171,9 +170,7 @@ async def test_remove_entry_keeps_card_when_others_remain(
     entry_b.add_to_hass(hass)
 
     fake_unregister = AsyncMock()
-    with patch(
-        "custom_components.nextbike_austria.JSModuleRegistration"
-    ) as cls:
+    with patch("custom_components.nextbike_austria.JSModuleRegistration") as cls:
         cls.return_value.async_unregister = fake_unregister
         # Remove entry_a; entry_b remains.
         await async_remove_entry(hass, entry_a)

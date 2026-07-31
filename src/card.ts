@@ -29,7 +29,7 @@ import {
   expandClassicTypes,
   batteryColor,
   relativeTime,
-  cleanStationName,
+  resolveDisplayName,
   getEbikeIds,
   safeHttpsUri,
 } from "./utils";
@@ -41,7 +41,7 @@ import "./editor";
 
 @customElement("nextbike-austria-card")
 export class NextbikeAustriaCard extends LitElement {
-  static styles: CSSResultGroup = cardStyles;
+  static override styles: CSSResultGroup = cardStyles;
 
   @property({ attribute: false }) public hass?: HomeAssistant;
 
@@ -87,6 +87,11 @@ export class NextbikeAustriaCard extends LitElement {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    // Drop the per-render memo BEFORE Lit calls render() so each cycle
+    // recomputes `_resolveEntities()` exactly once and threads the
+    // cached result through render + shouldUpdate. Without this,
+    // `findNextbikeEntities` walks `hass.states` 3× per render.
+    this._resolvedEntitiesMemo = null;
     if (changed.has("hass") && this.hass && !this._versionChecked) {
       this._versionChecked = true;
       void this._checkCardVersion();
@@ -102,6 +107,10 @@ export class NextbikeAustriaCard extends LitElement {
       }
     }
   }
+
+  // Render-scoped memo for `_resolveEntities`. Cleared at the top of
+  // every `willUpdate` so each Lit cycle gets a fresh value.
+  private _resolvedEntitiesMemo: NextbikeStationEntry[] | null = null;
 
   // Performance gate — every entity state change in HA fires a hass
   // update. Without this, we re-render on every change anywhere in the
@@ -120,14 +129,23 @@ export class NextbikeAustriaCard extends LitElement {
     const oldHass = changed.get("hass") as HomeAssistant | undefined;
     if (!oldHass) return true; // first hass — render
     if (!this.hass) return false;
-    const stations = this._resolveEntities(this.hass);
+    // memoize=false: this pre-cycle call must neither read nor seed the
+    // render-scoped memo. shouldUpdate can return false (no willUpdate,
+    // no memo-clear), so a value seeded here would outlive its cycle.
+    const stations = this._resolveEntities(this.hass, false);
     return stations.some(
       (s) => oldHass.states[s.entity] !== this.hass!.states[s.entity],
     );
   }
 
   public getCardSize(): number {
-    const n = (this._config?.entities || []).length || 1;
+    // Size from the resolved station list — entities filtered to those
+    // that actually exist, plus the single-station auto-detect fallback
+    // — so the masonry height contract matches what render() paints.
+    // Before the first hass arrives, fall back to the configured count.
+    const n = this.hass
+      ? this._resolveEntities().length || 1
+      : this._config.entities.length || 1;
     return Math.min(12, 3 + n * 3);
   }
 
@@ -174,17 +192,37 @@ export class NextbikeAustriaCard extends LitElement {
 
   private _resolveEntities(
     hass: HomeAssistant | undefined = this.hass,
+    memoize = true,
   ): NextbikeStationEntry[] {
+    // Memoised per render cycle when called for the card's current
+    // `hass` (the common case in willUpdate / render). The memo is
+    // owned by the willUpdate→render path, which clears it at the top
+    // of every cycle. `shouldUpdate` passes memoize=false so its
+    // pre-cycle call neither reads a stale value nor seeds one that
+    // could outlive a cycle it then declines to render. Custom-hass
+    // callers also bypass the cache so they read the right state map.
+    const useMemo = memoize && hass === this.hass;
+    if (useMemo && this._resolvedEntitiesMemo !== null) {
+      return this._resolvedEntitiesMemo;
+    }
     const picked = Array.isArray(this._config?.entities)
       ? this._config.entities.filter((s) => hass?.states[s.entity])
       : [];
-    if (picked.length) return picked;
-    const available = findNextbikeEntities(hass);
-    const first = available[0];
-    return first ? [{ entity: first }] : [];
+    let result: NextbikeStationEntry[];
+    if (picked.length) {
+      result = picked;
+    } else {
+      const available = findNextbikeEntities(hass);
+      const first = available[0];
+      result = first ? [{ entity: first }] : [];
+    }
+    if (useMemo) {
+      this._resolvedEntitiesMemo = result;
+    }
+    return result;
   }
 
-  protected render(): TemplateResult | typeof nothing {
+  protected override render(): TemplateResult | typeof nothing {
     if (!this.hass || !this._config) return nothing;
     const stations = this._resolveEntities();
     const useTabs = this._config.layout === "tabs" && stations.length >= 2;
@@ -236,13 +274,7 @@ export class NextbikeAustriaCard extends LitElement {
         ${stations.map((s, i) => {
           const a = this.hass?.states[s.entity]?.attributes || {};
           const hasFriendlyName = typeof a.friendly_name === "string" && a.friendly_name.length > 0;
-          // Prefer the locale-agnostic display name surfaced by the
-          // sensor; fall back to stripping HA's friendly-name suffix
-          // for users on an older Python integration version.
-          const displayName =
-            typeof a.station_display_name === "string" && a.station_display_name
-              ? a.station_display_name
-              : cleanStationName(a.friendly_name || s.entity);
+          const displayName = resolveDisplayName(a, s.entity);
           const label = displayName;
           const selected = i === this._activeTab;
           // WCAG 3.1.2 Language of Parts: station names come from the
@@ -318,9 +350,11 @@ export class NextbikeAustriaCard extends LitElement {
       return html`<div class="empty-state" role="status">${this._t("no_entities_unavailable")}</div>`;
     }
     const a = state.attributes || ({} as HassEntityAttributes);
-    const bikes = Number.isFinite(parseInt(state.state, 10))
-      ? parseInt(state.state, 10)
-      : 0;
+    // Clamp at the boundary: a malformed negative sensor state would
+    // otherwise drive `bikesVis` negative in _renderRack and run the
+    // empty-slot loop one slot too long.
+    const parsedBikes = parseInt(state.state, 10);
+    const bikes = Number.isFinite(parsedBikes) ? Math.max(0, parsedBikes) : 0;
     const capacity = typeof a.capacity === "number" ? a.capacity : null;
     const docks =
       typeof a.num_docks_available === "number" ? a.num_docks_available : null;
@@ -369,12 +403,7 @@ export class NextbikeAustriaCard extends LitElement {
       systemId.replace(/^nextbike_/, "");
     const rentUri = safeHttpsUri(a.rental_uri);
     const hasFriendlyName = typeof a.friendly_name === "string" && a.friendly_name.length > 0;
-    // Locale-agnostic display name (config-entry title) when the
-    // sensor surfaces it; regex-strip fallback for old coordinators.
-    const title =
-      typeof a.station_display_name === "string" && a.station_display_name
-        ? a.station_display_name
-        : cleanStationName(a.friendly_name || stopCfg.entity);
+    const title = resolveDisplayName(a, stopCfg.entity);
     // mapUrl is built from numeric lat/lon so the literal is always
     // https://, but pipe it through the same trust-boundary guard as
     // the rental URI so a future contributor can't add a stop-URL
@@ -551,12 +580,11 @@ export class NextbikeAustriaCard extends LitElement {
     const bikesVis = Math.min(bikes, capacity);
     // Reserved + disabled slots each eat into what would otherwise
     // render as empty docks. Order: bikes, reserved, disabled, empty.
-    const reservedVis = Math.min(
-      Number.isFinite(reservedCount) ? reservedCount : 0,
-      Math.max(0, totalSlots - bikesVis),
-    );
+    // reservedCount / disabledCount are already coerced to a finite
+    // number (0 on miss) by _renderStation, so no guard is needed here.
+    const reservedVis = Math.min(reservedCount, Math.max(0, totalSlots - bikesVis));
     const disabledVis = Math.min(
-      Number.isFinite(disabledCount) ? disabledCount : 0,
+      disabledCount,
       Math.max(0, totalSlots - bikesVis - reservedVis),
     );
     const hasEbikes = typeof ebikes === "number" && Number.isFinite(ebikes) && ebikes > 0;
@@ -566,16 +594,17 @@ export class NextbikeAustriaCard extends LitElement {
       typeof batteryPct === "number" &&
       batterySamples > 0;
     const perBike = showBattery && Array.isArray(batteryList) ? batteryList : [];
-    const ebikeFallbackType = firstEbikeTypeName(
-      vehicleTypesAvailable,
-      vehicleTypeNames,
-      ebikeIds,
-    );
-    const classicSequence = expandClassicTypes(
-      vehicleTypesAvailable,
-      vehicleTypeNames,
-      ebikeIds,
-    );
+    // Skip the vehicle-type lookup when no e-bikes flow AND no docks
+    // would be rendered — `firstEbikeTypeName` / `expandClassicTypes`
+    // walk `vehicleTypesAvailable` and don't need to fire when the
+    // result is unused.
+    const needsTypeLookup = hasEbikes || totalSlots > 0;
+    const ebikeFallbackType = needsTypeLookup
+      ? firstEbikeTypeName(vehicleTypesAvailable, vehicleTypeNames, ebikeIds)
+      : null;
+    const classicSequence = needsTypeLookup
+      ? expandClassicTypes(vehicleTypesAvailable, vehicleTypeNames, ebikeIds)
+      : [];
     let classicCursor = 0;
 
     const slots: TemplateResult[] = [];

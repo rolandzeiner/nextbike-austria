@@ -51,6 +51,13 @@ export interface HassEntity {
 
 export interface HomeAssistant {
   states: Record<string, HassEntity>;
+  // Entity registry, keyed by entity_id. `platform` is the owning
+  // integration's domain — used by the card picker's
+  // `getEntitySuggestion` hook to offer this card only for our own
+  // (`nextbike_austria`) entities. custom-card-helpers' HomeAssistant
+  // already carries this; the card's slim local type mirrors just the
+  // field we read.
+  entities?: Record<string, { platform?: string } | undefined>;
   language?: string;
   // HA core ships translations for common field names ("entities",
   // "name", "icon", etc.) — the editor's _computeLabel chain queries
@@ -187,5 +194,15 @@ export interface WindowWithCustomCards extends Window {
     description: string;
     preview?: boolean;
     documentationURL?: string;
+    /** HA 2026.6 entity-first card picker hook. Additive key older HA
+     *  ignores. Returns a card config stub (or array, or null) when the
+     *  given entity belongs to this integration. */
+    getEntitySuggestion?: (
+      hass: HomeAssistant,
+      entityId: string,
+    ) =>
+      | { config: NextbikeAustriaCardConfig }
+      | Array<{ config: NextbikeAustriaCardConfig }>
+      | null;
   }>;
 }
