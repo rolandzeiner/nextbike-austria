@@ -11,6 +11,25 @@ Architecture:
   Its ``_async_update_data`` goes through the shared client so the
   per-system feed fetches collapse when many stations are tracked.
 
+Fan-out on fetch
+----------------
+GBFS feeds are whole-system documents: one `station_status` fetch already
+carries every station in the system. The client therefore does not just
+*deduplicate* requests, it **publishes** each fresh snapshot to every
+registered coordinator (`_publish_snapshot`), and every fetch failure to
+every registered coordinator (`_publish_error`).
+
+This matters because per-entry `DataUpdateCoordinator` timers are
+phase-shifted — each entry starts its interval at a different instant. Without
+the fan-out, an entry whose tick lands mid-TTL reads the cached snapshot and
+serves data up to `_GBFS_TTL_SECONDS` older than its sibling's, purely as an
+artifact of when its timer happened to start. With it, every station in a
+system reflects the same fetch at the same moment, at identical request cost.
+
+The same argument drives the failure fan-out: the request is shared, so the
+outage is shared. Backing off only the coordinator that happened to own the
+failing tick would leave its siblings hammering a down CDN at full cadence.
+
 GBFS has no credentials; the `reauthentication-flow` quality-scale rule is
 therefore exempt and there is no 401/403 branch here.
 """
@@ -42,6 +61,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     EBIKE_PROPULSIONS,
+    STATION_INFO_TTL_SECONDS,
     SYSTEM_IDS,
     USER_AGENT,
     gbfs_feed_url,
@@ -110,7 +130,21 @@ class SharedSystemClient:
         self._lock = asyncio.Lock()
         self._battery_lock = asyncio.Lock()
         self._last_fetch: float = 0.0
+        # Coordinators subscribed to this system's snapshots, keyed by
+        # entry_id. Every successful fetch is fanned out to all of them so
+        # sibling entries never serve a staler snapshot than the one that
+        # happened to own the tick. See the module docstring.
+        self._members: dict[str, NextbikeStationCoordinator] = {}
         self._stations_by_id: dict[str, dict[str, Any]] = {}
+        # `station_information` is refreshed on its own long TTL — see
+        # STATION_INFO_TTL_SECONDS. Cached separately from the merged
+        # snapshot so a status-only tick can re-merge without a refetch.
+        self._info_by_id: dict[str, dict[str, Any]] = {}
+        self._info_last_fetch: float = 0.0
+        # Station ids the status feed reports but a freshly-pulled
+        # information feed still doesn't describe. Tracked so persistent
+        # upstream drift doesn't re-trigger the self-heal refetch forever.
+        self._unresolved_ids: set[str] = set()
         # vehicle_types_available in station_status returns vehicle_type_id
         # strings; vehicle_types.json tells us their propulsion. Built once
         # on first fetch (nearly static) and kept for the process lifetime —
@@ -278,8 +312,59 @@ class SharedSystemClient:
             self._battery_by_station = aggregates
             self._battery_last_fetch = now
 
-    async def async_fetch(self, *, force: bool = False) -> None:
-        """Refresh the cached snapshot, respecting the TTL window."""
+    def register(self, coordinator: NextbikeStationCoordinator) -> None:
+        """Subscribe a coordinator to this system's snapshot fan-out."""
+        self._members[coordinator.entry_id] = coordinator
+
+    def unregister(self, entry_id: str) -> bool:
+        """Unsubscribe a coordinator; return True if no members remain."""
+        self._members.pop(entry_id, None)
+        return not self._members
+
+    def _publish_snapshot(self, initiator: str | None) -> None:
+        """Push the fresh snapshot to every member except the initiator.
+
+        The initiator is skipped because it is mid-``_async_update_data``
+        and will return the snapshot through HA's normal refresh path;
+        pushing to it as well would write its state twice per tick.
+        """
+        for entry_id, coordinator in list(self._members.items()):
+            if entry_id == initiator:
+                continue
+            coordinator.apply_shared_snapshot()
+
+    def _publish_error(self, err: GBFSError, initiator: str | None) -> None:
+        """Mark every member except the initiator as failed.
+
+        Same reasoning as ``_publish_snapshot``: the initiator raises
+        ``UpdateFailed`` out of its own refresh and HA records the failure
+        for it. The siblings never saw the exception, so without this they
+        would keep polling a known-down feed at full cadence.
+        """
+        for entry_id, coordinator in list(self._members.items()):
+            if entry_id == initiator:
+                continue
+            coordinator.apply_shared_error(err)
+
+    async def async_fetch(
+        self, *, force: bool = False, initiator: str | None = None
+    ) -> None:
+        """Refresh the cached snapshot, respecting the TTL window.
+
+        Fans the outcome out to sibling members (see the module docstring).
+        The fan-out runs outside the fetch lock so a member's synchronous
+        state write can never re-enter a held lock.
+        """
+        try:
+            fetched = await self._fetch_locked(force=force)
+        except GBFSError as err:
+            self._publish_error(err, initiator)
+            raise
+        if fetched:
+            self._publish_snapshot(initiator)
+
+    async def _fetch_locked(self, *, force: bool) -> bool:
+        """Do the actual conditional refresh. True if the network was hit."""
         async with self._lock:
             now = time.monotonic()
             if (
@@ -287,30 +372,69 @@ class SharedSystemClient:
                 and self._last_fetch > 0.0
                 and (now - self._last_fetch) < _GBFS_TTL_SECONDS
             ):
-                return
+                return False
 
             # vehicle_types rarely changes; fetch once and keep unless empty.
             if not self._vehicle_types:
                 await self._refresh_vehicle_types()
 
-            stations = await self._fetch_json("station_information")
-            statuses = await self._fetch_json("station_status")
+            # `station_information` is near-static — refresh it on its own
+            # long TTL instead of on every status tick.
+            if not self._info_by_id or (
+                (now - self._info_last_fetch) >= STATION_INFO_TTL_SECONDS
+            ):
+                await self._refresh_station_information(now)
 
-            info_by_id: dict[str, dict[str, Any]] = {}
-            for s in stations.get("data", {}).get("stations") or []:
-                sid = str(s.get("station_id") or "")
-                if sid:
-                    info_by_id[sid] = s
+            statuses = await self._fetch_json("station_status")
+            status_rows = statuses.get("data", {}).get("stations") or []
+
+            # Self-heal the long info TTL: a station id that the status feed
+            # knows but the cached information feed doesn't means a rack was
+            # installed (or un-retired) upstream since the last info refresh.
+            # Re-pull immediately rather than leaving it invisible for hours.
+            unknown = {
+                sid
+                for row in status_rows
+                if (sid := str(row.get("station_id") or ""))
+                and sid not in self._info_by_id
+            }
+            # Only ids we have never resolved before justify a refetch. The
+            # two feeds do drift permanently for a handful of stations (a
+            # status row whose information row was withdrawn), and without
+            # this filter each one would force an extra request every tick —
+            # exactly the cost this TTL exists to remove.
+            if unknown - self._unresolved_ids and self._info_last_fetch < now:
+                _LOGGER.debug(
+                    "Unknown station id in %s status feed — refreshing information feed",
+                    self._system_id,
+                )
+                await self._refresh_station_information(now)
+                unknown = {sid for sid in unknown if sid not in self._info_by_id}
+            # Whatever a fresh information feed still can't explain is
+            # upstream drift, not staleness. Remember it so it stays quiet.
+            self._unresolved_ids = unknown
 
             merged: dict[str, dict[str, Any]] = {}
-            for st in statuses.get("data", {}).get("stations") or []:
+            for st in status_rows:
                 sid = str(st.get("station_id") or "")
-                if not sid or sid not in info_by_id:
+                if not sid or sid not in self._info_by_id:
                     continue
-                merged[sid] = {**info_by_id[sid], **st}
+                merged[sid] = {**self._info_by_id[sid], **st}
 
             self._stations_by_id = merged
             self._last_fetch = now
+            return True
+
+    async def _refresh_station_information(self, now: float) -> None:
+        """Re-pull the near-static `station_information` feed."""
+        stations = await self._fetch_json("station_information")
+        info_by_id: dict[str, dict[str, Any]] = {}
+        for s in stations.get("data", {}).get("stations") or []:
+            sid = str(s.get("station_id") or "")
+            if sid:
+                info_by_id[sid] = s
+        self._info_by_id = info_by_id
+        self._info_last_fetch = now
 
     async def _refresh_vehicle_types(self) -> None:
         """Populate the vehicle-type lookup + e-bike type-id set."""
@@ -500,10 +624,41 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """
         return
 
+    @property
+    def entry_id(self) -> str:
+        """Return the config-entry id — the key in the client's member map."""
+        return self._entry.entry_id
+
+    def apply_shared_snapshot(self) -> None:
+        """Adopt a snapshot fetched by a sibling coordinator.
+
+        Called by ``SharedSystemClient`` on every member but the one that
+        owned the fetch. Drives the entity update directly through
+        ``async_set_updated_data`` — there is no request to await, the data
+        is already in the shared client.
+        """
+        try:
+            station = self._extract_station()
+        except UpdateFailed as err:
+            self.async_set_update_error(err)
+            return
+        self.async_set_updated_data(station)
+
+    def apply_shared_error(self, err: GBFSError) -> None:
+        """Adopt a fetch failure observed by a sibling coordinator."""
+        self._note_failure()
+        self.async_set_update_error(
+            UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key=err.translation_key,
+                translation_placeholders=err.placeholders,
+            )
+        )
+
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch fresh data via the shared client and extract our station."""
         try:
-            await self._client.async_fetch()
+            await self._client.async_fetch(initiator=self.entry_id)
         except GBFSError as err:
             self._note_failure()
             raise UpdateFailed(
@@ -518,6 +673,15 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._track_battery:
             await self._client.async_fetch_battery()
 
+        return self._extract_station()
+
+    def _extract_station(self) -> dict[str, Any]:
+        """Build this entry's slice of the shared snapshot.
+
+        Shared by the timer path (``_async_update_data``) and the fan-out
+        path (``apply_shared_snapshot``) so both surface identical data,
+        identical Repairs behaviour, and identical failure semantics.
+        """
         station = self._client.station(self._station_id)
         if station is None:
             # The configured station is not in the current feed. Could be

@@ -89,13 +89,32 @@ class FakeClient:
         self._vehicle_type_names: dict[str, str] = {}
         self.fetch_calls: int = 0
         self.battery_calls: int = 0
+        # Mirrors the real client's member map so tests can assert the
+        # snapshot fan-out (register/unregister + publish to siblings)
+        # instead of only the request-dedup half of the contract.
+        self.members: dict[str, Any] = {}
 
     # ----- production interface -----------------------------------------
 
-    async def async_fetch(self, *, force: bool = False) -> None:
+    def register(self, coordinator: Any) -> None:
+        self.members[coordinator.entry_id] = coordinator
+
+    def unregister(self, entry_id: str) -> bool:
+        self.members.pop(entry_id, None)
+        return not self.members
+
+    async def async_fetch(
+        self, *, force: bool = False, initiator: str | None = None
+    ) -> None:
         self.fetch_calls += 1
         if self._raise is not None:
+            for entry_id, coordinator in list(self.members.items()):
+                if entry_id != initiator:
+                    coordinator.apply_shared_error(self._raise)
             raise self._raise
+        for entry_id, coordinator in list(self.members.items()):
+            if entry_id != initiator:
+                coordinator.apply_shared_snapshot()
 
     async def async_fetch_battery(self, *, force: bool = False) -> None:
         self.battery_calls += 1

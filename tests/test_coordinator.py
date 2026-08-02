@@ -18,6 +18,7 @@ from custom_components.nextbike_austria.const import (
     CONF_STATION_NAME,
     CONF_SYSTEM_ID,
     DOMAIN,
+    STATION_INFO_TTL_SECONDS,
 )
 from custom_components.nextbike_austria.coordinator import (
     GBFSError,
@@ -855,3 +856,260 @@ async def test_async_fetch_skips_status_orphans(hass: HomeAssistant) -> None:
 
     assert client.station("1") is not None
     assert client.station("ghost") is None
+
+
+# ---------------------------------------------------------------------
+# station_information long-TTL caching
+# ---------------------------------------------------------------------
+
+
+def _feed_counter() -> tuple[Any, dict[str, int]]:
+    """Return a `_fetch_json` double plus the per-feed call tally it fills."""
+    calls: dict[str, int] = {}
+
+    async def fake_fetch(feed: str) -> dict[str, Any]:
+        calls[feed] = calls.get(feed, 0) + 1
+        if feed == "vehicle_types":
+            return {"data": {"vehicle_types": []}}
+        if feed == "station_information":
+            return {"data": {"stations": [{"station_id": "1", "name": "One"}]}}
+        if feed == "station_status":
+            return {
+                "data": {"stations": [{"station_id": "1", "num_bikes_available": 3}]}
+            }
+        return {"data": {}}
+
+    return fake_fetch, calls
+
+
+async def test_station_information_cached_across_ticks(hass: HomeAssistant) -> None:
+    """The near-static information feed is fetched once, not once per tick.
+
+    This is the whole point of STATION_INFO_TTL_SECONDS: `station_status`
+    carries everything that moves, so re-pulling `station_information`
+    every 60 s doubled the request count for data that changes when an
+    operator physically installs a rack.
+    """
+    client = SharedSystemClient(hass, "nextbike_wr")
+    fake_fetch, calls = _feed_counter()
+
+    with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
+        for _ in range(3):
+            await client.async_fetch(force=True)
+
+    assert calls["station_status"] == 3
+    assert calls["station_information"] == 1
+    # The merge still works off the cached information rows.
+    assert client.station("1") is not None
+    assert client.station("1")["name"] == "One"
+
+
+async def test_station_information_refetched_after_ttl(hass: HomeAssistant) -> None:
+    """Once STATION_INFO_TTL_SECONDS elapses the information feed is re-pulled."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+    fake_fetch, calls = _feed_counter()
+
+    # Drive the clock explicitly — both ticks must read from the same
+    # fake timeline, or the second tick compares a synthetic `now`
+    # against a real-monotonic `_info_last_fetch` and the delta is
+    # meaningless (it goes negative, and the test passes for the wrong
+    # reason or fails for the wrong reason).
+    clock = iter([0.0, STATION_INFO_TTL_SECONDS + 1.0])
+    with (
+        patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch),
+        patch(
+            "custom_components.nextbike_austria.coordinator.time.monotonic",
+            side_effect=lambda: next(clock),
+        ),
+    ):
+        await client.async_fetch(force=True)
+        assert calls["station_information"] == 1
+        await client.async_fetch(force=True)
+
+    assert calls["station_information"] == 2
+
+
+async def test_unknown_status_id_forces_information_refresh(
+    hass: HomeAssistant,
+) -> None:
+    """A station id new to the status feed re-pulls information immediately.
+
+    Without this the long TTL would hide a newly-installed rack for up
+    to six hours.
+    """
+    client = SharedSystemClient(hass, "nextbike_wr")
+    calls: dict[str, int] = {}
+    known = ["1"]
+
+    async def fake_fetch(feed: str) -> dict[str, Any]:
+        calls[feed] = calls.get(feed, 0) + 1
+        if feed == "vehicle_types":
+            return {"data": {"vehicle_types": []}}
+        if feed == "station_information":
+            return {"data": {"stations": [{"station_id": s, "name": s} for s in known]}}
+        if feed == "station_status":
+            return {
+                "data": {
+                    "stations": [
+                        {"station_id": s, "num_bikes_available": 3} for s in known
+                    ]
+                }
+            }
+        return {"data": {}}
+
+    with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
+        await client.async_fetch(force=True)
+        assert calls["station_information"] == 1
+        # A new rack goes live upstream well inside the information TTL.
+        known.append("2")
+        await client.async_fetch(force=True)
+
+    assert calls["station_information"] == 2
+    assert client.station("2") is not None
+
+
+async def test_persistent_orphan_does_not_refetch_information_forever(
+    hass: HomeAssistant,
+) -> None:
+    """A status id the information feed never explains stops forcing refetches.
+
+    The two GBFS feeds do drift permanently for a handful of stations.
+    Treating that as "stale cache" would re-pull the information feed on
+    every single tick — reinstating exactly the cost the TTL removes.
+    """
+    client = SharedSystemClient(hass, "nextbike_wr")
+    calls: dict[str, int] = {}
+
+    async def fake_fetch(feed: str) -> dict[str, Any]:
+        calls[feed] = calls.get(feed, 0) + 1
+        if feed == "vehicle_types":
+            return {"data": {"vehicle_types": []}}
+        if feed == "station_information":
+            return {"data": {"stations": [{"station_id": "1", "name": "One"}]}}
+        if feed == "station_status":
+            return {
+                "data": {
+                    "stations": [
+                        {"station_id": "1", "num_bikes_available": 3},
+                        {"station_id": "ghost", "num_bikes_available": 99},
+                    ]
+                }
+            }
+        return {"data": {}}
+
+    with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
+        for _ in range(4):
+            await client.async_fetch(force=True)
+
+    assert calls["station_status"] == 4
+    # Exactly one information pull across four ticks. "ghost" was already
+    # unexplained by a *freshly-pulled* feed on tick 1, so it is recorded
+    # as upstream drift straight away and never forces another request.
+    assert calls["station_information"] == 1
+    assert client.station("ghost") is None
+
+
+# ---------------------------------------------------------------------
+# Snapshot fan-out to sibling coordinators
+# ---------------------------------------------------------------------
+
+
+async def _two_coordinators(
+    hass: HomeAssistant, client: SharedSystemClient
+) -> tuple[NextbikeStationCoordinator, NextbikeStationCoordinator]:
+    """Build two coordinators for different stations sharing one client."""
+    coordinators = []
+    for station_id in ("1", "2"):
+        entry = _make_entry({CONF_STATION_ID: station_id})
+        entry.add_to_hass(hass)
+        with patch(
+            "custom_components.nextbike_austria.coordinator._get_shared_client",
+            return_value=client,
+        ):
+            coordinator = NextbikeStationCoordinator(hass, entry)
+        client.register(coordinator)
+        coordinators.append(coordinator)
+    return coordinators[0], coordinators[1]
+
+
+async def test_fetch_fans_snapshot_out_to_siblings(hass: HomeAssistant) -> None:
+    """One coordinator's fetch updates every sibling on the same system.
+
+    Per-entry coordinator timers are phase-shifted, so without the fan-out
+    a sibling whose tick lands mid-TTL serves a snapshot up to
+    `_GBFS_TTL_SECONDS` older than its peer's purely because of when its
+    timer happened to start.
+    """
+    client = SharedSystemClient(hass, "nextbike_wr")
+
+    async def fake_fetch(feed: str) -> dict[str, Any]:
+        if feed == "vehicle_types":
+            return {"data": {"vehicle_types": []}}
+        if feed == "station_information":
+            return {
+                "data": {
+                    "stations": [
+                        {"station_id": "1", "name": "One"},
+                        {"station_id": "2", "name": "Two"},
+                    ]
+                }
+            }
+        if feed == "station_status":
+            return {
+                "data": {
+                    "stations": [
+                        {"station_id": "1", "num_bikes_available": 3},
+                        {"station_id": "2", "num_bikes_available": 7},
+                    ]
+                }
+            }
+        return {"data": {}}
+
+    first, second = await _two_coordinators(hass, client)
+
+    with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
+        # Only the FIRST coordinator refreshes. The second never runs its
+        # own update, yet must end up with fresh data.
+        await first.async_refresh()
+
+    assert first.last_update_success
+    assert first.data is not None
+    assert first.data["num_bikes_available"] == 3
+
+    assert second.last_update_success
+    assert second.data is not None
+    assert second.data["num_bikes_available"] == 7
+
+
+async def test_fetch_failure_fans_out_to_siblings(hass: HomeAssistant) -> None:
+    """A shared-request failure marks every member failed, not just the caller.
+
+    The request is shared, so the outage is shared. Failing only the
+    coordinator that owned the tick would leave its siblings polling a
+    known-down CDN at full cadence.
+    """
+    client = SharedSystemClient(hass, "nextbike_wr")
+
+    async def fake_fetch(feed: str) -> dict[str, Any]:
+        raise GBFSError("api_http_error", status="503", reason="Service Unavailable")
+
+    first, second = await _two_coordinators(hass, client)
+
+    with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
+        await first.async_refresh()
+
+    assert not first.last_update_success
+    assert not second.last_update_success
+
+
+async def test_unregister_reports_when_last_member_leaves(
+    hass: HomeAssistant,
+) -> None:
+    """unregister() returns True only once the member map is empty."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+    first, second = await _two_coordinators(hass, client)
+
+    assert client.unregister(first.entry_id) is False
+    assert client.unregister(second.entry_id) is True
+    # Idempotent — unloading an entry twice must not explode.
+    assert client.unregister(second.entry_id) is True

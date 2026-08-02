@@ -30,7 +30,7 @@ If your city uses nextbike under a different `system_id`, open an issue — addi
 - **Three sensors per station**: `Bikes available`, `Docks available`, `E-bikes available`. Full attribute list in [Sensor Attributes](#sensor-attributes).
 - **Multi-step config flow**: pick system → type station name → pick from dropdown. Live catalogue fetch during setup verifies the feed is reachable.
 - **Reconfigure flow** to switch to a different station at the same system without losing the entry; **options flow** for polling interval and battery tracking — see [Configuration Parameters](#configuration-parameters).
-- **Shared per-system polling**: if you track 10 Vienna stations, only one HTTP request per poll feeds them all — see [Data Updates](#data-updates).
+- **Shared per-system polling**: if you track 10 Vienna stations, one HTTP request per poll feeds them all — and all 10 refresh together, off the same snapshot — see [Data Updates](#data-updates).
 - **Optional e-bike battery + reservation tracking**: per-station battery aggregates (avg / min / max %), sorted per-bike battery list, reserved-bike counts, and out-of-service (disabled) bike counts. Off by default — bandwidth profile in [Data Updates](#data-updates).
 - **Direct rental link** via the `rental_uri` attribute (`https://nxtb.it/p/{id}` deep-links into the nextbike app).
 - **Station-gone repair flow**: if the operator retires a station mid-operation, a Repairs notification surfaces and auto-clears when the station reappears or the entry is removed.
@@ -134,7 +134,8 @@ The `Docks available` sensor additionally exposes `is_virtual_station` and `capa
 ## Data Updates
 
 - **Poll interval** defaults to **60 s** (the GBFS-advertised `ttl`). Floor 60 s, ceiling 900 s — set per entry in the options flow.
-- **Per-system shared fetch**: one HTTP request per system per poll, regardless of how many stations in that system are tracked. Each entry reads its station out of the shared snapshot.
+- **Per-system shared fetch**: one HTTP request per system per poll, regardless of how many stations in that system are tracked. Every entry for that system updates from the same snapshot at the same moment, so two stations never disagree about how fresh their data is.
+- **Static data on a slower clock**: station names, coordinates and capacity live in `station_information.json`, which only changes when an operator installs or renames a rack. It refreshes every **6 hours** instead of every poll, halving the steady-state request count. A station the live feed reports but the cached list doesn't know triggers an immediate refresh, so a new rack appears on the next poll rather than hours later.
 - **Conditional GET**: the shared client remembers each feed's `Last-Modified` and sends `If-Modified-Since`. A `304 Not Modified` reuses the cached payload without re-downloading the body — particularly effective on quiet feeds like `vehicle_types.json`.
 - **Battery / reservation tracking** (opt-in): with *Track e-bike battery state* enabled on at least one entry, the shared client additionally fetches `free_bike_status.json` every **20 min**, independent of the station poll interval. The feed is ~1.2 MB raw but only **~75 KB on the wire** for Wien thanks to `Accept-Encoding: gzip` (16.7× compression — measured April 2026) — approximately **5.3 MB/day / 160 MB/month** per opted-in Austrian system. The 20 min back-off is honoured even on failure, so a flaky upstream cannot trigger per-poll retries.
 - **Partial-failure handling**: a missing or unreadable feed surfaces as `unavailable` on the affected entry; the shared client continues serving cached data to the others. Translated `UpdateFailed` messages explain the specific failure mode (timeout, HTTP status, invalid response).
