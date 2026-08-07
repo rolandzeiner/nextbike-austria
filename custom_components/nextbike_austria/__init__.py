@@ -51,8 +51,8 @@ async def _websocket_card_version(
     catches the ~5% with stuck Service Workers, aggressive CDN caches,
     or browsers ignoring ``?v=`` invalidation. It pairs with the
     sessionStorage stuck-reload anti-loop on the card side
-    (PORTFOLIO_LIFTABLES.md item 44) so the residual case doesn't
-    itself loop. See PORTFOLIO_LIFTABLES.md item 20.
+    (portfolio-liftables reference, item 44) so the residual case doesn't
+    itself loop. See that reference, item 20 (maintainer note; not in this repo).
     """
     connection.send_result(msg["id"], {"version": CARD_VERSION})
 

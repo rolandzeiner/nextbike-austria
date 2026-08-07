@@ -120,7 +120,8 @@ class SharedSystemClient:
           ``non-zero → zero`` entry-count transition, and pop *before*
           platform-unload so a sibling's in-flight refresh can't
           re-create it.
-    See PORTFOLIO_LIFTABLES.md item 14 for the lift-this-pattern shape.
+    See the portfolio-liftables reference, item 14, for the
+    lift-this-pattern shape (maintainer note; not in this repo).
     """
 
     def __init__(self, hass: HomeAssistant, system_id: str) -> None:

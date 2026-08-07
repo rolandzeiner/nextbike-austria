@@ -24,11 +24,12 @@ DOMAIN: Final = "nextbike_austria"
 #
 # This is safe on the event loop, despite what the previous comment here
 # claimed. HA imports integrations via `async_add_import_executor_job`
-# (`Integration.import_executor` defaults to True), so the module body runs on
-# an import-executor thread, and `util.loop.protect_loop` only checks when
-# `threading.get_ident() == loop_thread_id`. Even on the loop, `open` is
-# registered with `strict=False`, so it would warn rather than raise.
-# Verified against home-assistant/core 2026.7.4.
+# (`Integration.import_executor` defaults to True — loader.py:876), so the
+# module body runs on an import-executor thread, and `util.loop.protect_loop`
+# only checks when `threading.get_ident() == loop_thread_id`
+# (util/loop.py:192). Even on the loop, the call below (`Path.read_text`) is
+# registered in block_async_io.py with `strict=False`, so it would warn
+# rather than raise. Verified against home-assistant/core 2026.7.4.
 INTEGRATION_VERSION: Final = json.loads(
     (Path(__file__).parent / "manifest.json").read_text(encoding="utf-8")
 )["version"]
