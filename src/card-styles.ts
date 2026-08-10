@@ -32,12 +32,31 @@ export const cardStyles: CSSResultGroup = css`
     /* Spacing / radius / sizing — layered over the HA Design System
        so the card moves with HA when tokens evolve. Hard-coded values
        are the fallback for older HA versions. */
-    --nb-radius-sm: var(--ha-radius-sm, 6px);
-    --nb-radius-md: var(--ha-radius-md, 10px);
-    --nb-radius-lg: var(--ha-card-border-radius, var(--ha-radius-lg, 12px));
-    --nb-pad-x:     var(--ha-spacing-4, 16px);
-    --nb-pad-y:     var(--ha-spacing-3, 14px);
-    --nb-row-gap:   var(--ha-spacing-3, 12px);
+    /* These names were wrong until v1.3.1 and nothing complained: var()
+       on a token HA does not define is not an error, it just resolves to
+       the fallback. So the card ran entirely on its own literals while
+       looking theme-aware — which is how --ha-spacing-3 came to mean
+       14px on one line and 12px on the next.
+
+       Verified against the frontend's src/resources/theme/core.globals.ts:
+         --ha-space-N          4px grid, 1…14   (was --ha-spacing-N)
+         --ha-border-radius-*  sm 4 / md 8 / lg 12 / xl 16 / pill / circle
+                                                (was --ha-radius-*)
+         --ha-animation-duration-*  none 1 / instant 75 / fast 150 /
+                                    normal 250 / slow 350ms
+                                                (was --ha-transition-duration-*)
+       There is no easing token — --ha-transition-easing-standard never
+       existed either, so easings are now named directly.
+
+       Fallbacks are kept and now match the token they stand in for.
+       Adopting a new --ha-* token means checking core.globals.ts first;
+       a typo here is invisible. */
+    --nb-radius-sm: var(--ha-border-radius-sm, 4px);
+    --nb-radius-md: var(--ha-border-radius-md, 8px);
+    --nb-radius-lg: var(--ha-card-border-radius, var(--ha-border-radius-lg, 12px));
+    --nb-pad-x:     var(--ha-space-4, 16px);
+    --nb-pad-y:     var(--ha-space-3, 12px);
+    --nb-row-gap:   var(--ha-space-3, 12px);
     --nb-slot-size: 18px;
     --nb-slot-height: 22px;
     --nb-slot-radius: 4px;
@@ -115,8 +134,8 @@ export const cardStyles: CSSResultGroup = css`
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    transition: color var(--ha-transition-duration-fast, 160ms) var(--ha-transition-easing-standard, ease), box-shadow var(--ha-transition-duration-fast, 160ms) var(--ha-transition-easing-standard, ease),
-      background-color var(--ha-transition-duration-fast, 160ms) var(--ha-transition-easing-standard, ease);
+    transition: color var(--ha-animation-duration-fast, 150ms) ease, box-shadow var(--ha-animation-duration-fast, 150ms) ease,
+      background-color var(--ha-animation-duration-fast, 150ms) ease;
   }
   .tab:hover {
     color: var(--primary-text-color);
@@ -208,7 +227,7 @@ export const cardStyles: CSSResultGroup = css`
     border-radius: 50%;
     color: var(--secondary-text-color);
     text-decoration: none;
-    transition: background-color var(--ha-transition-duration-fast, 160ms) var(--ha-transition-easing-standard, ease), color var(--ha-transition-duration-fast, 160ms) var(--ha-transition-easing-standard, ease);
+    transition: background-color var(--ha-animation-duration-fast, 150ms) ease, color var(--ha-animation-duration-fast, 150ms) ease;
     --mdc-icon-size: 20px;
   }
   .icon-action:hover {
@@ -529,7 +548,7 @@ export const cardStyles: CSSResultGroup = css`
     font-size: 0.75rem;
     font-weight: 600;
     text-decoration: none;
-    transition: filter var(--ha-transition-duration-fast, 160ms) var(--ha-transition-easing-standard, ease), transform var(--ha-transition-duration-fast, 160ms) var(--ha-transition-easing-standard, ease);
+    transition: filter var(--ha-animation-duration-fast, 150ms) ease, transform var(--ha-animation-duration-fast, 150ms) ease;
     box-shadow: 0 1px 2px color-mix(in srgb, #000 12%, transparent);
   }
   .btn-primary:hover {

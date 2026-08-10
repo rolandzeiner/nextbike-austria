@@ -12,10 +12,10 @@ export const editorStyles: CSSResultGroup = css`
     display: block;
   }
   .editor {
-    padding: var(--ha-spacing-4, 16px);
+    padding: var(--ha-space-4, 16px);
     display: flex;
     flex-direction: column;
-    gap: var(--ha-spacing-3, 12px);
+    gap: var(--ha-space-3, 12px);
   }
   ha-form {
     display: block;
