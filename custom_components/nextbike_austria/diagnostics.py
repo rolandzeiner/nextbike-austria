@@ -31,6 +31,14 @@ from .coordinator import NextbikeAustriaConfigEntry
 # contributor adding a generically-named credential field without
 # remembering to update this set. Treat the set as monotonically
 # growing — never shrink.
+#
+# `entry.title` is deliberately NOT redacted, even though the station name
+# it carries is coarse location data of the same kind as the coordinates
+# below. The two are not inconsistent: coordinates pin a location to a few
+# metres, whereas the title is a user-chosen label that is what makes a
+# shared dump readable at all — "which entry is this?" is the first
+# question every triage starts with. Redacting it buys little and costs
+# the dump most of its usefulness. Ratified 2026-08-07.
 TO_REDACT = {
     "lat",
     "lon",

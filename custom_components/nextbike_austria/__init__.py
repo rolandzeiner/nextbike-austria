@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import logging
 from typing import Any
 
@@ -50,8 +51,8 @@ async def _websocket_card_version(
     catches the ~5% with stuck Service Workers, aggressive CDN caches,
     or browsers ignoring ``?v=`` invalidation. It pairs with the
     sessionStorage stuck-reload anti-loop on the card side
-    (PORTFOLIO_LIFTABLES.md item 44) so the residual case doesn't
-    itself loop. See PORTFOLIO_LIFTABLES.md item 20.
+    (portfolio-liftables reference, item 44) so the residual case doesn't
+    itself loop. See that reference, item 20 (maintainer note; not in this repo).
     """
     connection.send_result(msg["id"], {"version": CARD_VERSION})
 
@@ -100,6 +101,17 @@ async def async_setup_entry(
 ) -> bool:
     """Set up Nextbike Austria from a config entry."""
     coordinator = NextbikeStationCoordinator(hass, entry)
+
+    # Subscribe to the shared client's snapshot fan-out BEFORE the first
+    # refresh, so a sibling entry's in-flight fetch can already serve this
+    # entry rather than making it wait for its own. Wire the unsubscribe via
+    # `async_on_unload`, which HA runs on normal unload AND on a setup that
+    # never completes (first-refresh ConfigEntryNotReady, platform-forward
+    # failure) — leaving a dead coordinator in the member map would have the
+    # client pushing snapshots into a torn-down entry.
+    coordinator.client.register(coordinator)
+    entry.async_on_unload(functools.partial(_deregister_from_client, coordinator))
+
     # HA auto-invokes coordinator._async_setup() inside this call before the
     # first fetch; it also raises ConfigEntryNotReady on fetch failure.
     await coordinator.async_config_entry_first_refresh()
@@ -125,6 +137,16 @@ async def async_setup_entry(
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
     return True
+
+
+def _deregister_from_client(coordinator: NextbikeStationCoordinator) -> None:
+    """Unsubscribe a coordinator from its shared client's fan-out.
+
+    Only unsubscribes — dropping the client itself from ``hass.data`` stays
+    ``async_unload_entry``'s job, which gates it on the last entry for the
+    system and orders the pop before the platform unload.
+    """
+    coordinator.client.unregister(coordinator.entry_id)
 
 
 async def _async_reload_entry(

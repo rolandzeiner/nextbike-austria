@@ -34,7 +34,7 @@ Python's `CARD_VERSION` is aliased to `INTEGRATION_VERSION` (read from `manifest
 
 - `pyproject.toml` — ruff, mypy, coverage. Change rules here, not in CI flags.
   - **`target-version` tracks the oldest Python we support, never the one CI runs.** `hacs.json` promises HA ≥ 2025.1.0, which runs on Python 3.12, so `target-version = "py312"` — even though the venv and CI are on 3.14. Pointing it at the CI interpreter lets ruff rewrite code into syntax our users cannot parse and then stay silent about it; that is how wiener-linien-austria v1.7.1 shipped a SyntaxError. The `compile-floor-python` CI job byte-compiles the shipped package on 3.12 as an independent backstop. Raise all three together or not at all.
-- `pytest.ini` — pytest config and the **`--cov-fail-under=90` coverage gate** (current measurement ~97%).
+- `pytest.ini` — pytest config and the **`--cov-fail-under=90` coverage gate** (current measurement ~96%).
 - `ATTRIBUTION` — data-source statement; keep `const.ATTRIBUTION` in sync when this changes.
 
 View per-file coverage locally:

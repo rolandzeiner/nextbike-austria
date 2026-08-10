@@ -9,20 +9,30 @@ validation / future-proofing.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Final, TypedDict
 
 from homeassistant.const import __version__ as _HA_VERSION
 
 DOMAIN: Final = "nextbike_austria"
 
-# Integration version — pinned as a string literal here. Reading
-# `manifest.json` at import time is sync I/O on the event loop, which
-# HA core's import-time blocking-call detector flags. Drift between
-# this constant and `manifest.json` is caught by
-# `tests/test_card_version.py`, which asserts byte-for-byte
-# equality. Release workflow: bump BOTH this constant AND
-# `manifest.json["version"]` (and `src/const.ts`) to the same string.
-INTEGRATION_VERSION: Final = "1.3.0"
+# Integration version — read from `manifest.json` at import so there is
+# exactly one source of truth. manifest.json is what HACS reads; a literal
+# here only adds a second place to forget on release day, which is precisely
+# what happened cutting v1.3.0 (caught by `tests/test_card_version.py`).
+#
+# This is safe on the event loop, despite what the previous comment here
+# claimed. HA imports integrations via `async_add_import_executor_job`
+# (`Integration.import_executor` defaults to True — loader.py:876), so the
+# module body runs on an import-executor thread, and `util.loop.protect_loop`
+# only checks when `threading.get_ident() == loop_thread_id`
+# (util/loop.py:192). Even on the loop, the call below (`Path.read_text`) is
+# registered in block_async_io.py with `strict=False`, so it would warn
+# rather than raise. Verified against home-assistant/core 2026.7.4.
+INTEGRATION_VERSION: Final = json.loads(
+    (Path(__file__).parent / "manifest.json").read_text(encoding="utf-8")
+)["version"]
 
 # Config entry keys
 CONF_SYSTEM_ID: Final = "system_id"
@@ -92,6 +102,26 @@ BACKOFF_CAP_SECONDS: Final = 3600
 # changes slowly. Only fetched when at least one tracked entry has
 # `track_e_bike_range` enabled in its options.
 BATTERY_FETCH_TTL_SECONDS: Final = 1200
+
+# `station_information` fetch cadence. The status feed carries everything
+# that actually moves (bike counts, dock counts, is_renting); the
+# information feed carries names, coordinates and capacity, which change
+# only when an operator physically installs or renames a rack. Fetching it
+# on every 60 s tick alongside the status feed doubled the integration's
+# request count for data that is static for months at a time.
+#
+# The feed is already conditional-GET'd, so a redundant fetch costs a 304
+# rather than a body — but it still costs a round trip against nextbike's
+# CDN. 6 h drops the steady-state profile from 2 requests/min to
+# 1 request/min + 4 requests/day per system.
+#
+# Staleness is bounded independently of this TTL: `async_fetch` forces an
+# out-of-band refresh whenever the status feed reports a station id the
+# cached information feed doesn't know about, so a newly-installed rack
+# appears on the next tick rather than up to 6 h later. The TTL is the
+# ceiling for *silent* metadata drift (a rename, a capacity change), which
+# is cosmetic and self-heals.
+STATION_INFO_TTL_SECONDS: Final = 21600
 
 # GBFS endpoint base. Each Austrian system (see AUSTRIAN_SYSTEMS below)
 # publishes at `{GBFS_BASE}/{system_id}/{lang}/{feed}.json`.

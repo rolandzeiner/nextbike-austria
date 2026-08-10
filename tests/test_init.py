@@ -10,9 +10,11 @@ config-flow, coordinator, or card_registration tests:
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -176,3 +178,26 @@ async def test_remove_entry_keeps_card_when_others_remain(
         await async_remove_entry(hass, entry_a)
 
     fake_unregister.assert_not_awaited()
+
+
+async def test_setup_uses_no_deprecated_ha_api(
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+) -> None:
+    """HA reports deprecated API use to the logger, not via warnings.
+
+    `frame.report_usage` logs through `_LOGGER.warning`
+    (homeassistant/helpers/frame.py:393) and never calls `warnings.warn`,
+    so pytest.ini's `error::DeprecationWarning` cannot see it. This is the
+    check that covers that channel.
+    """
+    caplog.set_level(logging.WARNING)
+    entry = _make_entry()
+    entry.add_to_hass(hass)
+
+    with _patch_client():
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+        await entry.runtime_data.async_refresh()
+        await hass.async_block_till_done()
+
+    assert "Detected that custom integration" not in caplog.text
