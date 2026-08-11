@@ -146,7 +146,7 @@ export const cardStyles: CSSResultGroup = css`
        Survives any single-channel deficit (low vision, protanopia,
        grayscale). */
     color: var(--primary-color);
-    font-weight: var(--ha-font-weight-bold, 600);
+    font-weight: var(--ha-font-weight-bold, 700);
     box-shadow: inset 0 -2px 0 var(--primary-color);
   }
 
@@ -257,7 +257,7 @@ export const cardStyles: CSSResultGroup = css`
   }
   .metric-num {
     font-size: 2.25rem;
-    font-weight: var(--ha-font-weight-bold, 600);
+    font-weight: var(--ha-font-weight-bold, 700);
     color: var(--primary-text-color);
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.5px;
