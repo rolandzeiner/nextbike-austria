@@ -77,9 +77,8 @@ export class NextbikeAustriaCardEditor extends LitElement {
         required: true,
         selector: {
           entity: {
-            domain: "sensor",
-            integration: "nextbike_austria",
             multiple: true,
+            filter: { domain: "sensor", integration: "nextbike_austria" },
           },
         },
       },
