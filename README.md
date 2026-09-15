@@ -41,9 +41,9 @@ If your city uses nextbike under a different `system_id`, open an issue — addi
 
 <table>
   <tr>
-    <td align="center"><img src="screenshots/card.webp" height="320" alt="Lovelace card" /></td>
-    <td align="center"><img src="screenshots/card-config.webp" height="320" alt="Card editor" /></td>
-    <td align="center"><img src="screenshots/config-flow.webp" height="320" alt="Config flow" /></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/rolandzeiner/nextbike-austria/main/screenshots/card.webp" height="320" alt="Lovelace card" /></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/rolandzeiner/nextbike-austria/main/screenshots/card-config.webp" height="320" alt="Card editor" /></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/rolandzeiner/nextbike-austria/main/screenshots/config-flow.webp" height="320" alt="Config flow" /></td>
   </tr>
   <tr>
     <td align="center"><em>Lovelace card</em></td>
