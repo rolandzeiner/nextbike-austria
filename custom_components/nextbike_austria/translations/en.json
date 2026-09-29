@@ -45,7 +45,7 @@
         },
         "data_description": {
           "scan_interval": "Per-station polling cadence (60 s minimum).",
-          "track_e_bike_range": "Fetches an additional feed every 20 minutes — ~75 KB on the wire (gzip-compressed), roughly 5.3 MB per day / 160 MB per month per opted-in Austrian system. Leave off if your bandwidth is capped."
+          "track_e_bike_range": "Fetches an additional feed every 20 minutes. For Wien that's ~80 KB on the wire (gzip-compressed), roughly 6 MB per day / 180 MB per month; the other systems need less. Leave off if your bandwidth is capped."
         }
       }
     }

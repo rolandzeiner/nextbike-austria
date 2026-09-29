@@ -94,11 +94,12 @@ MAX_POLL_SECONDS: Final = (
 # the next success resets it.
 BACKOFF_CAP_SECONDS: Final = 3600
 
-# Battery-range fetch cadence. `free_bike_status.json` is ~1.2 MB raw
-# for Wien but ~75 KB on the wire under `Accept-Encoding: gzip`. The
-# GBFS feed advertises ttl=60s, so the API permits anything from 60 s
-# upward; 20 min keeps the bandwidth profile polite (~5.3 MB/day per
-# opted-in Austrian system) for an opt-in feed where battery state
+# Battery-range fetch cadence. `free_bike_status.json` is ~1.35 MB raw
+# for Wien, the largest system, but ~80 KB on the wire under
+# `Accept-Encoding: gzip` (measured September 2026). The GBFS feed
+# advertises ttl=60s, so the API permits anything from 60 s upward;
+# 20 min keeps the bandwidth profile polite (~6 MB/day for Wien, far less
+# for the smaller systems) for an opt-in feed where battery state
 # changes slowly. Only fetched when at least one tracked entry has
 # `track_e_bike_range` enabled in its options.
 BATTERY_FETCH_TTL_SECONDS: Final = 1200
