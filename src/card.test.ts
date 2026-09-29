@@ -140,13 +140,18 @@ async function mount(config: Record<string, unknown>, h?: HomeAssistant): Promis
 const root = (el: Card): ShadowRoot => el.shadowRoot!;
 
 /** The card's markup without Lit's comment markers, with whitespace runs
- *  squeezed to one space and none left between tags. */
+ *  squeezed to one space and none left between tags. The markers are
+ *  removed as DOM nodes from a clone, not by pattern-matching the HTML
+ *  string, which CodeQL rightly flags as incomplete sanitisation. */
 function markup(el: Card): string {
-  return (root(el).querySelector("ha-card")?.outerHTML ?? "")
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/\s+/g, " ")
-    .replace(/>\s+</g, "><")
-    .trim();
+  const card = root(el).querySelector("ha-card");
+  if (!card) return "";
+  const clone = card.cloneNode(true) as Element;
+  const walker = document.createTreeWalker(clone, NodeFilter.SHOW_COMMENT);
+  const markers: Node[] = [];
+  while (walker.nextNode()) markers.push(walker.currentNode);
+  for (const marker of markers) marker.parentNode?.removeChild(marker);
+  return clone.outerHTML.replace(/\s+/g, " ").replace(/>\s+</g, "><").trim();
 }
 
 /** Let a pending WebSocket probe resolve and the card re-render. */
