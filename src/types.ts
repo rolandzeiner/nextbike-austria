@@ -122,10 +122,11 @@ export interface RackInputs {
   disabledTypes: string[];
 }
 
-/** How the rack's docks are filled. The slot counts are in rack order and
- *  always sum to the capacity. */
+/** How the rack's docks are filled. `bikes`, `reserved`, `disabled` and
+ *  `empty` are whole numbers ≥ 0, in rack order, and always sum to the
+ *  capacity; `ebikes` counts the leading part of `bikes`, not extra docks. */
 export interface RackLayout {
-  /** Docks holding a bike; the first `ebikes` of them hold e-bikes. */
+  /** Docks holding an available bike; the first `ebikes` hold e-bikes. */
   bikes: number;
   ebikes: number;
   reserved: number;

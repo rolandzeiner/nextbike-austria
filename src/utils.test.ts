@@ -6,6 +6,7 @@ import {
   batteryColor,
   cleanStationName,
   countEbikesAvailable,
+  countOf,
   expandClassicTypes,
   findNextbikeEntities,
   firstEbikeTypeName,
@@ -355,6 +356,18 @@ describe("attribute coercion", () => {
   ])("reads the bike count %j as %d", (state, bikes) => {
     expect(parseBikeCount(state)).toBe(bikes);
   });
+
+  it.each([
+    [3, 3],
+    [0, 0],
+    [-3, 0],
+    [1.5, 1],
+    [Number.NaN, 0],
+    ["2", 0],
+    [undefined, 0],
+  ])("reads the count %o as %d", (value, count) => {
+    expect(countOf(value)).toBe(count);
+  });
 });
 
 describe("station header", () => {
@@ -442,6 +455,18 @@ describe("rackLayout — filling the docks", () => {
       reserved: 3,
       disabled: 0,
       empty: 0,
+      overflow: 0,
+    });
+  });
+
+  it("draws one slot per dock even when upstream sends negative counts", () => {
+    const fromSensor = rackInputs(4, { bikes_reserved: -3, bikes_disabled: 1.5 }, "red");
+    expect(counts(fromSensor, 10)).toEqual({
+      bikes: 4,
+      ebikes: 0,
+      reserved: 0,
+      disabled: 1,
+      empty: 5,
       overflow: 0,
     });
   });

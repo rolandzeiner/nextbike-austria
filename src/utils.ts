@@ -230,9 +230,16 @@ export function resolveDisplayName(
   return cleanStationName(typeof friendly === "string" && friendly ? friendly : fallbackEntity);
 }
 
-/** A numeric attribute, or `fallback` when upstream sent anything else. */
+/** A numeric attribute, or `fallback` when upstream sent anything else.
+ *  Any number passes, negatives and NaN included; use `countOf` for a
+ *  count. */
 export function numberOr<F extends number | null>(value: unknown, fallback: F): number | F {
   return typeof value === "number" ? value : fallback;
+}
+
+/** A count attribute as a whole number ≥ 0; anything else reads as 0. */
+export function countOf(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0;
 }
 
 /** An array attribute, or `fallback` when upstream sent anything else. */
@@ -301,18 +308,24 @@ export function rackInputs(
     // Live e-bike id set surfaced by the Python coordinator (with a small
     // fallback for old coordinators), resolved once per station.
     ebikeIds: getEbikeIds(attrs),
-    // Reserved bikes occupy extra rack slots beyond `num_bikes_available`.
-    reservedCount: numberOr(attrs.bikes_reserved, 0),
+    // Reserved and out-of-service bikes are excluded from
+    // `num_bikes_available`, so they fill docks of their own. Like the
+    // battery state, the coordinator only sends them when
+    // `track_e_bike_range` is on. Clamped so the rack can't draw more
+    // slots than it has docks.
+    reservedCount: countOf(attrs.bikes_reserved),
     reservedTypes: arrayOr(attrs.bikes_reserved_types, []),
-    disabledCount: numberOr(attrs.bikes_disabled, 0),
+    disabledCount: countOf(attrs.bikes_disabled),
     disabledTypes: arrayOr(attrs.bikes_disabled_types, []),
   };
 }
 
-/** Fill `capacity` docks from the station's counts. One visual slot per
- *  dock, always: bikes first (e-bikes leading), then reserved, then out of
- *  service, then empty. Bikes beyond the capacity become the "+N" note, not
- *  extra slots. */
+/** Fill `capacity` docks from the station's counts. `capacity` is a whole
+ *  number > 0: the card only draws a rack when the station publishes one.
+ *  One visual slot per dock, always: available bikes first (e-bikes
+ *  leading), then reserved, then out of service, then empty. Available
+ *  bikes beyond the capacity become the "+N" note, not extra slots;
+ *  reserved and out-of-service bikes that don't fit are dropped. */
 export function rackLayout(
   rack: RackInputs,
   capacity: number,
