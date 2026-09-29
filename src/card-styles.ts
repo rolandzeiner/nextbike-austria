@@ -700,6 +700,54 @@ export const cardStyles: CSSResultGroup = css`
     .btn-primary {
       forced-color-adjust: none;
     }
+    /* The rack draws with fills, gradients and inset shadows, and forced
+       colours drop all three: every background turns Canvas and shadows
+       vanish, leaving only the lock and wrench icons. Opt the slots and
+       their legend swatches out and redraw them in the user's palette,
+       keeping the cues that need no colour: solid for a bike, a stripe
+       for an e-bike, a fill height for its charge, an outline for a dock
+       without an available bike. */
+    .slot,
+    .legend-swatch {
+      forced-color-adjust: none;
+    }
+    .slot.filled,
+    .legend-swatch.filled {
+      background: CanvasText;
+      box-shadow: none;
+    }
+    .slot.filled.ebike,
+    .legend-swatch.ebike {
+      background: linear-gradient(
+        135deg,
+        CanvasText 0%,
+        CanvasText 55%,
+        Highlight 55%,
+        Highlight 100%
+      );
+    }
+    .slot.filled.ebike.battery {
+      background: linear-gradient(
+        to top,
+        CanvasText var(--bat-pct, 0%),
+        Canvas var(--bat-pct, 0%)
+      );
+      box-shadow: inset 0 0 0 1px CanvasText;
+    }
+    .legend-swatch.ebike.battery {
+      background: linear-gradient(to top, CanvasText 70%, Canvas 70%);
+      outline-color: CanvasText;
+    }
+    .slot.empty,
+    .legend-swatch.empty,
+    .slot.reserved,
+    .legend-swatch.reserved,
+    .slot.disabled,
+    .legend-swatch.disabled {
+      background: Canvas;
+      box-shadow: inset 0 0 0 1px CanvasText;
+      color: CanvasText;
+    }
   }
 
   /* Honour user motion preference (catch-all). */
