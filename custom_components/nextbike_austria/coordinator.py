@@ -30,6 +30,11 @@ The same argument drives the failure fan-out: the request is shared, so the
 outage is shared. Backing off only the coordinator that happened to own the
 failing tick would leave its siblings hammering a down CDN at full cadence.
 
+The client also remembers a failure: for one TTL window after it, or for the
+server's Retry-After (429/503) if that is longer, it stays off the network and
+re-raises the error to whoever asks. The re-raise is marked `replayed`, so it
+is neither fanned out again nor counted twice in anyone's backoff.
+
 GBFS has no credentials; the `reauthentication-flow` quality-scale rule is
 therefore exempt and there is no 401/403 branch here.
 """
@@ -37,10 +42,12 @@ therefore exempt and there is no 401/403 branch here.
 from __future__ import annotations
 
 import asyncio
+import email.utils
 import json
 import logging
 import time
-from datetime import timedelta
+from collections.abc import Mapping
+from datetime import UTC, timedelta
 from typing import Any
 
 import aiohttp
@@ -51,6 +58,7 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .const import (
     BACKOFF_CAP_SECONDS,
@@ -79,6 +87,10 @@ type NextbikeAustriaConfigEntry = ConfigEntry["NextbikeStationCoordinator"]
 _GBFS_TTL_SECONDS = 60.0
 _HTTP_TIMEOUT = aiohttp.ClientTimeout(total=15)
 
+# Longest Retry-After taken at face value. A day covers any real maintenance
+# window; past that, a bogus header would freeze polling indefinitely.
+_RETRY_AFTER_MAX_SECONDS = 86400.0
+
 
 class GBFSError(RuntimeError):
     """Raised by SharedSystemClient when the upstream is unusable.
@@ -87,10 +99,47 @@ class GBFSError(RuntimeError):
     can lift the error into an `UpdateFailed` with the right placeholders.
     """
 
-    def __init__(self, translation_key: str, **placeholders: str) -> None:
+    def __init__(
+        self,
+        translation_key: str,
+        *,
+        retry_after: float | None = None,
+        replayed: bool = False,
+        **placeholders: str,
+    ) -> None:
         self.translation_key = translation_key
         self.placeholders = placeholders
+        # Seconds the server asked us to stay away (Retry-After on 429/503).
+        self.retry_after = retry_after
+        # True when the shared client re-raises a failure it already saw,
+        # inside its failure window, instead of reporting a new attempt.
+        self.replayed = replayed
         super().__init__(f"{translation_key}: {placeholders}")
+
+    def replay(self) -> GBFSError:
+        """A fresh copy to re-raise inside the failure window."""
+        copy = GBFSError(self.translation_key, replayed=True)
+        copy.placeholders = dict(self.placeholders)
+        copy.args = self.args
+        return copy
+
+
+def _retry_after_seconds(headers: Mapping[str, str] | None) -> float | None:
+    """Read a Retry-After header: delay-seconds or an HTTP-date (RFC 9110)."""
+    value = (headers or {}).get("Retry-After", "").strip()
+    if not value:
+        return None
+    if value.isdigit():
+        seconds = float(value)
+    else:
+        try:
+            when = email.utils.parsedate_to_datetime(value)
+        except (TypeError, ValueError):
+            return None
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=UTC)
+        seconds = (when - dt_util.utcnow()).total_seconds()
+    return min(max(seconds, 0.0), _RETRY_AFTER_MAX_SECONDS)
 
 
 class SharedSystemClient:
@@ -131,6 +180,11 @@ class SharedSystemClient:
         self._lock = asyncio.Lock()
         self._battery_lock = asyncio.Lock()
         self._last_fetch: float = 0.0
+        # A failed attempt closes the network until `_blocked_until` (one
+        # TTL window, or the server's Retry-After if longer); callers inside
+        # the window get `_last_error` re-raised instead of a new request.
+        self._blocked_until: float = 0.0
+        self._last_error: GBFSError | None = None
         # Coordinators subscribed to this system's snapshots, keyed by
         # entry_id. Every successful fetch is fanned out to all of them so
         # sibling entries never serve a staler snapshot than the one that
@@ -359,72 +413,93 @@ class SharedSystemClient:
         try:
             fetched = await self._fetch_locked(force=force)
         except GBFSError as err:
-            self._publish_error(err, initiator)
+            # A replay was fanned out when it first happened.
+            if not err.replayed:
+                self._publish_error(err, initiator)
             raise
         if fetched:
             self._publish_snapshot(initiator)
 
     async def _fetch_locked(self, *, force: bool) -> bool:
-        """Do the actual conditional refresh. True if the network was hit."""
+        """Refresh under the lock, gated by TTL and failure window.
+
+        True if the network was hit.
+        """
         async with self._lock:
             now = time.monotonic()
+            # After a failure, stay off the network until the window closes,
+            # `force` included, and re-raise what we saw. Without this every
+            # member's own timer sends its own request at a down feed: one
+            # attempt per member per backoff step instead of one per system.
+            if self._last_error is not None and now < self._blocked_until:
+                raise self._last_error.replay()
             if (
                 not force
                 and self._last_fetch > 0.0
                 and (now - self._last_fetch) < _GBFS_TTL_SECONDS
             ):
                 return False
-
-            # vehicle_types rarely changes; fetch once and keep unless empty.
-            if not self._vehicle_types:
-                await self._refresh_vehicle_types()
-
-            # `station_information` is near-static — refresh it on its own
-            # long TTL instead of on every status tick.
-            if not self._info_by_id or (
-                (now - self._info_last_fetch) >= STATION_INFO_TTL_SECONDS
-            ):
-                await self._refresh_station_information(now)
-
-            statuses = await self._fetch_json("station_status")
-            status_rows = statuses.get("data", {}).get("stations") or []
-
-            # Self-heal the long info TTL: a station id that the status feed
-            # knows but the cached information feed doesn't means a rack was
-            # installed (or un-retired) upstream since the last info refresh.
-            # Re-pull immediately rather than leaving it invisible for hours.
-            unknown = {
-                sid
-                for row in status_rows
-                if (sid := str(row.get("station_id") or ""))
-                and sid not in self._info_by_id
-            }
-            # Only ids we have never resolved before justify a refetch. The
-            # two feeds do drift permanently for a handful of stations (a
-            # status row whose information row was withdrawn), and without
-            # this filter each one would force an extra request every tick —
-            # exactly the cost this TTL exists to remove.
-            if unknown - self._unresolved_ids and self._info_last_fetch < now:
-                _LOGGER.debug(
-                    "Unknown station id in %s status feed — refreshing information feed",
-                    self._system_id,
+            try:
+                await self._refresh(now)
+            except GBFSError as err:
+                self._last_error = err
+                self._blocked_until = now + max(
+                    _GBFS_TTL_SECONDS, err.retry_after or 0.0
                 )
-                await self._refresh_station_information(now)
-                unknown = {sid for sid in unknown if sid not in self._info_by_id}
-            # Whatever a fresh information feed still can't explain is
-            # upstream drift, not staleness. Remember it so it stays quiet.
-            self._unresolved_ids = unknown
-
-            merged: dict[str, dict[str, Any]] = {}
-            for st in status_rows:
-                sid = str(st.get("station_id") or "")
-                if not sid or sid not in self._info_by_id:
-                    continue
-                merged[sid] = {**self._info_by_id[sid], **st}
-
-            self._stations_by_id = merged
-            self._last_fetch = now
+                raise
+            self._last_error = None
             return True
+
+    async def _refresh(self, now: float) -> None:
+        """Pull the feeds and rebuild the merged per-station snapshot."""
+        # vehicle_types rarely changes; fetch once and keep unless empty.
+        if not self._vehicle_types:
+            await self._refresh_vehicle_types()
+
+        # `station_information` is near-static — refresh it on its own
+        # long TTL instead of on every status tick.
+        if not self._info_by_id or (
+            (now - self._info_last_fetch) >= STATION_INFO_TTL_SECONDS
+        ):
+            await self._refresh_station_information(now)
+
+        statuses = await self._fetch_json("station_status")
+        status_rows = statuses.get("data", {}).get("stations") or []
+
+        # Self-heal the long info TTL: a station id that the status feed
+        # knows but the cached information feed doesn't means a rack was
+        # installed (or un-retired) upstream since the last info refresh.
+        # Re-pull immediately rather than leaving it invisible for hours.
+        unknown = {
+            sid
+            for row in status_rows
+            if (sid := str(row.get("station_id") or "")) and sid not in self._info_by_id
+        }
+        # Only ids we have never resolved before justify a refetch. The
+        # two feeds do drift permanently for a handful of stations (a
+        # status row whose information row was withdrawn), and without
+        # this filter each one would force an extra request every tick —
+        # exactly the cost this TTL exists to remove.
+        if unknown - self._unresolved_ids and self._info_last_fetch < now:
+            _LOGGER.debug(
+                "Unknown station id in %s status feed — refreshing information feed",
+                self._system_id,
+            )
+            await self._refresh_station_information(now)
+            unknown = {sid for sid in unknown if sid not in self._info_by_id}
+        # Whatever a fresh information feed still can't explain is
+        # upstream drift, not staleness. Remember it so it stays quiet.
+        self._unresolved_ids = unknown
+
+        merged: dict[str, dict[str, Any]] = {}
+        for st in status_rows:
+            sid = str(st.get("station_id") or "")
+            if not sid or sid not in self._info_by_id:
+                continue
+            merged[sid] = {**self._info_by_id[sid], **st}
+
+        self._stations_by_id = merged
+        self._last_fetch = now
 
     async def _refresh_station_information(self, now: float) -> None:
         """Re-pull the near-static `station_information` feed."""
@@ -499,8 +574,16 @@ class SharedSystemClient:
         except TimeoutError as err:
             raise GBFSError("api_timeout", seconds="15") from err
         except aiohttp.ClientResponseError as err:
+            # 429 and 503 may say how long to stay away (RFC 9110); the
+            # shared client's failure window honours it.
+            retry_after = (
+                _retry_after_seconds(err.headers) if err.status in (429, 503) else None
+            )
             raise GBFSError(
-                "api_http_error", status=str(err.status), reason=err.message or ""
+                "api_http_error",
+                retry_after=retry_after,
+                status=str(err.status),
+                reason=err.message or "",
             ) from err
         except aiohttp.ClientError as err:
             # Covers ClientPayloadError / ClientConnectionError raised
@@ -681,7 +764,11 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         try:
             await self._client.async_fetch(initiator=self.entry_id)
         except GBFSError as err:
-            self._note_failure()
+            # A replay is a failure every member already counted when the
+            # shared client first saw it; counting it again would stretch
+            # the backoff for a request that never went out.
+            if not err.replayed:
+                self._note_failure()
             raise UpdateFailed(
                 translation_domain=DOMAIN,
                 translation_key=err.translation_key,
