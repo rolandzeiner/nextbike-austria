@@ -2,9 +2,8 @@
 
 Every registered Austrian nextbike system publishes a GBFS 2.3 discovery
 document at `{GBFS_BASE}/{system_id}/gbfs.json`. The per-feed URLs under it
-can be derived without fetching the discovery doc every poll; we use the
-predictable pattern directly and keep the discovery URL only for
-validation / future-proofing.
+follow a fixed pattern, so `gbfs_feed_url` builds them directly and the
+discovery document is never fetched.
 """
 
 from __future__ import annotations
@@ -143,10 +142,11 @@ class SystemInfo(TypedDict):
 # Known Austrian nextbike systems, in the order they appear in the picker.
 # To add a new system:
 #   1. Confirm its GBFS feed exists at `{GBFS_BASE}/{system_id}/gbfs.json`.
-#   2. Append a SystemInfo entry here.
-#   3. Add translation entries for the system's display in strings.json.
-#   4. Add the system to `SYSTEM_ACCENT` in src/const.ts so the
-#      Lovelace card's per-system theming works.
+#   2. Append a SystemInfo entry here. `name` is the picker label as is
+#      (it isn't translated); `region` becomes the sensor's `system_label`.
+#   3. Add the system to `SYSTEM_ACCENT` in src/const.ts for the card's
+#      brand tint; without it the card falls back to the theme colour.
+#   4. Add a row to the README's Supported Systems table.
 AUSTRIAN_SYSTEMS: Final[tuple[SystemInfo, ...]] = (
     {"id": "nextbike_wr", "name": "Wien — WienMobil Rad", "region": "Wien"},
     {"id": "nextbike_la", "name": "Niederösterreich", "region": "Niederösterreich"},
