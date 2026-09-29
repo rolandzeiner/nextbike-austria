@@ -17,10 +17,15 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, Platform
 from homeassistant.core import CoreState, Event, HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import issue_registry as ir
 
 from .card_registration import JSModuleRegistration
 from .const import CARD_VERSION, DOMAIN
-from .coordinator import NextbikeAustriaConfigEntry, NextbikeStationCoordinator
+from .coordinator import (
+    NextbikeAustriaConfigEntry,
+    NextbikeStationCoordinator,
+    degraded_issue_id,
+)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -197,12 +202,19 @@ async def async_unload_entry(
 async def async_remove_entry(
     hass: HomeAssistant, entry: NextbikeAustriaConfigEntry
 ) -> None:
-    """Drop the Lovelace resource when the LAST config entry is removed.
+    """Clean up what outlives the entry.
+
+    The entry's own Repairs issue goes every time: nothing else clears it
+    once the coordinator is gone, and it would keep warning about a
+    station nobody tracks any more.
 
     The card resource is registered once globally per integration, so
     reloading or removing a single entry must not remove it. Only when
     no other entries of this domain remain do we unregister.
     """
+    ir.async_delete_issue(
+        hass, DOMAIN, degraded_issue_id("station_gone", entry.entry_id)
+    )
     remaining = [
         e
         for e in hass.config_entries.async_entries(DOMAIN)

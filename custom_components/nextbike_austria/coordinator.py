@@ -552,6 +552,14 @@ def _get_shared_client(hass: HomeAssistant, system_id: str) -> SharedSystemClien
     return client
 
 
+def degraded_issue_id(translation_key: str, entry_id: str) -> str:
+    """The Repairs issue id for one entry's degraded condition.
+
+    Keyed per entry, so two retired stations surface and clear independently.
+    """
+    return f"{translation_key}_{entry_id}"
+
+
 class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Per-entry coordinator. One station per config entry."""
 
@@ -564,7 +572,15 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._system_id: str = str(data[CONF_SYSTEM_ID])
         self._station_id: str = str(data[CONF_STATION_ID])
         self._client = _get_shared_client(hass, self._system_id)
-        self._issue_raised: bool = False
+        # Seeded from the registry, not False: a reload builds a new
+        # coordinator, and one that assumed no issue would never clear the
+        # issue its predecessor raised.
+        self._issue_raised: bool = (
+            ir.async_get(hass).async_get_issue(
+                DOMAIN, degraded_issue_id("station_gone", entry.entry_id)
+            )
+            is not None
+        )
         # Opt-in per entry. When enabled, the coordinator also triggers
         # the shared client's separate battery-cache refresh (20 min TTL)
         # on each station poll and exposes per-station battery aggregates.
@@ -760,7 +776,7 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         ir.async_create_issue(
             self.hass,
             DOMAIN,
-            f"{translation_key}_{self._entry.entry_id}",
+            degraded_issue_id(translation_key, self._entry.entry_id),
             is_fixable=False,
             severity=ir.IssueSeverity.WARNING,
             translation_key=translation_key,
@@ -776,7 +792,7 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return
         self._issue_raised = False
         ir.async_delete_issue(
-            self.hass, DOMAIN, f"{translation_key}_{self._entry.entry_id}"
+            self.hass, DOMAIN, degraded_issue_id(translation_key, self._entry.entry_id)
         )
 
     def _note_success(self) -> None:

@@ -140,6 +140,29 @@ async def test_repair_issue_clears_on_recovery(hass: HomeAssistant) -> None:
     assert registry.async_get_issue(DOMAIN, f"station_gone_{entry.entry_id}") is None
 
 
+async def test_reloaded_coordinator_clears_its_predecessors_issue(
+    hass: HomeAssistant,
+) -> None:
+    """A reload builds a new coordinator; it must still clear the old issue."""
+    entry = _make_entry()
+    entry.add_to_hass(hass)
+
+    fake = FakeClient()
+    fake.set_stations({})
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=fake,
+    ):
+        with pytest.raises(UpdateFailed):
+            await NextbikeStationCoordinator(hass, entry)._async_update_data()
+        # Reload: a fresh coordinator, and the station is back.
+        fake.set_stations({"68577989": _station_snapshot()})
+        await NextbikeStationCoordinator(hass, entry)._async_update_data()
+
+    registry = ir.async_get(hass)
+    assert registry.async_get_issue(DOMAIN, f"station_gone_{entry.entry_id}") is None
+
+
 async def test_transport_error_raises_update_failed(hass: HomeAssistant) -> None:
     """A GBFSError from the client becomes UpdateFailed with translation keys."""
     entry = _make_entry()
