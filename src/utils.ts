@@ -287,17 +287,12 @@ export function stationMapUrl(attrs: HassEntityAttributes): string | null {
 }
 
 /** What the hero and the rack draw, read off the sensor attributes. */
-export function rackInputs(
-  bikes: number,
-  attrs: HassEntityAttributes,
-  accent: string,
-): RackInputs {
+export function rackInputs(bikes: number, attrs: HassEntityAttributes): RackInputs {
   const names = attrs.vehicle_type_names;
   return {
     bikes,
     ebikes: countEbikesAvailable(attrs),
     capacity: numberOr(attrs.capacity, null),
-    accent,
     // Battery state is only present when the options flow has
     // `track_e_bike_range` enabled AND upstream reported
     // `current_fuel_percent` for at least one e-bike at this station.

@@ -109,7 +109,6 @@ export interface RackInputs {
   bikes: number;
   ebikes: number | null;
   capacity: number | null;
-  accent: string;
   batteryPct: number | null;
   batterySamples: number;
   batteryList: BatteryEntry[] | null;

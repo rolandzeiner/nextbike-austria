@@ -89,6 +89,11 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
 
     /* Brand accent — domain-specific, no HA equivalent. */
     --nb-accent: var(--primary-color);
+    /* E-bike amber: the rack's diagonal stripe, its legend swatch and the
+       e-bike chip. The green is the charge the legend's battery swatch
+       samples; each rack slot's own colour comes from batteryColor(). */
+    --nb-ebike-amber: #ffd740;
+    --nb-battery-sample: #2ecc71;
 
     /* Semantic state tokens layered over HA's official semantic palette
        so theme authors can recolour the whole portfolio in one place;
@@ -386,7 +391,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
   .chip.ebike {
     /* E-bike chip uses the same amber as the rack diagonal stripe so
        the visual vocabulary stays consistent. */
-    background: color-mix(in srgb, #ffd740 28%, transparent);
+    background: color-mix(in srgb, var(--nb-ebike-amber) 28%, transparent);
     color: var(--primary-text-color);
   }
   .chip.ebike ha-icon {
@@ -429,8 +434,8 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
       135deg,
       var(--nb-accent) 0%,
       var(--nb-accent) 55%,
-      #ffd740 55%,
-      #ffd740 100%
+      var(--nb-ebike-amber) 55%,
+      var(--nb-ebike-amber) 100%
     );
   }
   /* Battery-fill variant: vertical gradient bottom (filled) → top (empty).
@@ -440,12 +445,12 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
   .slot.filled.ebike.battery {
     background: linear-gradient(
       to top,
-      var(--bat-color, #2ecc71) var(--bat-pct, 0%),
-      color-mix(in srgb, var(--bat-color, #2ecc71) 15%, transparent)
+      var(--bat-color, var(--nb-battery-sample)) var(--bat-pct, 0%),
+      color-mix(in srgb, var(--bat-color, var(--nb-battery-sample)) 15%, transparent)
         var(--bat-pct, 0%)
     );
     box-shadow: inset 0 0 0 1px
-      color-mix(in srgb, var(--bat-color, #2ecc71) 60%, transparent);
+      color-mix(in srgb, var(--bat-color, var(--nb-battery-sample)) 60%, transparent);
   }
   .slot.empty {
     background: color-mix(in srgb, var(--secondary-text-color) 6%, transparent);
@@ -533,6 +538,29 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
     padding: 0;
     margin: 0;
     vertical-align: middle;
+  }
+  /* Bike, e-bike and battery swatches mirror the rack slots above, so the
+     stylesheet is the one place their colours come from. */
+  .legend-swatch.filled {
+    background: var(--nb-accent);
+  }
+  .legend-swatch.ebike {
+    background: linear-gradient(
+      135deg,
+      var(--nb-accent) 0%,
+      var(--nb-accent) 55%,
+      var(--nb-ebike-amber) 55%,
+      var(--nb-ebike-amber) 100%
+    );
+  }
+  .legend-swatch.ebike.battery {
+    background: linear-gradient(
+      to top,
+      var(--nb-battery-sample) 70%,
+      color-mix(in srgb, var(--nb-battery-sample) 15%, transparent) 70%
+    );
+    outline: 1px solid color-mix(in srgb, var(--nb-battery-sample) 60%, transparent);
+    outline-offset: -1px;
   }
   .legend-swatch.empty {
     background: color-mix(in srgb, var(--secondary-text-color) 6%, transparent);
@@ -740,7 +768,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
       scroll-behavior: auto !important;
     }
   }
-`,Pe=/* @__PURE__ */ new Set([`143`,`183`,`200`]);function Fe(e){let t=e?.e_bike_vehicle_type_ids;if(Array.isArray(t)&&t.length>0){let e=t.filter(e=>typeof e==`string`&&e.length>0);if(e.length>0)return new Set(e)}return Pe}function Ie(e){return typeof e==`string`&&/^https?:\/\//i.test(e)?e:``}function Le(e){return!e||!e.states?[]:Object.keys(e.states).filter(t=>{if(!t.startsWith(`sensor.`))return!1;let n=e.states[t];if(!n)return!1;let r=n.attributes;return!!r&&typeof r.station_id==`string`&&typeof r.system_id==`string`&&r.system_id.startsWith(`nextbike_`)&&typeof r.attribution==`string`&&r.attribution.startsWith(`Data: nextbike`)})}function Re(e){return typeof e==`string`?e.includes(`.`)?{entity:e}:null:!e||typeof e!=`object`||typeof e.entity!=`string`?null:{entity:e.entity}}function J(e){let t={...e||{}};return typeof t.entity==`string`&&t.entity.includes(`.`)&&(!Array.isArray(t.entities)||t.entities.length===0)&&(t.entities=[{entity:t.entity}]),delete t.entity,t.entities=(Array.isArray(t.entities)?t.entities:[]).map(Re).filter(e=>e!==null),t.show_rack=t.show_rack!==!1,t.show_legend=t.show_legend!==!1,t.show_ebikes=t.show_ebikes!==!1,t.show_battery=t.show_battery!==!1,t.show_docks=t.show_docks!==!1,t.show_flags=t.show_flags!==!1,t.show_timestamp=t.show_timestamp!==!1,t.show_rent_button=t.show_rent_button!==!1,t.hide_header=t.hide_header===!0,t.hide_attribution=t.hide_attribution===!0,t.layout!==`tabs`&&(t.layout=`stacked`),t}function ze(e){let t=e?.vehicle_types_available;if(!Array.isArray(t))return null;let n=Fe(e),r=0;for(let e of t){if(!e||typeof e!=`object`)continue;let t=e,i=String(t.vehicle_type_id??``),a=t.count;n.has(i)&&typeof a==`number`&&Number.isFinite(a)&&(r+=a)}return r}function Be(e,t,n){if(!Array.isArray(e))return null;for(let r of e){let e=String(r?.vehicle_type_id??``);if(n.has(e)&&t?.[e])return t[e]}return null}function Ve(e,t,n){let r=[];if(!Array.isArray(e))return r;for(let i of e){let e=String(i?.vehicle_type_id??``),a=typeof i?.count==`number`&&Number.isFinite(i.count)?i.count:0;if(n.has(e)||a<=0)continue;let o=t?.[e]||``;for(let e=0;e<a;e++)r.push(o)}return r}function He(e){return typeof e!=`number`||!Number.isFinite(e)||e>=75?`#2ecc71`:e>=50?`#8bc34a`:e>=25?`#ffa726`:`#e53935`}function Ue(e,t){let n=null;if(typeof e==`number`&&Number.isFinite(e))n=e>1e11?e/1e3:e;else if(typeof e==`string`&&e.length>0){let t=Date.parse(e);Number.isFinite(t)&&(n=t/1e3)}if(n===null)return null;let r=Math.max(0,Math.floor(Date.now()/1e3-n));return r<10?t(`now`):r<60?t(`seconds_ago`).replace(`{n}`,String(r)):r<3600?t(`minutes_ago`).replace(`{n}`,String(Math.floor(r/60))):t(`hours_ago`).replace(`{n}`,String(Math.floor(r/3600)))}function We(e){return String(e).replace(/\s+(Bikes available|Räder verfügbar)$/,``)}function Ge(e,t){let n=e?.station_display_name;if(typeof n==`string`&&n)return n;let r=e?.friendly_name;return We(typeof r==`string`&&r?r:t)}function Y(e,t){return typeof e==`number`?e:t}function Ke(e){return typeof e==`number`&&Number.isFinite(e)?Math.max(0,Math.trunc(e)):0}function X(e,t){return Array.isArray(e)?e:t}function qe(e){let t=parseInt(e,10);return Number.isFinite(t)?Math.max(0,t):0}function Je(e){return Te[e.system_id||``]||`var(--primary-color)`}function Ye(e){return typeof e.system_label==`string`&&e.system_label||(e.system_id||``).replace(/^nextbike_/,``)}function Xe(e){return typeof e.latitude!=`number`||typeof e.longitude!=`number`?null:Ie(`https://www.google.com/maps/search/?api=1&query=${e.latitude},${e.longitude}`)||null}function Ze(e,t,n){let r=t.vehicle_type_names;return{bikes:e,ebikes:ze(t),capacity:Y(t.capacity,null),accent:n,batteryPct:Y(t.e_bike_avg_battery_pct,null),batterySamples:Y(t.e_bike_range_samples,0),batteryList:X(t.e_bike_battery_list,null),vehicleTypesAvailable:X(t.vehicle_types_available,[]),vehicleTypeNames:r&&typeof r==`object`?r:{},ebikeIds:Fe(t),reservedCount:Ke(t.bikes_reserved),reservedTypes:X(t.bikes_reserved_types,[]),disabledCount:Ke(t.bikes_disabled),disabledTypes:X(t.bikes_disabled_types,[])}}function Qe(e,t,n){let r=Math.min(e.bikes,t),i=Math.min(e.reservedCount,Math.max(0,t-r)),a=Math.min(e.disabledCount,Math.max(0,t-r-i)),o=typeof e.ebikes==`number`&&Number.isFinite(e.ebikes)&&e.ebikes>0?e.ebikes:0,s=n&&typeof e.batteryPct==`number`&&e.batterySamples>0;return{bikes:r,ebikes:Math.min(r,o),reserved:i,disabled:a,empty:t-r-i-a,overflow:Math.max(0,e.bikes-t),hasEbikes:o>0,showBattery:s,perBike:s&&Array.isArray(e.batteryList)?e.batteryList:[],ebikeFallbackType:Be(e.vehicleTypesAvailable,e.vehicleTypeNames,e.ebikeIds),classicNames:Ve(e.vehicleTypesAvailable,e.vehicleTypeNames,e.ebikeIds)}}const $e=o`
+`,Pe=/* @__PURE__ */ new Set([`143`,`183`,`200`]);function Fe(e){let t=e?.e_bike_vehicle_type_ids;if(Array.isArray(t)&&t.length>0){let e=t.filter(e=>typeof e==`string`&&e.length>0);if(e.length>0)return new Set(e)}return Pe}function Ie(e){return typeof e==`string`&&/^https?:\/\//i.test(e)?e:``}function Le(e){return!e||!e.states?[]:Object.keys(e.states).filter(t=>{if(!t.startsWith(`sensor.`))return!1;let n=e.states[t];if(!n)return!1;let r=n.attributes;return!!r&&typeof r.station_id==`string`&&typeof r.system_id==`string`&&r.system_id.startsWith(`nextbike_`)&&typeof r.attribution==`string`&&r.attribution.startsWith(`Data: nextbike`)})}function Re(e){return typeof e==`string`?e.includes(`.`)?{entity:e}:null:!e||typeof e!=`object`||typeof e.entity!=`string`?null:{entity:e.entity}}function J(e){let t={...e||{}};return typeof t.entity==`string`&&t.entity.includes(`.`)&&(!Array.isArray(t.entities)||t.entities.length===0)&&(t.entities=[{entity:t.entity}]),delete t.entity,t.entities=(Array.isArray(t.entities)?t.entities:[]).map(Re).filter(e=>e!==null),t.show_rack=t.show_rack!==!1,t.show_legend=t.show_legend!==!1,t.show_ebikes=t.show_ebikes!==!1,t.show_battery=t.show_battery!==!1,t.show_docks=t.show_docks!==!1,t.show_flags=t.show_flags!==!1,t.show_timestamp=t.show_timestamp!==!1,t.show_rent_button=t.show_rent_button!==!1,t.hide_header=t.hide_header===!0,t.hide_attribution=t.hide_attribution===!0,t.layout!==`tabs`&&(t.layout=`stacked`),t}function ze(e){let t=e?.vehicle_types_available;if(!Array.isArray(t))return null;let n=Fe(e),r=0;for(let e of t){if(!e||typeof e!=`object`)continue;let t=e,i=String(t.vehicle_type_id??``),a=t.count;n.has(i)&&typeof a==`number`&&Number.isFinite(a)&&(r+=a)}return r}function Be(e,t,n){if(!Array.isArray(e))return null;for(let r of e){let e=String(r?.vehicle_type_id??``);if(n.has(e)&&t?.[e])return t[e]}return null}function Ve(e,t,n){let r=[];if(!Array.isArray(e))return r;for(let i of e){let e=String(i?.vehicle_type_id??``),a=typeof i?.count==`number`&&Number.isFinite(i.count)?i.count:0;if(n.has(e)||a<=0)continue;let o=t?.[e]||``;for(let e=0;e<a;e++)r.push(o)}return r}function He(e){return typeof e!=`number`||!Number.isFinite(e)||e>=75?`#2ecc71`:e>=50?`#8bc34a`:e>=25?`#ffa726`:`#e53935`}function Ue(e,t){let n=null;if(typeof e==`number`&&Number.isFinite(e))n=e>1e11?e/1e3:e;else if(typeof e==`string`&&e.length>0){let t=Date.parse(e);Number.isFinite(t)&&(n=t/1e3)}if(n===null)return null;let r=Math.max(0,Math.floor(Date.now()/1e3-n));return r<10?t(`now`):r<60?t(`seconds_ago`).replace(`{n}`,String(r)):r<3600?t(`minutes_ago`).replace(`{n}`,String(Math.floor(r/60))):t(`hours_ago`).replace(`{n}`,String(Math.floor(r/3600)))}function We(e){return String(e).replace(/\s+(Bikes available|Räder verfügbar)$/,``)}function Ge(e,t){let n=e?.station_display_name;if(typeof n==`string`&&n)return n;let r=e?.friendly_name;return We(typeof r==`string`&&r?r:t)}function Y(e,t){return typeof e==`number`?e:t}function Ke(e){return typeof e==`number`&&Number.isFinite(e)?Math.max(0,Math.trunc(e)):0}function X(e,t){return Array.isArray(e)?e:t}function qe(e){let t=parseInt(e,10);return Number.isFinite(t)?Math.max(0,t):0}function Je(e){return Te[e.system_id||``]||`var(--primary-color)`}function Ye(e){return typeof e.system_label==`string`&&e.system_label||(e.system_id||``).replace(/^nextbike_/,``)}function Xe(e){return typeof e.latitude!=`number`||typeof e.longitude!=`number`?null:Ie(`https://www.google.com/maps/search/?api=1&query=${e.latitude},${e.longitude}`)||null}function Ze(e,t){let n=t.vehicle_type_names;return{bikes:e,ebikes:ze(t),capacity:Y(t.capacity,null),batteryPct:Y(t.e_bike_avg_battery_pct,null),batterySamples:Y(t.e_bike_range_samples,0),batteryList:X(t.e_bike_battery_list,null),vehicleTypesAvailable:X(t.vehicle_types_available,[]),vehicleTypeNames:n&&typeof n==`object`?n:{},ebikeIds:Fe(t),reservedCount:Ke(t.bikes_reserved),reservedTypes:X(t.bikes_reserved_types,[]),disabledCount:Ke(t.bikes_disabled),disabledTypes:X(t.bikes_disabled_types,[])}}function Qe(e,t,n){let r=Math.min(e.bikes,t),i=Math.min(e.reservedCount,Math.max(0,t-r)),a=Math.min(e.disabledCount,Math.max(0,t-r-i)),o=typeof e.ebikes==`number`&&Number.isFinite(e.ebikes)&&e.ebikes>0?e.ebikes:0,s=n&&typeof e.batteryPct==`number`&&e.batterySamples>0;return{bikes:r,ebikes:Math.min(r,o),reserved:i,disabled:a,empty:t-r-i-a,overflow:Math.max(0,e.bikes-t),hasEbikes:o>0,showBattery:s,perBike:s&&Array.isArray(e.batteryList)?e.batteryList:[],ebikeFallbackType:Be(e.vehicleTypesAvailable,e.vehicleTypeNames,e.ebikeIds),classicNames:Ve(e.vehicleTypesAvailable,e.vehicleTypeNames,e.ebikeIds)}}const $e=o`
   :host {
     color-scheme: light dark;
     display: block;
@@ -792,7 +820,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
             </button>
           `})}
       </div>
-    `}_setActiveTab(e){Number.isFinite(e)&&e!==this._activeTab&&(this._activeTab=e)}_onTabKeydown(e,t,n){let r=t;switch(e.key){case`ArrowRight`:r=(t+1)%n;break;case`ArrowLeft`:r=(t-1+n)%n;break;case`Home`:r=0;break;case`End`:r=n-1;break;default:return}e.preventDefault(),this._setActiveTab(r),this.updateComplete.then(()=>{(this.shadowRoot?.querySelectorAll(`.tabs [role="tab"]`))?.[r]?.focus()})}_renderStation(e,t){let n=this.hass?.states[e.entity];if(!n)return N`<div class="empty-state" role="status">${this._t(`no_entities_unavailable`)}</div>`;let r=n.attributes||{},i=Je(r),a=Ze(qe(n.state),r,i),o=Ge(r,e.entity),s=typeof t==`number`;return N`
+    `}_setActiveTab(e){Number.isFinite(e)&&e!==this._activeTab&&(this._activeTab=e)}_onTabKeydown(e,t,n){let r=t;switch(e.key){case`ArrowRight`:r=(t+1)%n;break;case`ArrowLeft`:r=(t-1+n)%n;break;case`Home`:r=0;break;case`End`:r=n-1;break;default:return}e.preventDefault(),this._setActiveTab(r),this.updateComplete.then(()=>{(this.shadowRoot?.querySelectorAll(`.tabs [role="tab"]`))?.[r]?.focus()})}_renderStation(e,t){let n=this.hass?.states[e.entity];if(!n)return N`<div class="empty-state" role="status">${this._t(`no_entities_unavailable`)}</div>`;let r=n.attributes||{},i=Je(r),a=Ze(qe(n.state),r),o=Ge(r,e.entity),s=typeof t==`number`;return N`
       <section
         class="station"
         aria-label=${o}
@@ -853,7 +881,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
       `)}return r}_renderRack(e,t){let n=Qe(e,t,!!this._config.show_battery),r=this._t(`rack_summary`).replace(`{available}`,String(n.bikes)).replace(`{capacity}`,String(t));return N`
       <div class="rack-block">
         <div class="rack" role="group" aria-label=${r}>
-          ${this._bikeSlots(n,e.accent)}
+          ${this._bikeSlots(n)}
           ${this._dockSlots(n,e)}
           ${n.overflow>0?N`<span
                 class="rack-note"
@@ -861,31 +889,29 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
                 >+${n.overflow}</span
               >`:F}
         </div>
-        ${this._config.show_legend?this._renderLegend({accent:e.accent,hasEbikes:n.hasEbikes,hasOverflow:n.overflow>0,hasEmptyVisible:n.empty>0,battery:n.showBattery&&typeof e.batteryPct==`number`?{pct:e.batteryPct,color:He(e.batteryPct)}:null,hasReservedVisible:n.reserved>0,hasDisabledVisible:n.disabled>0}):F}
+        ${this._config.show_legend?this._renderLegend({hasEbikes:n.hasEbikes,hasOverflow:n.overflow>0,hasEmptyVisible:n.empty>0,battery:n.showBattery&&typeof e.batteryPct==`number`?{pct:e.batteryPct,color:He(e.batteryPct)}:null,hasReservedVisible:n.reserved>0,hasDisabledVisible:n.disabled>0}):F}
       </div>
-    `}_bikeSlots(e,t){let n=[];for(let r=0;r<e.ebikes;r++)n.push(this._ebikeSlot(e.perBike[r]||null,e,t));for(let r=0;r<e.bikes-e.ebikes;r++){let i=e.classicNames[r]||this._t(`legend_bike`);n.push(N`
+    `}_bikeSlots(e){let t=[];for(let n=0;n<e.ebikes;n++)t.push(this._ebikeSlot(e.perBike[n]||null,e));for(let n=0;n<e.bikes-e.ebikes;n++){let r=e.classicNames[n]||this._t(`legend_bike`);t.push(N`
         <div
           class="slot filled"
           role="img"
-          aria-label=${i}
-          style=${`background:${t};`}
-          title=${i}
+          aria-label=${r}
+          title=${r}
         ></div>
-      `)}return n}_ebikeSlot(e,t,n){let r=e?.type||t.ebikeFallbackType||this._t(`legend_ebike`);if(e&&t.showBattery&&typeof e.pct==`number`){let t=e.pct,n=He(t),i=`${r} · ${Math.round(t)}%`;return N`
+      `)}return t}_ebikeSlot(e,t){let n=e?.type||t.ebikeFallbackType||this._t(`legend_ebike`);if(e&&t.showBattery&&typeof e.pct==`number`){let t=e.pct,r=He(t),i=`${n} · ${Math.round(t)}%`;return N`
         <div
           class="slot filled ebike battery"
           role="img"
           aria-label=${i}
-          style=${`--bat-pct:${t}%;--bat-color:${n};`}
+          style=${`--bat-pct:${t}%;--bat-color:${r};`}
           title=${i}
         ></div>
-      `}let i=t.showBattery?`${r} · ${this._t(`battery_unknown`)}`:r;return N`
+      `}let r=t.showBattery?`${n} · ${this._t(`battery_unknown`)}`:n;return N`
       <div
         class="slot filled ebike"
         role="img"
-        aria-label=${i}
-        style=${`background:linear-gradient(135deg, ${n} 0%, ${n} 55%, #ffd740 55%, #ffd740 100%);`}
-        title=${i}
+        aria-label=${r}
+        title=${r}
       ></div>
     `}_dockSlots(e,t){let n=[],r=(e,t)=>e?`${e} · ${t}`:t,i=this._t(`reserved`);for(let a=0;a<e.reserved;a++){let e=r(t.reservedTypes[a],i);n.push(N`
         <div
@@ -912,41 +938,41 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
           aria-label=${o}
           title=${o}
         ></div>
-      `);return n}_renderLegend(e){let{accent:t,hasEbikes:n,hasOverflow:r,hasEmptyVisible:i,battery:a,hasReservedVisible:o,hasDisabledVisible:s}=e,c=[N`
+      `);return n}_renderLegend(e){let{hasEbikes:t,hasOverflow:n,hasEmptyVisible:r,battery:i,hasReservedVisible:a,hasDisabledVisible:o}=e,s=[N`
         <div class="legend-item">
-          <dt class="legend-swatch" style=${`background:${t}`} aria-hidden="true"></dt>
+          <dt class="legend-swatch filled" aria-hidden="true"></dt>
           <dd>${this._t(`legend_bike`)}</dd>
         </div>
-      `];if(n){let e=a?`background:linear-gradient(to top, #2ecc71 70%, color-mix(in srgb, #2ecc71 15%, transparent) 70%);outline:1px solid color-mix(in srgb, #2ecc71 60%, transparent);outline-offset:-1px;`:`background:linear-gradient(135deg, ${t} 0%, ${t} 55%, #ffd740 55%, #ffd740 100%);`;c.push(N`
+      `];return t&&s.push(N`
         <div class="legend-item">
-          <dt class="legend-swatch" style=${e} aria-hidden="true"></dt>
+          <dt class=${i?`legend-swatch ebike battery`:`legend-swatch ebike`} aria-hidden="true"></dt>
           <dd>${this._t(`legend_ebike`)}</dd>
         </div>
-      `)}return o&&c.push(N`
+      `),a&&s.push(N`
         <div class="legend-item">
           <dt class="legend-swatch reserved" aria-hidden="true">
             <ha-icon icon="mdi:lock"></ha-icon>
           </dt>
           <dd>${this._t(`legend_reserved`)}</dd>
         </div>
-      `),s&&c.push(N`
+      `),o&&s.push(N`
         <div class="legend-item">
           <dt class="legend-swatch disabled" aria-hidden="true">
             <ha-icon icon="mdi:wrench"></ha-icon>
           </dt>
           <dd>${this._t(`legend_disabled`)}</dd>
         </div>
-      `),i&&c.push(N`
+      `),r&&s.push(N`
         <div class="legend-item">
           <dt class="legend-swatch empty" aria-hidden="true"></dt>
           <dd>${this._t(`legend_empty`)}</dd>
         </div>
-      `),r&&c.push(N`
+      `),n&&s.push(N`
         <div class="legend-item">
           <dt class="legend-overflow" aria-hidden="true">+N</dt>
           <dd>${this._t(`legend_overflow`)}</dd>
         </div>
-      `),N`<dl class="legend">${c}</dl>`}_renderFlags(e){let t=[];return e.is_installed===!1&&t.push(N`
+      `),N`<dl class="legend">${s}</dl>`}_renderFlags(e){let t=[];return e.is_installed===!1&&t.push(N`
         <span class="flag err">
           <ha-icon icon="mdi:alert-circle"></ha-icon>${this._t(`offline`)}
         </span>

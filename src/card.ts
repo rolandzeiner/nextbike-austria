@@ -357,7 +357,7 @@ export class NextbikeAustriaCard extends LitElement {
     }
     const a = state.attributes || ({} as HassEntityAttributes);
     const accent = systemAccent(a);
-    const rack = rackInputs(parseBikeCount(state.state), a, accent);
+    const rack = rackInputs(parseBikeCount(state.state), a);
     const title = resolveDisplayName(a, stopCfg.entity);
 
     // WAI-ARIA tabpanel pattern: when rendered inside the tab strip,
@@ -483,7 +483,7 @@ export class NextbikeAustriaCard extends LitElement {
     return html`
       <div class="rack-block">
         <div class="rack" role="group" aria-label=${rackAriaLabel}>
-          ${this._bikeSlots(layout, rack.accent)}
+          ${this._bikeSlots(layout)}
           ${this._dockSlots(layout, rack)}
           ${layout.overflow > 0
             ? html`<span
@@ -495,7 +495,6 @@ export class NextbikeAustriaCard extends LitElement {
         </div>
         ${this._config.show_legend
           ? this._renderLegend({
-              accent: rack.accent,
               hasEbikes: layout.hasEbikes,
               hasOverflow: layout.overflow > 0,
               hasEmptyVisible: layout.empty > 0,
@@ -512,10 +511,10 @@ export class NextbikeAustriaCard extends LitElement {
   }
 
   /** The docks holding an available bike: e-bikes first, then classic bikes. */
-  private _bikeSlots(layout: RackLayout, accent: string): TemplateResult[] {
+  private _bikeSlots(layout: RackLayout): TemplateResult[] {
     const slots: TemplateResult[] = [];
     for (let i = 0; i < layout.ebikes; i++) {
-      slots.push(this._ebikeSlot(layout.perBike[i] || null, layout, accent));
+      slots.push(this._ebikeSlot(layout.perBike[i] || null, layout));
     }
     for (let i = 0; i < layout.bikes - layout.ebikes; i++) {
       const typeName = layout.classicNames[i] || this._t("legend_bike");
@@ -524,7 +523,6 @@ export class NextbikeAustriaCard extends LitElement {
           class="slot filled"
           role="img"
           aria-label=${typeName}
-          style=${`background:${accent};`}
           title=${typeName}
         ></div>
       `);
@@ -535,11 +533,7 @@ export class NextbikeAustriaCard extends LitElement {
   /** An e-bike slot: filled to its charge when that is known, otherwise
    *  the accent with the amber e-bike stripe. With the charge display on,
    *  a bike without a reading is labelled "battery unknown". */
-  private _ebikeSlot(
-    entry: BatteryEntry | null,
-    layout: RackLayout,
-    accent: string,
-  ): TemplateResult {
+  private _ebikeSlot(entry: BatteryEntry | null, layout: RackLayout): TemplateResult {
     const typeName = entry?.type || layout.ebikeFallbackType || this._t("legend_ebike");
     if (entry && layout.showBattery && typeof entry.pct === "number") {
       const pct = entry.pct;
@@ -563,7 +557,6 @@ export class NextbikeAustriaCard extends LitElement {
         class="slot filled ebike"
         role="img"
         aria-label=${tooltip}
-        style=${`background:linear-gradient(135deg, ${accent} 0%, ${accent} 55%, #ffd740 55%, #ffd740 100%);`}
         title=${tooltip}
       ></div>
     `;
@@ -617,7 +610,6 @@ export class NextbikeAustriaCard extends LitElement {
   }
 
   private _renderLegend(args: {
-    accent: string;
     hasEbikes: boolean;
     hasOverflow: boolean;
     hasEmptyVisible: boolean;
@@ -626,7 +618,6 @@ export class NextbikeAustriaCard extends LitElement {
     hasDisabledVisible: boolean;
   }): TemplateResult {
     const {
-      accent,
       hasEbikes,
       hasOverflow,
       hasEmptyVisible,
@@ -637,7 +628,7 @@ export class NextbikeAustriaCard extends LitElement {
     const items: TemplateResult[] = [
       html`
         <div class="legend-item">
-          <dt class="legend-swatch" style=${`background:${accent}`} aria-hidden="true"></dt>
+          <dt class="legend-swatch filled" aria-hidden="true"></dt>
           <dd>${this._t("legend_bike")}</dd>
         </div>
       `,
@@ -647,12 +638,9 @@ export class NextbikeAustriaCard extends LitElement {
       // vertical-fill battery pattern when per-slot charge is showing,
       // classic amber-diagonal otherwise. Label is the same either way;
       // the rack's colors + hover tooltips carry charge-level detail.
-      const swatchStyle = battery
-        ? `background:linear-gradient(to top, #2ecc71 70%, color-mix(in srgb, #2ecc71 15%, transparent) 70%);outline:1px solid color-mix(in srgb, #2ecc71 60%, transparent);outline-offset:-1px;`
-        : `background:linear-gradient(135deg, ${accent} 0%, ${accent} 55%, #ffd740 55%, #ffd740 100%);`;
       items.push(html`
         <div class="legend-item">
-          <dt class="legend-swatch" style=${swatchStyle} aria-hidden="true"></dt>
+          <dt class=${battery ? "legend-swatch ebike battery" : "legend-swatch ebike"} aria-hidden="true"></dt>
           <dd>${this._t("legend_ebike")}</dd>
         </div>
       `);

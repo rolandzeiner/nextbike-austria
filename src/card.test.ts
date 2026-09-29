@@ -418,6 +418,23 @@ describe("tab layout", () => {
 
 // --- rendered markup --------------------------------------------------------------
 
+describe("rack colours", () => {
+  it("come from the stylesheet, never from inline styles", async () => {
+    // One source for every slot and legend colour. An inline background
+    // would also override the high-contrast (forced-colors) rules.
+    const el = await mount(
+      { entities: ["sensor.nb_a"], show_battery: true },
+      hass({ "sensor.nb_a": ["3", FULL] }),
+    );
+    const painted = root(el).querySelectorAll<HTMLElement>(".slot, .legend-swatch");
+    expect(painted.length).toBeGreaterThan(0);
+    for (const node of painted) {
+      expect(node.style.background).toBe("");
+      expect(node.style.backgroundColor).toBe("");
+    }
+  });
+});
+
 describe("rendered markup", () => {
   it("a full station stacked above an overflowing one", async () => {
     const el = await mount(

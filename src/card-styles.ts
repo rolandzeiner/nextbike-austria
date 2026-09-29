@@ -34,6 +34,11 @@ export const cardStyles: CSSResultGroup = css`
 
     /* Brand accent — domain-specific, no HA equivalent. */
     --nb-accent: var(--primary-color);
+    /* E-bike amber: the rack's diagonal stripe, its legend swatch and the
+       e-bike chip. The green is the charge the legend's battery swatch
+       samples; each rack slot's own colour comes from batteryColor(). */
+    --nb-ebike-amber: #ffd740;
+    --nb-battery-sample: #2ecc71;
 
     /* Semantic state tokens layered over HA's official semantic palette
        so theme authors can recolour the whole portfolio in one place;
@@ -331,7 +336,7 @@ export const cardStyles: CSSResultGroup = css`
   .chip.ebike {
     /* E-bike chip uses the same amber as the rack diagonal stripe so
        the visual vocabulary stays consistent. */
-    background: color-mix(in srgb, #ffd740 28%, transparent);
+    background: color-mix(in srgb, var(--nb-ebike-amber) 28%, transparent);
     color: var(--primary-text-color);
   }
   .chip.ebike ha-icon {
@@ -374,8 +379,8 @@ export const cardStyles: CSSResultGroup = css`
       135deg,
       var(--nb-accent) 0%,
       var(--nb-accent) 55%,
-      #ffd740 55%,
-      #ffd740 100%
+      var(--nb-ebike-amber) 55%,
+      var(--nb-ebike-amber) 100%
     );
   }
   /* Battery-fill variant: vertical gradient bottom (filled) → top (empty).
@@ -385,12 +390,12 @@ export const cardStyles: CSSResultGroup = css`
   .slot.filled.ebike.battery {
     background: linear-gradient(
       to top,
-      var(--bat-color, #2ecc71) var(--bat-pct, 0%),
-      color-mix(in srgb, var(--bat-color, #2ecc71) 15%, transparent)
+      var(--bat-color, var(--nb-battery-sample)) var(--bat-pct, 0%),
+      color-mix(in srgb, var(--bat-color, var(--nb-battery-sample)) 15%, transparent)
         var(--bat-pct, 0%)
     );
     box-shadow: inset 0 0 0 1px
-      color-mix(in srgb, var(--bat-color, #2ecc71) 60%, transparent);
+      color-mix(in srgb, var(--bat-color, var(--nb-battery-sample)) 60%, transparent);
   }
   .slot.empty {
     background: color-mix(in srgb, var(--secondary-text-color) 6%, transparent);
@@ -478,6 +483,29 @@ export const cardStyles: CSSResultGroup = css`
     padding: 0;
     margin: 0;
     vertical-align: middle;
+  }
+  /* Bike, e-bike and battery swatches mirror the rack slots above, so the
+     stylesheet is the one place their colours come from. */
+  .legend-swatch.filled {
+    background: var(--nb-accent);
+  }
+  .legend-swatch.ebike {
+    background: linear-gradient(
+      135deg,
+      var(--nb-accent) 0%,
+      var(--nb-accent) 55%,
+      var(--nb-ebike-amber) 55%,
+      var(--nb-ebike-amber) 100%
+    );
+  }
+  .legend-swatch.ebike.battery {
+    background: linear-gradient(
+      to top,
+      var(--nb-battery-sample) 70%,
+      color-mix(in srgb, var(--nb-battery-sample) 15%, transparent) 70%
+    );
+    outline: 1px solid color-mix(in srgb, var(--nb-battery-sample) 60%, transparent);
+    outline-offset: -1px;
   }
   .legend-swatch.empty {
     background: color-mix(in srgb, var(--secondary-text-color) 6%, transparent);

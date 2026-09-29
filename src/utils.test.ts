@@ -402,11 +402,10 @@ describe("rackInputs — what the rack reads off the sensor", () => {
       bikes_reserved_types: "x",
       e_bike_battery_list: {},
     } as unknown as HassEntityAttributes;
-    expect(rackInputs(3, junk, "red")).toEqual({
+    expect(rackInputs(3, junk)).toEqual({
       bikes: 3,
       ebikes: null,
       capacity: null,
-      accent: "red",
       batteryPct: null,
       batterySamples: 0,
       batteryList: null,
@@ -423,7 +422,7 @@ describe("rackInputs — what the rack reads off the sensor", () => {
 
 describe("rackLayout — filling the docks", () => {
   const rack = (over: Partial<RackInputs> = {}): RackInputs => ({
-    ...rackInputs(0, {}, "red"),
+    ...rackInputs(0, {}),
     ...over,
   });
   const counts = (r: RackInputs, capacity: number, battery = true) => {
@@ -460,7 +459,7 @@ describe("rackLayout — filling the docks", () => {
   });
 
   it("draws one slot per dock even when upstream sends negative counts", () => {
-    const fromSensor = rackInputs(4, { bikes_reserved: -3, bikes_disabled: 1.5 }, "red");
+    const fromSensor = rackInputs(4, { bikes_reserved: -3, bikes_disabled: 1.5 });
     expect(counts(fromSensor, 10)).toEqual({
       bikes: 4,
       ebikes: 0,
