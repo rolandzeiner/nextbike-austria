@@ -87,6 +87,11 @@ type NextbikeAustriaConfigEntry = ConfigEntry["NextbikeStationCoordinator"]
 _GBFS_TTL_SECONDS = 60.0
 _HTTP_TIMEOUT = aiohttp.ClientTimeout(total=15)
 
+# A vehicle-type fetch that failed is retried this often instead of on every
+# tick. The feed is tiny and near-static; the e-bike sensor reads 0 until it
+# loads.
+_VEHICLE_TYPES_RETRY_SECONDS = 600.0
+
 # Longest Retry-After taken at face value. A day covers any real maintenance
 # window; past that, a bogus header would freeze polling indefinitely.
 _RETRY_AFTER_MAX_SECONDS = 86400.0
@@ -201,11 +206,13 @@ class SharedSystemClient:
         # upstream drift doesn't re-trigger the self-heal refetch forever.
         self._unresolved_ids: set[str] = set()
         # vehicle_types_available in station_status returns vehicle_type_id
-        # strings; vehicle_types.json tells us their propulsion. Built once
-        # on first fetch (nearly static) and kept for the process lifetime —
-        # an HA restart picks up an upstream catalogue change.
+        # strings; vehicle_types.json tells us their propulsion. Refreshed
+        # on the station-data clock (see `_vehicle_types_due`), so a new
+        # e-bike type upstream is counted without an HA restart.
         self._vehicle_types: dict[str, dict[str, Any]] = {}
         self._ebike_type_ids: frozenset[str] = frozenset()
+        self._vehicle_types_attempt: float | None = None
+        self._vehicle_types_ok = False
         # Per-station battery aggregates computed from free_bike_status.
         # Populated only when at least one entry has track_e_bike_range.
         # Shape: {station_id: {"avg_pct": float, "min_pct": float,
@@ -267,10 +274,11 @@ class SharedSystemClient:
             # vehicle_types provides the friendly type name used in
             # tooltips. Battery % comes straight from
             # `current_fuel_percent`, so a missing catalogue is no
-            # longer a hard blocker — try to load it once, but fall
-            # back to a generic "Bike" label if it's unavailable.
-            if not self._vehicle_types:
-                await self._refresh_vehicle_types()
+            # longer a hard blocker: fill an empty one when a retry is
+            # due, else fall back to a generic "Bike" label. The periodic
+            # refresh belongs to the station poll.
+            if not self._vehicle_types and self._vehicle_types_due(now):
+                await self._refresh_vehicle_types(now)
 
             try:
                 payload = await self._fetch_json("free_bike_status")
@@ -444,9 +452,10 @@ class SharedSystemClient:
 
     async def _refresh(self, now: float) -> None:
         """Pull the feeds and rebuild the merged per-station snapshot."""
-        # vehicle_types rarely changes; fetch once and keep unless empty.
-        if not self._vehicle_types:
-            await self._refresh_vehicle_types()
+        # vehicle_types changes as rarely as the station data, so it rides
+        # the same six-hour clock.
+        if self._vehicle_types_due(now):
+            await self._refresh_vehicle_types(now)
 
         # `station_information` is near-static — refresh it on its own
         # long TTL instead of on every status tick.
@@ -504,16 +513,35 @@ class SharedSystemClient:
         self._info_by_id = info_by_id
         self._info_last_fetch = now
 
-    async def _refresh_vehicle_types(self) -> None:
+    def _vehicle_types_due(self, now: float) -> bool:
+        """Whether the vehicle-type catalogue should be fetched now.
+
+        Six hours after a successful fetch, like the station data. After a
+        failure, retry every `_VEHICLE_TYPES_RETRY_SECONDS` rather than on
+        every tick; the previous catalogue (if any) stays in use meanwhile.
+        """
+        if self._vehicle_types_attempt is None:
+            return True
+        wait = (
+            STATION_INFO_TTL_SECONDS
+            if self._vehicle_types_ok
+            else _VEHICLE_TYPES_RETRY_SECONDS
+        )
+        return now - self._vehicle_types_attempt >= wait
+
+    async def _refresh_vehicle_types(self, now: float) -> None:
         """Populate the vehicle-type lookup + e-bike type-id set."""
+        self._vehicle_types_attempt = now
         try:
             payload = await self._fetch_json("vehicle_types")
         except GBFSError:
             # vehicle_types is not strictly required — without it the
-            # e-bike count sensor is simply 0. Log and carry on; the next
-            # successful fetch will populate it.
+            # e-bike count sensor is simply 0. Log and carry on; the
+            # retry clock in `_vehicle_types_due` brings it back.
+            self._vehicle_types_ok = False
             _LOGGER.debug("vehicle_types feed unavailable for %s", self._system_id)
             return
+        self._vehicle_types_ok = True
         types = payload.get("data", {}).get("vehicle_types") or []
         by_id: dict[str, dict[str, Any]] = {}
         ebike_ids: set[str] = set()

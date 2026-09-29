@@ -414,7 +414,7 @@ async def test_refresh_vehicle_types_populates_ebike_ids(hass: HomeAssistant) ->
         }
 
     with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
-        await client._refresh_vehicle_types()
+        await client._refresh_vehicle_types(1000.0)
     assert client.is_ebike_type("183")
     assert client.is_ebike_type("200")
     assert not client.is_ebike_type("192")
@@ -430,7 +430,7 @@ async def test_refresh_vehicle_types_swallows_gbfs_error(hass: HomeAssistant) ->
 
     with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
         # Should NOT raise — vehicle_types is optional.
-        await client._refresh_vehicle_types()
+        await client._refresh_vehicle_types(1000.0)
     assert client.vehicle_type_names() == {}
 
 
@@ -849,7 +849,8 @@ async def test_failure_window_keeps_the_system_off_the_network(
     calls: list[str] = []
 
     async def failing(feed: str) -> dict[str, Any]:
-        calls.append(feed)
+        if feed != "vehicle_types":  # that one has its own retry clock
+            calls.append(feed)
         raise GBFSError("api_timeout", seconds="15")
 
     clock = {"now": 1000.0}
@@ -883,7 +884,8 @@ async def test_retry_after_holds_the_window_open(hass: HomeAssistant) -> None:
     calls: list[str] = []
 
     async def rate_limited(feed: str) -> dict[str, Any]:
-        calls.append(feed)
+        if feed != "vehicle_types":  # that one has its own retry clock
+            calls.append(feed)
         raise GBFSError(
             "api_http_error",
             retry_after=600.0,
@@ -1057,6 +1059,56 @@ def _feed_counter() -> tuple[Any, dict[str, int]]:
         return {"data": {}}
 
     return fake_fetch, calls
+
+
+async def test_vehicle_types_ride_the_station_data_clock(
+    hass: HomeAssistant,
+) -> None:
+    """Refetched after six hours, not once per HA start and not every tick."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+    fake_fetch, calls = _feed_counter()
+
+    clock = {"now": 1000.0}
+    with (
+        patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch),
+        patch(_MONOTONIC, side_effect=lambda: clock["now"]),
+    ):
+        await client.async_fetch()
+        clock["now"] += 61
+        await client.async_fetch()
+        assert calls["vehicle_types"] == 1
+        clock["now"] += STATION_INFO_TTL_SECONDS
+        await client.async_fetch()
+    assert calls["vehicle_types"] == 2
+
+
+async def test_failed_vehicle_types_retry_after_ten_minutes(
+    hass: HomeAssistant,
+) -> None:
+    """A failed catalogue fetch is retried on its own clock, not every tick."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+    fake_fetch, calls = _feed_counter()
+
+    async def vehicle_types_down(feed: str) -> dict[str, Any]:
+        if feed == "vehicle_types":
+            calls["vehicle_types"] = calls.get("vehicle_types", 0) + 1
+            raise GBFSError("api_http_error", status="500", reason="Server Error")
+        return await fake_fetch(feed)
+
+    clock = {"now": 1000.0}
+    with (
+        patch.object(SharedSystemClient, "_fetch_json", side_effect=vehicle_types_down),
+        patch(_MONOTONIC, side_effect=lambda: clock["now"]),
+    ):
+        await client.async_fetch()
+        for _ in range(5):
+            clock["now"] += 61
+            await client.async_fetch()
+        assert calls["vehicle_types"] == 1
+        clock["now"] += 600
+        await client.async_fetch()
+    assert calls["vehicle_types"] == 2
+    assert calls["station_status"] == 7
 
 
 async def test_station_information_cached_across_ticks(hass: HomeAssistant) -> None:
