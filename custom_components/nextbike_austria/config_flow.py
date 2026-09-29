@@ -160,6 +160,10 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
         self._system_id: str | None = None
         self._query: str = ""
         self._matches: list[dict[str, Any]] = []
+        # The system's station list, fetched once per flow: a second search
+        # or "Search again" filters it locally instead of re-downloading it
+        # (~11 KB gzipped for Wien). An empty list means "not fetched yet".
+        self._catalogue: list[dict[str, Any]] = []
 
     @staticmethod
     @callback
@@ -227,11 +231,12 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
             if len(self._query) < _MIN_QUERY_LENGTH:
                 errors[CONF_SEARCH_QUERY] = "query_too_short"
             else:
-                stations = await _fetch_stations(self.hass, self._system_id)
-                if not stations:
+                if not self._catalogue:
+                    self._catalogue = await _fetch_stations(self.hass, self._system_id)
+                if not self._catalogue:
                     errors["base"] = "cannot_connect"
                 else:
-                    self._matches = _match_stations(stations, self._query)
+                    self._matches = _match_stations(self._catalogue, self._query)
                     if not self._matches:
                         errors[CONF_SEARCH_QUERY] = "no_matches"
                     else:

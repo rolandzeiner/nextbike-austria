@@ -292,6 +292,46 @@ async def test_search_again_returns_to_search_step(hass: HomeAssistant) -> None:
     assert result["step_id"] == "search_station"
 
 
+async def test_station_list_is_fetched_once_per_flow(hass: HomeAssistant) -> None:
+    """A second search filters the cached list instead of re-downloading it."""
+    with _patch_fetch() as fetch:
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_SYSTEM_ID: "nextbike_wr"}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_SEARCH_QUERY: "Hoher"}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_STATION_ID: "__search_again__", CONF_SCAN_INTERVAL: 60},
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_SEARCH_QUERY: "Julius"}
+        )
+    assert result["step_id"] == "select_station"
+    fetch.assert_awaited_once()
+
+
+async def test_failed_station_list_is_fetched_again(hass: HomeAssistant) -> None:
+    """A failed fetch isn't cached: the next search tries the network again."""
+    with _patch_fetch([]) as fetch:
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_SYSTEM_ID: "nextbike_wr"}
+        )
+        for _ in range(2):
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"], {CONF_SEARCH_QUERY: "Hoher"}
+            )
+            assert result["errors"] == {"base": "cannot_connect"}
+    assert fetch.await_count == 2
+
+
 async def test_fetch_stations_survives_client_error(
     hass: HomeAssistant,
 ) -> None:
