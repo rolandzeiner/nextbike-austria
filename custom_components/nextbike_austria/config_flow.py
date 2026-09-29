@@ -6,8 +6,9 @@ Three-step flow:
   2. `search_station`  — user types a fragment of the station name.
   3. `select_station`  — dropdown of matches; picking one creates the entry.
 
-`async_step_reconfigure` re-enters the scan-interval form for an existing
-entry, preserving unique_id. The options flow tweaks the scan interval too.
+There is no reconfigure step: the station is the entry's identity (the
+unique_id is `{system_id}_{station_id}`), so changing it means a new
+entry, and the only other settings live in the options flow.
 
 No credentials involved — nextbike's GBFS is unauthenticated — so there is
 no `async_step_reauth`, and `reauthentication-flow` is marked exempt in
@@ -159,7 +160,6 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
         self._system_id: str | None = None
         self._query: str = ""
         self._matches: list[dict[str, Any]] = []
-        self._reconfigure_entry: ConfigEntry | None = None
 
     @staticmethod
     @callback
@@ -282,15 +282,6 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_STATION_NAME: station_name,
                 CONF_SCAN_INTERVAL: interval,
             }
-
-            if self._reconfigure_entry is not None:
-                await self.async_set_unique_id(f"{self._system_id}_{station_id}")
-                self._abort_if_unique_id_mismatch()
-                return self.async_update_and_abort(
-                    self._reconfigure_entry,
-                    data=data,
-                )
-
             await self.async_set_unique_id(f"{self._system_id}_{station_id}")
             self._abort_if_unique_id_configured(reload_on_update=False)
             return self.async_create_entry(title=station_name, data=data)
@@ -326,20 +317,6 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     # ------------------------------------------------------------------
-    # Reconfigure
-    # ------------------------------------------------------------------
-
-    async def async_step_reconfigure(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Re-enter the station search for an existing entry."""
-        entry = self._get_reconfigure_entry()
-        self._reconfigure_entry = entry
-        current = {**entry.data, **entry.options}
-        self._system_id = str(current[CONF_SYSTEM_ID])
-        return await self.async_step_search_station()
-
-    # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
 
@@ -354,9 +331,8 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
 class NextbikeAustriaOptionsFlow(OptionsFlow):
     """Options flow: scan interval + optional e-bike battery tracking.
 
-    Station / system changes go through `async_step_reconfigure` in the
-    main flow so the entry's unique_id stays stable and entities are
-    preserved.
+    The system and station are the entry's identity and can't change here;
+    tracking a different station means adding a new entry.
     """
 
     async def async_step_init(

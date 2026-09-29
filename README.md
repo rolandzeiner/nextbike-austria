@@ -122,7 +122,7 @@ Reserved and out-of-service bikes show up as lock and wrench slots in the rack, 
 
 ## Configuration Parameters
 
-Setup and the per-entry options flow share the update interval. Reach the options flow via **Settings → Devices & Services → Nextbike Austria → Configure**. An entry stays tied to its station: to track a different station or system, add a new entry and delete the old one. **Reconfigure** only runs the station search again for the same station.
+Setup and the per-entry options flow share the update interval. Reach the options flow via **Settings → Devices & Services → Nextbike Austria → Configure**. An entry stays tied to its station: to track a different station or system, add a new entry and delete the old one.
 
 | Field | Where | Default | Description |
 |---|---|---|---|

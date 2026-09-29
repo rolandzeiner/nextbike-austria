@@ -31,16 +31,14 @@
       "no_matches": "Keine Stationen gefunden — bitte mit einem anderen Suchbegriff erneut versuchen."
     },
     "abort": {
-      "already_configured": "Diese Station wird bereits verfolgt.",
-      "reconfigure_successful": "Neukonfiguration erfolgreich.",
-      "unique_id_mismatch": "Die gewählte Station passt nicht zu dieser ID. Bitte den Eintrag löschen und die neue Station hinzufügen."
+      "already_configured": "Diese Station wird bereits verfolgt."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Nextbike Austria – Optionen",
-        "description": "Abfrage und optionales E-Bike-Batterietracking konfigurieren. Um System oder Station dieses Eintrags zu ändern, **Neukonfigurieren** verwenden.",
+        "description": "Abfrage und optionales E-Bike-Batterietracking konfigurieren. Um eine andere Station zu verfolgen, füge sie als neuen Eintrag hinzu.",
         "data": {
           "scan_interval": "Aktualisierungsintervall (Sekunden)",
           "track_e_bike_range": "E-Bike-Batteriestand tracken"

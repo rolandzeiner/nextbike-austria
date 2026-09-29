@@ -31,16 +31,14 @@
       "no_matches": "No stations match your search — try a shorter or different fragment."
     },
     "abort": {
-      "already_configured": "This station is already being tracked.",
-      "reconfigure_successful": "Reconfigure completed successfully.",
-      "unique_id_mismatch": "The picked station does not match this entry's station id. Delete the entry and add the new station instead."
+      "already_configured": "This station is already being tracked."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Nextbike Austria options",
-        "description": "Configure polling and optional e-bike battery tracking. To switch the system or station for this entry, use **Reconfigure** instead.",
+        "description": "Configure polling and optional e-bike battery tracking. To track a different station, add it as a new entry.",
         "data": {
           "scan_interval": "Update interval (seconds)",
           "track_e_bike_range": "Track e-bike battery state"

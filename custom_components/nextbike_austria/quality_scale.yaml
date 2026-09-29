@@ -128,10 +128,19 @@ rules:
   icon-translations:
     status: done
   reconfiguration-flow:
-    status: done
+    status: exempt
+    comment: >-
+      The entry's only identity is the station picked at setup (unique_id
+      `{system_id}_{station_id}`), so changing it is equivalent to adding a
+      new entry, and rewriting the unique_id would orphan the device and its
+      three sensors. The update interval and battery tracking, the only other
+      settings, are handled by the options flow.
   repair-issues:
     status: done
-    comment: Coordinator has raise/clear helpers; raise real issues when degraded conditions occur.
+    comment: >-
+      One issue, station_gone, raised when the configured station drops out of
+      the system's GBFS feed. Raised once, cleared on recovery (also by a
+      reloaded coordinator), and deleted when its entry is removed.
   stale-devices:
     status: exempt
     comment: See dynamic-devices.
