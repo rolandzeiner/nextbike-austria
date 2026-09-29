@@ -33,6 +33,7 @@ If your city uses nextbike under a different `system_id`, open an issue — addi
 - **Shared per-system polling**: if you track 10 Vienna stations, one HTTP request per poll feeds them all — and all 10 refresh together, off the same snapshot — see [Data Updates](#data-updates).
 - **Optional e-bike battery + reservation tracking**: per-station battery aggregates (avg / min / max %), sorted per-bike battery list, reserved-bike counts, and out-of-service (disabled) bike counts. Off by default — bandwidth profile in [Data Updates](#data-updates).
 - **Bundled Lovelace card**: a slot-by-slot bike rack with e-bike charge, status flags and a rent link. It registers itself, so there's no dashboard resource to add — see [Lovelace Card](#lovelace-card).
+- **Average e-bike charge on the card**: with battery tracking on, the station's average charge appears next to the e-bike count. *(1.4.0)*
 - **Direct rental link** via the `rental_uri` attribute (`https://nxtb.it/p/{id}` deep-links into the nextbike app).
 - **Station-gone repair flow**: if the operator retires a station mid-operation, a Repairs notification surfaces and clears itself when the station reappears.
 - **Diagnostics download** with redacted coordinates, station / coordinator state summary, and counts derived from the live snapshot. The snapshot body itself stays out, so an issue doesn't reveal the station's current state.
