@@ -110,10 +110,10 @@ BATTERY_FETCH_TTL_SECONDS: Final = 1200
 # on every 60 s tick alongside the status feed doubled the integration's
 # request count for data that is static for months at a time.
 #
-# The feed is already conditional-GET'd, so a redundant fetch costs a 304
-# rather than a body — but it still costs a round trip against nextbike's
-# CDN. 6 h drops the steady-state profile from 2 requests/min to
-# 1 request/min + 4 requests/day per system.
+# Every refetch is a full body (~11 KB gzipped for Wien): the feed
+# regenerates its Last-Modified each minute, so no 304 can soften it (see
+# the measurement block below). 6 h drops the steady-state profile from
+# 2 requests/min to 1 request/min + 4 requests/day per system.
 #
 # Staleness is bounded independently of this TTL: `async_fetch` forces an
 # out-of-band refresh whenever the status feed reports a station id the
@@ -126,6 +126,22 @@ STATION_INFO_TTL_SECONDS: Final = 21600
 # GBFS endpoint base. Each Austrian system (see AUSTRIAN_SYSTEMS below)
 # publishes at `{GBFS_BASE}/{system_id}/{lang}/{feed}.json`.
 GBFS_BASE: Final = "https://gbfs.nextbike.net/maps/gbfs/v2"
+
+# --- Upstream capabilities, measured 2026-09-29 against nextbike_wr --------
+#   station_status        67.8 KB -> 3.2 KB on the wire (gzip, 21.0x)
+#   station_information   84.6 KB -> 11.2 KB (gzip, 7.6x)
+#   vehicle_types          2.3 KB -> 0.7 KB (gzip, 3.2x)
+#   free_bike_status      1.35 MB -> 83 KB (gzip, 16.5x)
+#   Compression: gzip only. Offering zstd or br alone returns identity, so
+#   the client's default Accept-Encoding negotiates gzip on its own.
+#   Conditional GET: churning on all four feeds. No ETag; If-Modified-Since
+#   earns a 304 within seconds, but every feed regenerates Last-Modified
+#   each minute, so a validator replayed 60 s later comes back 200. At our
+#   intervals (60 s, 20 min, 6 h) a 304 never happens, so the client sends
+#   no validators. Replay one after the poll interval before adding them.
+#   Rate limits: none advertised; the feeds' GBFS `ttl` is 60 on all six
+#   systems, which sets the 60 s floor.
+# ---------------------------------------------------------------------------
 
 # Language segment in the per-feed GBFS URL path (see `gbfs_feed_url`).
 GBFS_LANG: Final = "en"

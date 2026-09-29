@@ -212,14 +212,6 @@ class SharedSystemClient:
         # "max_pct": float, "samples": int}}.
         self._battery_by_station: dict[str, dict[str, Any]] = {}
         self._battery_last_fetch: float = 0.0
-        # Per-feed `Last-Modified` strings, sent back as `If-Modified-Since`
-        # on the next request. nextbike honours conditional GETs and
-        # answers 304 when nothing changed — saves the body transfer
-        # entirely on quiet feeds (vehicle_types in particular).
-        self._last_modified: dict[str, str] = {}
-        # Last successfully-parsed JSON body per feed. We hand the cached
-        # copy back when the upstream returns 304 Not Modified.
-        self._payload_cache: dict[str, dict[str, Any]] = {}
 
     @property
     def system_id(self) -> str:
@@ -538,9 +530,9 @@ class SharedSystemClient:
     async def _fetch_json(self, feed: str) -> dict[str, Any]:
         """Fetch one sub-feed and return the parsed JSON body.
 
-        Sends ``If-Modified-Since`` based on the last seen ``Last-Modified``
-        for this feed; on a 304 the cached body is returned without
-        re-parsing.
+        No conditional GET: every feed regenerates its ``Last-Modified``
+        each minute, so a validator never matches at our intervals (see the
+        measurement block in const.py).
 
         GBFS bodies from nextbike occasionally include stray control
         characters (e.g. raw CRLF in vehicle-type descriptions). We parse
@@ -548,29 +540,15 @@ class SharedSystemClient:
         whole feed being unusable for a single escaping bug.
         """
         url = gbfs_feed_url(self._system_id, feed)
-        # `base_request_headers` provides UA + Accept + Accept-Encoding gzip
-        # (verified 2026-05-08: GBFS station_status 66 KB → 3 KB compressed,
-        # 21x reduction). The conditional-GET `If-Modified-Since` header is
-        # added on top per-feed so a 304 short-circuits to the cached payload.
-        headers = base_request_headers(USER_AGENT)
-        cached = self._payload_cache.get(feed)
-        if (
-            last_mod := self._last_modified.get(feed)
-        ) is not None and cached is not None:
-            headers["If-Modified-Since"] = last_mod
         status: int | None = None
         text: str | None = None
-        new_last_mod: str | None = None
         try:
             async with self._session.get(
-                url, headers=headers, timeout=_HTTP_TIMEOUT
+                url, headers=base_request_headers(USER_AGENT), timeout=_HTTP_TIMEOUT
             ) as resp:
                 status = resp.status
-                if status == 304 and cached is not None:
-                    return cached
                 resp.raise_for_status()
                 text = await resp.text()
-                new_last_mod = resp.headers.get("Last-Modified")
         except TimeoutError as err:
             raise GBFSError("api_timeout", seconds="15") from err
         except aiohttp.ClientResponseError as err:
@@ -606,9 +584,6 @@ class SharedSystemClient:
                 status=str(status),
                 error=f"expected dict, got {type(parsed).__name__}",
             )
-        if new_last_mod:
-            self._last_modified[feed] = new_last_mod
-        self._payload_cache[feed] = parsed
         return parsed
 
 

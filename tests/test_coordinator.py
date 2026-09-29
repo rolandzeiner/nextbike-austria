@@ -691,54 +691,6 @@ async def test_battery_fetch_backoff_on_empty_result(hass: HomeAssistant) -> Non
     assert calls == 1
 
 
-async def test_fetch_json_uses_conditional_get(hass: HomeAssistant) -> None:
-    """Last-Modified is captured and sent back as If-Modified-Since; 304 reuses cache."""
-    client = SharedSystemClient(hass, "nextbike_wr")
-
-    seen_headers: list[dict[str, str]] = []
-    response_status = {"status": 200}
-
-    class _FirstResp:
-        status = 200
-        headers: ClassVar[dict[str, str]] = {
-            "Last-Modified": "Wed, 21 Apr 2026 12:00:00 GMT"
-        }
-
-        def raise_for_status(self) -> None:
-            return None
-
-        async def text(self) -> str:
-            return '{"data": {"stations": [{"station_id": "1"}]}}'
-
-    class _NotModifiedResp:
-        status = 304
-        headers: ClassVar[dict[str, str]] = {}
-
-        def raise_for_status(self) -> None:
-            return None
-
-        async def text(self) -> str:  # pragma: no cover — not reached on 304
-            return ""
-
-    class _FakeSession:
-        def get(self, *args: Any, **kwargs: Any) -> CtxResp:
-            seen_headers.append(dict(kwargs.get("headers") or {}))
-            if response_status["status"] == 304:
-                return CtxResp(_NotModifiedResp())
-            return CtxResp(_FirstResp())
-
-    _seed_session(client, _FakeSession())
-
-    first = await client._fetch_json("station_information")
-    assert first["data"]["stations"][0]["station_id"] == "1"
-    assert "If-Modified-Since" not in seen_headers[0]
-
-    response_status["status"] = 304
-    second = await client._fetch_json("station_information")
-    assert seen_headers[1]["If-Modified-Since"] == "Wed, 21 Apr 2026 12:00:00 GMT"
-    assert second is first
-
-
 # ---------------------------------------------------------------------
 # Coordinator + battery merge
 # ---------------------------------------------------------------------
