@@ -1,21 +1,25 @@
 /**
  * @vitest-environment happy-dom
  *
- * Component tests for the station card and everything the bundle registers.
+ * Component tests for the station card and everything src/index.ts registers.
  *
  * Three jobs a green build does not do on its own:
  *
- * 1. **The decorator check.** Rolldown lowers Lit's legacy decorators from
- *    tsconfig.json. If that regresses, class fields overwrite Lit's
- *    accessors and the card stops re-rendering while the build stays green;
- *    reading `elementProperties` back off the constructor catches it.
+ * 1. **The decorator check.** Rolldown lowers Lit's legacy decorators per
+ *    tsconfig.json, and so does vitest's Vite for these tests; nothing here
+ *    runs the built bundle. It can regress two ways, both with the build
+ *    still green. The decorators stop running: reading `elementProperties`
+ *    back off the constructor catches that. Or class fields overwrite Lit's
+ *    accessors and the card stops re-rendering: mounting a card catches
+ *    that, through Lit's dev-mode check or, failing that, the own-property
+ *    assertion.
  * 2. **Behaviour.** The hass gate in shouldUpdate, the tab strip's keyboard
  *    handling, the version banner and the empty states.
  * 3. **The rendered markup, pinned.** Each scenario under "rendered markup"
- *    snapshots the card with Lit's comment markers and inter-tag whitespace
- *    stripped, so a refactor of the render helpers must reproduce the same
- *    elements, attributes and text. Update a snapshot only for an intended
- *    visual change, and review the diff when you do.
+ *    snapshots the card with Lit's comment markers removed, whitespace runs
+ *    squeezed to one space and none left between tags, so a refactor of the
+ *    render helpers must reproduce the same elements, attributes and text.
+ *    When to update a snapshot: CONTRIBUTING.md.
  *
  * `ha-card` and `ha-icon` are HA elements that do not exist here; happy-dom
  * renders them as inert containers, which is all these tests need.
@@ -28,7 +32,7 @@ import type { HassEntityAttributes, HomeAssistant, WindowWithCustomCards } from 
 const NOW = Date.parse("2026-09-29T12:00:00Z");
 const minutesAgo = (n: number): string => new Date(NOW - n * 60_000).toISOString();
 
-/** Custom-element names recorded as the bundle registers them. */
+/** Custom-element names recorded as src/index.ts registers them. */
 const registered: string[] = [];
 
 beforeAll(async () => {
@@ -135,7 +139,8 @@ async function mount(config: Record<string, unknown>, h?: HomeAssistant): Promis
 
 const root = (el: Card): ShadowRoot => el.shadowRoot!;
 
-/** The card's markup without Lit's comment markers or inter-tag whitespace. */
+/** The card's markup without Lit's comment markers, with whitespace runs
+ *  squeezed to one space and none left between tags. */
 function markup(el: Card): string {
   return (root(el).querySelector("ha-card")?.outerHTML ?? "")
     .replace(/<!--[\s\S]*?-->/g, "")
@@ -180,13 +185,24 @@ describe("custom element registration", () => {
     expect(entry.getEntitySuggestion?.(h, "light.nb")).toBeNull();
   });
 
+  const reactive = ["hass", "_config", "_activeTab", "_versionMismatch", "_tickKey"];
+
   it("keeps Lit's reactive properties through decorator lowering", () => {
     const ctor = customElements.get("nextbike-austria-card") as unknown as {
       elementProperties: Map<PropertyKey, unknown>;
     };
     const props = [...ctor.elementProperties.keys()].map(String);
-    for (const name of ["hass", "_config", "_activeTab", "_versionMismatch", "_tickKey"]) {
+    for (const name of reactive) {
       expect(props).toContain(name);
+    }
+  });
+
+  it("leaves a mounted card's reactive properties to Lit's accessors", async () => {
+    // A class field would define an own property on the instance,
+    // shadowing the accessor Lit put on the prototype.
+    const el = await mount({ entities: ["sensor.nb_a"] }, hass({ "sensor.nb_a": ["3", FULL] }));
+    for (const name of reactive) {
+      expect(Object.hasOwn(el, name)).toBe(false);
     }
   });
 });
