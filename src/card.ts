@@ -268,10 +268,10 @@ export class NextbikeAustriaCard extends LitElement {
     `;
   }
 
+  // Reached only when no nextbike sensor exists at all: _resolveEntities
+  // falls back to the first one whenever the picked stations are gone.
   private _renderEmpty(): TemplateResult {
-    const available = findNextbikeEntities(this.hass);
-    const key = available.length ? "no_entities_picked" : "no_entities_available";
-    return html`<div class="empty-state" role="status">${this._t(key)}</div>`;
+    return html`<div class="empty-state" role="status">${this._t("no_entities_available")}</div>`;
   }
 
   private _renderTabs(stations: NextbikeStationEntry[]): TemplateResult {
@@ -349,10 +349,10 @@ export class NextbikeAustriaCard extends LitElement {
   ): TemplateResult {
     const state = this.hass?.states[stopCfg.entity];
     if (!state) {
-      // User picked a station in the editor but its sensor doesn't
-      // exist (integration unloaded, entity renamed). Distinct from
-      // _renderEmpty's "nothing configured" case — use a specific
-      // message so the user knows what went wrong.
+      // Safety net: _resolveEntities only returns stations whose sensor
+      // is in this hass, so today this only narrows the type. A picked
+      // sensor that disappears falls back to the first nextbike sensor
+      // instead of landing here.
       return html`<div class="empty-state" role="status">${this._t("no_entities_unavailable")}</div>`;
     }
     const a = state.attributes || ({} as HassEntityAttributes);
