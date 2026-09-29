@@ -252,6 +252,42 @@ describe("card API", () => {
   });
 });
 
+describe("editor", () => {
+  interface Editor extends HTMLElement {
+    setConfig(config: unknown): void;
+    hass: HomeAssistant;
+    updateComplete: Promise<unknown>;
+  }
+
+  const mountEditor = async (entities: string[], h: HomeAssistant): Promise<Editor> => {
+    const editor = document.createElement("nextbike-austria-card-editor") as Editor;
+    editor.setConfig({
+      type: "custom:nextbike-austria-card",
+      entities: entities.map((entity) => ({ entity })),
+    });
+    editor.hass = h;
+    document.body.appendChild(editor);
+    await editor.updateComplete;
+    return editor;
+  };
+
+  it("names each picked sensor that no longer exists (WCAG 3.3.1)", async () => {
+    const editor = await mountEditor(
+      ["sensor.nb_a", "sensor.gone"],
+      hass({ "sensor.nb_a": ["3", FULL] }),
+    );
+    const alerts = [...editor.shadowRoot!.querySelectorAll("ha-alert")];
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]!.getAttribute("alert-type")).toBe("warning");
+    expect(alerts[0]!.textContent).toContain("sensor.gone");
+  });
+
+  it("shows no alert while every picked sensor exists", async () => {
+    const editor = await mountEditor(["sensor.nb_a"], hass({ "sensor.nb_a": ["3", FULL] }));
+    expect(editor.shadowRoot!.querySelectorAll("ha-alert")).toHaveLength(0);
+  });
+});
+
 // --- station resolution and empty states ------------------------------------
 
 describe("station resolution", () => {
