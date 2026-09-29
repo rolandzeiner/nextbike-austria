@@ -10,20 +10,20 @@ const e=globalThis,t=e.ShadowRoot&&(e.ShadyCSS===void 0||e.ShadyCSS.nativeShadow
 * Copyright 2017 Google LLC
 * SPDX-License-Identifier: BSD-3-Clause
 */
-switch(t){case Boolean:e=e?ie:null;break;case Object:case Array:e=e==null?e:JSON.stringify(e)}return e},fromAttribute(e,t){let n=e;switch(t){case Boolean:n=e!==null;break;case Number:n=e===null?null:Number(e);break;case Object:case Array:try{n=JSON.parse(e)}catch{n=null}}return n}},h=(e,t)=>!l(e,t),oe={attribute:!0,type:String,converter:m,reflect:!1,useDefault:!1,hasChanged:h};Symbol.metadata??=Symbol(`metadata`),f.litPropertyMetadata??=/* @__PURE__ */ new WeakMap;var g=class extends HTMLElement{static addInitializer(e){this._$Ei(),(this.l??=[]).push(e)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(e,t=oe){if(t.state&&(t.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(e)&&((t=Object.create(t)).wrapped=!0),this.elementProperties.set(e,t),!t.noAccessor){let n=Symbol(),r=this.getPropertyDescriptor(e,n,t);r!==void 0&&u(this.prototype,e,r)}}static getPropertyDescriptor(e,t,n){let{get:r,set:i}=d(this.prototype,e)??{get(){return this[t]},set(e){this[t]=e}};return{get:r,set(t){let a=r?.call(this);i?.call(this,t),this.requestUpdate(e,a,n)},configurable:!0,enumerable:!0}}static getPropertyOptions(e){return this.elementProperties.get(e)??oe}static _$Ei(){if(this.hasOwnProperty(p(`elementProperties`)))return;let e=ne(this);e.finalize(),e.l!==void 0&&(this.l=[...e.l]),this.elementProperties=new Map(e.elementProperties)}static finalize(){if(this.hasOwnProperty(p(`finalized`)))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(p(`properties`))){let e=this.properties,t=[...ee(e),...te(e)];for(let n of t)this.createProperty(n,e[n])}let e=this[Symbol.metadata];if(e!==null){let t=litPropertyMetadata.get(e);if(t!==void 0)for(let[e,n]of t)this.elementProperties.set(e,n)}this._$Eh=/* @__PURE__ */ new Map;for(let[e,t]of this.elementProperties){let n=this._$Eu(e,t);n!==void 0&&this._$Eh.set(n,e)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(e){let t=[];if(Array.isArray(e)){let n=new Set(e.flat(1/0).reverse());for(let e of n)t.unshift(c(e))}else e!==void 0&&t.push(c(e));return t}static _$Eu(e,t){let n=t.attribute;return!1===n?void 0:typeof n==`string`?n:typeof e==`string`?e.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(e=>this.enableUpdating=e),this._$AL=/* @__PURE__ */ new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(e=>e(this))}addController(e){(this._$EO??=/* @__PURE__ */ new Set).add(e),this.renderRoot!==void 0&&this.isConnected&&e.hostConnected?.()}removeController(e){this._$EO?.delete(e)}_$E_(){let e=/* @__PURE__ */ new Map,t=this.constructor.elementProperties;for(let n of t.keys())this.hasOwnProperty(n)&&(e.set(n,this[n]),delete this[n]);e.size>0&&(this._$Ep=e)}createRenderRoot(){let e=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return s(e,this.constructor.elementStyles),e}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(e=>e.hostConnected?.())}enableUpdating(e){}disconnectedCallback(){this._$EO?.forEach(e=>e.hostDisconnected?.())}attributeChangedCallback(e,t,n){this._$AK(e,n)}_$ET(e,t){let n=this.constructor.elementProperties.get(e),r=this.constructor._$Eu(e,n);if(r!==void 0&&!0===n.reflect){let i=(n.converter?.toAttribute===void 0?m:n.converter).toAttribute(t,n.type);this._$Em=e,i==null?this.removeAttribute(r):this.setAttribute(r,i),this._$Em=null}}_$AK(e,t){let n=this.constructor,r=n._$Eh.get(e);if(r!==void 0&&this._$Em!==r){let e=n.getPropertyOptions(r),i=typeof e.converter==`function`?{fromAttribute:e.converter}:e.converter?.fromAttribute===void 0?m:e.converter;this._$Em=r;let a=i.fromAttribute(t,e.type);this[r]=a??this._$Ej?.get(r)??a,this._$Em=null}}requestUpdate(e,t,n,r=!1,i){if(e!==void 0){let a=this.constructor;if(!1===r&&(i=this[e]),n??=a.getPropertyOptions(e),!((n.hasChanged??h)(i,t)||n.useDefault&&n.reflect&&i===this._$Ej?.get(e)&&!this.hasAttribute(a._$Eu(e,n))))return;this.C(e,t,n)}!1===this.isUpdatePending&&(this._$ES=this._$EP())}C(e,t,{useDefault:n,reflect:r,wrapped:i},a){n&&!(this._$Ej??=/* @__PURE__ */ new Map).has(e)&&(this._$Ej.set(e,a??t??this[e]),!0!==i||a!==void 0)||(this._$AL.has(e)||(this.hasUpdated||n||(t=void 0),this._$AL.set(e,t)),!0===r&&this._$Em!==e&&(this._$Eq??=/* @__PURE__ */ new Set).add(e))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(e){Promise.reject(e)}let e=this.scheduleUpdate();return e!=null&&await e,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(let[e,t]of this._$Ep)this[e]=t;this._$Ep=void 0}let e=this.constructor.elementProperties;if(e.size>0)for(let[t,n]of e){let{wrapped:e}=n,r=this[t];!0!==e||this._$AL.has(t)||r===void 0||this.C(t,void 0,n,r)}}let e=!1,t=this._$AL;try{e=this.shouldUpdate(t),e?(this.willUpdate(t),this._$EO?.forEach(e=>e.hostUpdate?.()),this.update(t)):this._$EM()}catch(t){throw e=!1,this._$EM(),t}e&&this._$AE(t)}willUpdate(e){}_$AE(e){this._$EO?.forEach(e=>e.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(e)),this.updated(e)}_$EM(){this._$AL=/* @__PURE__ */ new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(e){return!0}update(e){this._$Eq&&=this._$Eq.forEach(e=>this._$ET(e,this[e])),this._$EM()}updated(e){}firstUpdated(e){}};g.elementStyles=[],g.shadowRootOptions={mode:`open`},g[p(`elementProperties`)]=/* @__PURE__ */ new Map,g[p(`finalized`)]=/* @__PURE__ */ new Map,ae?.({ReactiveElement:g}),(f.reactiveElementVersions??=[]).push(`2.1.2`);
+switch(t){case Boolean:e=e?ie:null;break;case Object:case Array:e=e==null?e:JSON.stringify(e)}return e},fromAttribute(e,t){let n=e;switch(t){case Boolean:n=e!==null;break;case Number:n=e===null?null:Number(e);break;case Object:case Array:try{n=JSON.parse(e)}catch{n=null}}return n}},h=(e,t)=>!l(e,t),g={attribute:!0,type:String,converter:m,reflect:!1,useDefault:!1,hasChanged:h};Symbol.metadata??=Symbol(`metadata`),f.litPropertyMetadata??=/* @__PURE__ */ new WeakMap;var _=class extends HTMLElement{static addInitializer(e){this._$Ei(),(this.l??=[]).push(e)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(e,t=g){if(t.state&&(t.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(e)&&((t=Object.create(t)).wrapped=!0),this.elementProperties.set(e,t),!t.noAccessor){let n=Symbol(),r=this.getPropertyDescriptor(e,n,t);r!==void 0&&u(this.prototype,e,r)}}static getPropertyDescriptor(e,t,n){let{get:r,set:i}=d(this.prototype,e)??{get(){return this[t]},set(e){this[t]=e}};return{get:r,set(t){let a=r?.call(this);i?.call(this,t),this.requestUpdate(e,a,n)},configurable:!0,enumerable:!0}}static getPropertyOptions(e){return this.elementProperties.get(e)??g}static _$Ei(){if(this.hasOwnProperty(p(`elementProperties`)))return;let e=ne(this);e.finalize(),e.l!==void 0&&(this.l=[...e.l]),this.elementProperties=new Map(e.elementProperties)}static finalize(){if(this.hasOwnProperty(p(`finalized`)))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(p(`properties`))){let e=this.properties,t=[...ee(e),...te(e)];for(let n of t)this.createProperty(n,e[n])}let e=this[Symbol.metadata];if(e!==null){let t=litPropertyMetadata.get(e);if(t!==void 0)for(let[e,n]of t)this.elementProperties.set(e,n)}this._$Eh=/* @__PURE__ */ new Map;for(let[e,t]of this.elementProperties){let n=this._$Eu(e,t);n!==void 0&&this._$Eh.set(n,e)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(e){let t=[];if(Array.isArray(e)){let n=new Set(e.flat(1/0).reverse());for(let e of n)t.unshift(c(e))}else e!==void 0&&t.push(c(e));return t}static _$Eu(e,t){let n=t.attribute;return!1===n?void 0:typeof n==`string`?n:typeof e==`string`?e.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(e=>this.enableUpdating=e),this._$AL=/* @__PURE__ */ new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(e=>e(this))}addController(e){(this._$EO??=/* @__PURE__ */ new Set).add(e),this.renderRoot!==void 0&&this.isConnected&&e.hostConnected?.()}removeController(e){this._$EO?.delete(e)}_$E_(){let e=/* @__PURE__ */ new Map,t=this.constructor.elementProperties;for(let n of t.keys())this.hasOwnProperty(n)&&(e.set(n,this[n]),delete this[n]);e.size>0&&(this._$Ep=e)}createRenderRoot(){let e=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return s(e,this.constructor.elementStyles),e}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(e=>e.hostConnected?.())}enableUpdating(e){}disconnectedCallback(){this._$EO?.forEach(e=>e.hostDisconnected?.())}attributeChangedCallback(e,t,n){this._$AK(e,n)}_$ET(e,t){let n=this.constructor.elementProperties.get(e),r=this.constructor._$Eu(e,n);if(r!==void 0&&!0===n.reflect){let i=(n.converter?.toAttribute===void 0?m:n.converter).toAttribute(t,n.type);this._$Em=e,i==null?this.removeAttribute(r):this.setAttribute(r,i),this._$Em=null}}_$AK(e,t){let n=this.constructor,r=n._$Eh.get(e);if(r!==void 0&&this._$Em!==r){let e=n.getPropertyOptions(r),i=typeof e.converter==`function`?{fromAttribute:e.converter}:e.converter?.fromAttribute===void 0?m:e.converter;this._$Em=r;let a=i.fromAttribute(t,e.type);this[r]=a??this._$Ej?.get(r)??a,this._$Em=null}}requestUpdate(e,t,n,r=!1,i){if(e!==void 0){let a=this.constructor;if(!1===r&&(i=this[e]),n??=a.getPropertyOptions(e),!((n.hasChanged??h)(i,t)||n.useDefault&&n.reflect&&i===this._$Ej?.get(e)&&!this.hasAttribute(a._$Eu(e,n))))return;this.C(e,t,n)}!1===this.isUpdatePending&&(this._$ES=this._$EP())}C(e,t,{useDefault:n,reflect:r,wrapped:i},a){n&&!(this._$Ej??=/* @__PURE__ */ new Map).has(e)&&(this._$Ej.set(e,a??t??this[e]),!0!==i||a!==void 0)||(this._$AL.has(e)||(this.hasUpdated||n||(t=void 0),this._$AL.set(e,t)),!0===r&&this._$Em!==e&&(this._$Eq??=/* @__PURE__ */ new Set).add(e))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(e){Promise.reject(e)}let e=this.scheduleUpdate();return e!=null&&await e,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(let[e,t]of this._$Ep)this[e]=t;this._$Ep=void 0}let e=this.constructor.elementProperties;if(e.size>0)for(let[t,n]of e){let{wrapped:e}=n,r=this[t];!0!==e||this._$AL.has(t)||r===void 0||this.C(t,void 0,n,r)}}let e=!1,t=this._$AL;try{e=this.shouldUpdate(t),e?(this.willUpdate(t),this._$EO?.forEach(e=>e.hostUpdate?.()),this.update(t)):this._$EM()}catch(t){throw e=!1,this._$EM(),t}e&&this._$AE(t)}willUpdate(e){}_$AE(e){this._$EO?.forEach(e=>e.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(e)),this.updated(e)}_$EM(){this._$AL=/* @__PURE__ */ new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(e){return!0}update(e){this._$Eq&&=this._$Eq.forEach(e=>this._$ET(e,this[e])),this._$EM()}updated(e){}firstUpdated(e){}};_.elementStyles=[],_.shadowRootOptions={mode:`open`},_[p(`elementProperties`)]=/* @__PURE__ */ new Map,_[p(`finalized`)]=/* @__PURE__ */ new Map,ae?.({ReactiveElement:_}),(f.reactiveElementVersions??=[]).push(`2.1.2`);
 /**
 * @license
 * Copyright 2017 Google LLC
 * SPDX-License-Identifier: BSD-3-Clause
 */
-const _=globalThis,v=e=>e,y=_.trustedTypes,b=y?y.createPolicy(`lit-html`,{createHTML:e=>e}):void 0,x=`$lit$`,S=`lit$${Math.random().toFixed(9).slice(2)}$`,se=`?`+S,ce=`<${se}>`,C=document,w=()=>C.createComment(``),T=e=>e===null||typeof e!=`object`&&typeof e!=`function`,E=Array.isArray,le=e=>E(e)||typeof e?.[Symbol.iterator]==`function`,D=`[ 	
-\f\r]`,O=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,ue=/-->/g,de=/>/g,k=RegExp(`>|${D}(?:([^\\s"'>=/]+)(${D}*=${D}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`,`g`),A=/'/g,j=/"/g,M=/^(?:script|style|textarea|title)$/i,N=(e=>(t,...n)=>({_$litType$:e,strings:t,values:n}))(1),P=Symbol.for(`lit-noChange`),F=Symbol.for(`lit-nothing`),fe=/* @__PURE__ */ new WeakMap,I=C.createTreeWalker(C,129);function L(e,t){if(!E(e)||!e.hasOwnProperty(`raw`))throw Error(`invalid template strings array`);return b===void 0?t:b.createHTML(t)}const pe=(e,t)=>{let n=e.length-1,r=[],i,a=t===2?`<svg>`:t===3?`<math>`:``,o=O;for(let t=0;t<n;t++){let n=e[t],s,c,l=-1,u=0;for(;u<n.length&&(o.lastIndex=u,c=o.exec(n),c!==null);)u=o.lastIndex,o===O?c[1]===`!--`?o=ue:c[1]===void 0?c[2]===void 0?c[3]!==void 0&&(o=k):(M.test(c[2])&&(i=RegExp(`</`+c[2],`g`)),o=k):o=de:o===k?c[0]===`>`?(o=i??O,l=-1):c[1]===void 0?l=-2:(l=o.lastIndex-c[2].length,s=c[1],o=c[3]===void 0?k:c[3]===`"`?j:A):o===j||o===A?o=k:o===ue||o===de?o=O:(o=k,i=void 0);let d=o===k&&e[t+1].startsWith(`/>`)?` `:``;a+=o===O?n+ce:l>=0?(r.push(s),n.slice(0,l)+x+n.slice(l)+S+d):n+S+(l===-2?t:d)}return[L(e,a+(e[n]||`<?>`)+(t===2?`</svg>`:t===3?`</math>`:``)),r]};var R=class e{constructor({strings:t,_$litType$:n},r){let i;this.parts=[];let a=0,o=0,s=t.length-1,c=this.parts,[l,u]=pe(t,n);if(this.el=e.createElement(l,r),I.currentNode=this.el.content,n===2||n===3){let e=this.el.content.firstChild;e.replaceWith(...e.childNodes)}for(;(i=I.nextNode())!==null&&c.length<s;){if(i.nodeType===1){if(i.hasAttributes())for(let e of i.getAttributeNames())if(e.endsWith(x)){let t=u[o++],n=i.getAttribute(e).split(S),r=/([.?@])?(.*)/.exec(t);c.push({type:1,index:a,name:r[2],strings:n,ctor:r[1]===`.`?he:r[1]===`?`?ge:r[1]===`@`?_e:V}),i.removeAttribute(e)}else e.startsWith(S)&&(c.push({type:6,index:a}),i.removeAttribute(e));if(M.test(i.tagName)){let e=i.textContent.split(S),t=e.length-1;if(t>0){i.textContent=y?y.emptyScript:``;for(let n=0;n<t;n++)i.append(e[n],w()),I.nextNode(),c.push({type:2,index:++a});i.append(e[t],w())}}}else if(i.nodeType===8){if(i.data===se)c.push({type:2,index:a});else{let e=-1;for(;(e=i.data.indexOf(S,e+1))!==-1;)c.push({type:7,index:a}),e+=S.length-1}}a++}}static createElement(e,t){let n=C.createElement(`template`);return n.innerHTML=e,n}};function z(e,t,n=e,r){if(t===P)return t;let i=r===void 0?n._$Cl:n._$Co?.[r],a=T(t)?void 0:t._$litDirective$;return i?.constructor!==a&&(i?._$AO?.(!1),a===void 0?i=void 0:(i=new a(e),i._$AT(e,n,r)),r===void 0?n._$Cl=i:(n._$Co??=[])[r]=i),i!==void 0&&(t=z(e,i._$AS(e,t.values),i,r)),t}var me=class{constructor(e,t){this._$AV=[],this._$AN=void 0,this._$AD=e,this._$AM=t}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(e){let{el:{content:t},parts:n}=this._$AD,r=(e?.creationScope??C).importNode(t,!0);I.currentNode=r;let i=I.nextNode(),a=0,o=0,s=n[0];for(;s!==void 0;){if(a===s.index){let t;s.type===2?t=new B(i,i.nextSibling,this,e):s.type===1?t=new s.ctor(i,s.name,s.strings,this,e):s.type===6&&(t=new ve(i,this,e)),this._$AV.push(t),s=n[++o]}a!==s?.index&&(i=I.nextNode(),a++)}return I.currentNode=C,r}p(e){let t=0;for(let n of this._$AV)n!==void 0&&(n.strings===void 0?n._$AI(e[t]):(n._$AI(e,n,t),t+=n.strings.length-2)),t++}},B=class e{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(e,t,n,r){this.type=2,this._$AH=F,this._$AN=void 0,this._$AA=e,this._$AB=t,this._$AM=n,this.options=r,this._$Cv=r?.isConnected??!0}get parentNode(){let e=this._$AA.parentNode,t=this._$AM;return t!==void 0&&e?.nodeType===11&&(e=t.parentNode),e}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(e,t=this){e=z(this,e,t),T(e)?e===F||e==null||e===``?(this._$AH!==F&&this._$AR(),this._$AH=F):e!==this._$AH&&e!==P&&this._(e):e._$litType$===void 0?e.nodeType===void 0?le(e)?this.k(e):this._(e):this.T(e):this.$(e)}O(e){return this._$AA.parentNode.insertBefore(e,this._$AB)}T(e){this._$AH!==e&&(this._$AR(),this._$AH=this.O(e))}_(e){this._$AH!==F&&T(this._$AH)?this._$AA.nextSibling.data=e:this.T(C.createTextNode(e)),this._$AH=e}$(e){let{values:t,_$litType$:n}=e,r=typeof n==`number`?this._$AC(e):(n.el===void 0&&(n.el=R.createElement(L(n.h,n.h[0]),this.options)),n);if(this._$AH?._$AD===r)this._$AH.p(t);else{let e=new me(r,this),n=e.u(this.options);e.p(t),this.T(n),this._$AH=e}}_$AC(e){let t=fe.get(e.strings);return t===void 0&&fe.set(e.strings,t=new R(e)),t}k(t){E(this._$AH)||(this._$AH=[],this._$AR());let n=this._$AH,r,i=0;for(let a of t)i===n.length?n.push(r=new e(this.O(w()),this.O(w()),this,this.options)):r=n[i],r._$AI(a),i++;i<n.length&&(this._$AR(r&&r._$AB.nextSibling,i),n.length=i)}_$AR(e=this._$AA.nextSibling,t){for(this._$AP?.(!1,!0,t);e!==this._$AB;){let t=v(e).nextSibling;v(e).remove(),e=t}}setConnected(e){this._$AM===void 0&&(this._$Cv=e,this._$AP?.(e))}},V=class{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(e,t,n,r,i){this.type=1,this._$AH=F,this._$AN=void 0,this.element=e,this.name=t,this._$AM=r,this.options=i,n.length>2||n[0]!==``||n[1]!==``?(this._$AH=Array(n.length-1).fill(/* @__PURE__ */ new String),this.strings=n):this._$AH=F}_$AI(e,t=this,n,r){let i=this.strings,a=!1;if(i===void 0)e=z(this,e,t,0),a=!T(e)||e!==this._$AH&&e!==P,a&&(this._$AH=e);else{let r=e,o,s;for(e=i[0],o=0;o<i.length-1;o++)s=z(this,r[n+o],t,o),s===P&&(s=this._$AH[o]),a||=!T(s)||s!==this._$AH[o],s===F?e=F:e!==F&&(e+=(s??``)+i[o+1]),this._$AH[o]=s}a&&!r&&this.j(e)}j(e){e===F?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,e??``)}},he=class extends V{constructor(){super(...arguments),this.type=3}j(e){this.element[this.name]=e===F?void 0:e}},ge=class extends V{constructor(){super(...arguments),this.type=4}j(e){this.element.toggleAttribute(this.name,!!e&&e!==F)}},_e=class extends V{constructor(e,t,n,r,i){super(e,t,n,r,i),this.type=5}_$AI(e,t=this){if((e=z(this,e,t,0)??F)===P)return;let n=this._$AH,r=e===F&&n!==F||e.capture!==n.capture||e.once!==n.once||e.passive!==n.passive,i=e!==F&&(n===F||r);r&&this.element.removeEventListener(this.name,this,n),i&&this.element.addEventListener(this.name,this,e),this._$AH=e}handleEvent(e){typeof this._$AH==`function`?this._$AH.call(this.options?.host??this.element,e):this._$AH.handleEvent(e)}},ve=class{constructor(e,t,n){this.element=e,this.type=6,this._$AN=void 0,this._$AM=t,this.options=n}get _$AU(){return this._$AM._$AU}_$AI(e){z(this,e)}};const ye=_.litHtmlPolyfillSupport;ye?.(R,B),(_.litHtmlVersions??=[]).push(`3.3.2`);const be=(e,t,n)=>{let r=n?.renderBefore??t,i=r._$litPart$;if(i===void 0){let e=n?.renderBefore??null;r._$litPart$=i=new B(t.insertBefore(w(),e),e,void 0,n??{})}return i._$AI(e),i},H=globalThis
+const v=globalThis,oe=e=>e,y=v.trustedTypes,se=y?y.createPolicy(`lit-html`,{createHTML:e=>e}):void 0,ce=`$lit$`,b=`lit$${Math.random().toFixed(9).slice(2)}$`,le=`?`+b,ue=`<${le}>`,x=document,S=()=>x.createComment(``),C=e=>e===null||typeof e!=`object`&&typeof e!=`function`,w=Array.isArray,de=e=>w(e)||typeof e?.[Symbol.iterator]==`function`,T=`[ 	
+\f\r]`,E=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,D=/-->/g,O=/>/g,k=RegExp(`>|${T}(?:([^\\s"'>=/]+)(${T}*=${T}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`,`g`),A=/'/g,j=/"/g,M=/^(?:script|style|textarea|title)$/i,N=(e=>(t,...n)=>({_$litType$:e,strings:t,values:n}))(1),P=Symbol.for(`lit-noChange`),F=Symbol.for(`lit-nothing`),I=/* @__PURE__ */ new WeakMap,L=x.createTreeWalker(x,129);function fe(e,t){if(!w(e)||!e.hasOwnProperty(`raw`))throw Error(`invalid template strings array`);return se===void 0?t:se.createHTML(t)}const pe=(e,t)=>{let n=e.length-1,r=[],i,a=t===2?`<svg>`:t===3?`<math>`:``,o=E;for(let t=0;t<n;t++){let n=e[t],s,c,l=-1,u=0;for(;u<n.length&&(o.lastIndex=u,c=o.exec(n),c!==null);)u=o.lastIndex,o===E?c[1]===`!--`?o=D:c[1]===void 0?c[2]===void 0?c[3]!==void 0&&(o=k):(M.test(c[2])&&(i=RegExp(`</`+c[2],`g`)),o=k):o=O:o===k?c[0]===`>`?(o=i??E,l=-1):c[1]===void 0?l=-2:(l=o.lastIndex-c[2].length,s=c[1],o=c[3]===void 0?k:c[3]===`"`?j:A):o===j||o===A?o=k:o===D||o===O?o=E:(o=k,i=void 0);let d=o===k&&e[t+1].startsWith(`/>`)?` `:``;a+=o===E?n+ue:l>=0?(r.push(s),n.slice(0,l)+ce+n.slice(l)+b+d):n+b+(l===-2?t:d)}return[fe(e,a+(e[n]||`<?>`)+(t===2?`</svg>`:t===3?`</math>`:``)),r]};var R=class e{constructor({strings:t,_$litType$:n},r){let i;this.parts=[];let a=0,o=0,s=t.length-1,c=this.parts,[l,u]=pe(t,n);if(this.el=e.createElement(l,r),L.currentNode=this.el.content,n===2||n===3){let e=this.el.content.firstChild;e.replaceWith(...e.childNodes)}for(;(i=L.nextNode())!==null&&c.length<s;){if(i.nodeType===1){if(i.hasAttributes())for(let e of i.getAttributeNames())if(e.endsWith(ce)){let t=u[o++],n=i.getAttribute(e).split(b),r=/([.?@])?(.*)/.exec(t);c.push({type:1,index:a,name:r[2],strings:n,ctor:r[1]===`.`?he:r[1]===`?`?ge:r[1]===`@`?_e:V}),i.removeAttribute(e)}else e.startsWith(b)&&(c.push({type:6,index:a}),i.removeAttribute(e));if(M.test(i.tagName)){let e=i.textContent.split(b),t=e.length-1;if(t>0){i.textContent=y?y.emptyScript:``;for(let n=0;n<t;n++)i.append(e[n],S()),L.nextNode(),c.push({type:2,index:++a});i.append(e[t],S())}}}else if(i.nodeType===8){if(i.data===le)c.push({type:2,index:a});else{let e=-1;for(;(e=i.data.indexOf(b,e+1))!==-1;)c.push({type:7,index:a}),e+=b.length-1}}a++}}static createElement(e,t){let n=x.createElement(`template`);return n.innerHTML=e,n}};function z(e,t,n=e,r){if(t===P)return t;let i=r===void 0?n._$Cl:n._$Co?.[r],a=C(t)?void 0:t._$litDirective$;return i?.constructor!==a&&(i?._$AO?.(!1),a===void 0?i=void 0:(i=new a(e),i._$AT(e,n,r)),r===void 0?n._$Cl=i:(n._$Co??=[])[r]=i),i!==void 0&&(t=z(e,i._$AS(e,t.values),i,r)),t}var me=class{constructor(e,t){this._$AV=[],this._$AN=void 0,this._$AD=e,this._$AM=t}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(e){let{el:{content:t},parts:n}=this._$AD,r=(e?.creationScope??x).importNode(t,!0);L.currentNode=r;let i=L.nextNode(),a=0,o=0,s=n[0];for(;s!==void 0;){if(a===s.index){let t;s.type===2?t=new B(i,i.nextSibling,this,e):s.type===1?t=new s.ctor(i,s.name,s.strings,this,e):s.type===6&&(t=new ve(i,this,e)),this._$AV.push(t),s=n[++o]}a!==s?.index&&(i=L.nextNode(),a++)}return L.currentNode=x,r}p(e){let t=0;for(let n of this._$AV)n!==void 0&&(n.strings===void 0?n._$AI(e[t]):(n._$AI(e,n,t),t+=n.strings.length-2)),t++}},B=class e{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(e,t,n,r){this.type=2,this._$AH=F,this._$AN=void 0,this._$AA=e,this._$AB=t,this._$AM=n,this.options=r,this._$Cv=r?.isConnected??!0}get parentNode(){let e=this._$AA.parentNode,t=this._$AM;return t!==void 0&&e?.nodeType===11&&(e=t.parentNode),e}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(e,t=this){e=z(this,e,t),C(e)?e===F||e==null||e===``?(this._$AH!==F&&this._$AR(),this._$AH=F):e!==this._$AH&&e!==P&&this._(e):e._$litType$===void 0?e.nodeType===void 0?de(e)?this.k(e):this._(e):this.T(e):this.$(e)}O(e){return this._$AA.parentNode.insertBefore(e,this._$AB)}T(e){this._$AH!==e&&(this._$AR(),this._$AH=this.O(e))}_(e){this._$AH!==F&&C(this._$AH)?this._$AA.nextSibling.data=e:this.T(x.createTextNode(e)),this._$AH=e}$(e){let{values:t,_$litType$:n}=e,r=typeof n==`number`?this._$AC(e):(n.el===void 0&&(n.el=R.createElement(fe(n.h,n.h[0]),this.options)),n);if(this._$AH?._$AD===r)this._$AH.p(t);else{let e=new me(r,this),n=e.u(this.options);e.p(t),this.T(n),this._$AH=e}}_$AC(e){let t=I.get(e.strings);return t===void 0&&I.set(e.strings,t=new R(e)),t}k(t){w(this._$AH)||(this._$AH=[],this._$AR());let n=this._$AH,r,i=0;for(let a of t)i===n.length?n.push(r=new e(this.O(S()),this.O(S()),this,this.options)):r=n[i],r._$AI(a),i++;i<n.length&&(this._$AR(r&&r._$AB.nextSibling,i),n.length=i)}_$AR(e=this._$AA.nextSibling,t){for(this._$AP?.(!1,!0,t);e!==this._$AB;){let t=oe(e).nextSibling;oe(e).remove(),e=t}}setConnected(e){this._$AM===void 0&&(this._$Cv=e,this._$AP?.(e))}},V=class{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(e,t,n,r,i){this.type=1,this._$AH=F,this._$AN=void 0,this.element=e,this.name=t,this._$AM=r,this.options=i,n.length>2||n[0]!==``||n[1]!==``?(this._$AH=Array(n.length-1).fill(/* @__PURE__ */ new String),this.strings=n):this._$AH=F}_$AI(e,t=this,n,r){let i=this.strings,a=!1;if(i===void 0)e=z(this,e,t,0),a=!C(e)||e!==this._$AH&&e!==P,a&&(this._$AH=e);else{let r=e,o,s;for(e=i[0],o=0;o<i.length-1;o++)s=z(this,r[n+o],t,o),s===P&&(s=this._$AH[o]),a||=!C(s)||s!==this._$AH[o],s===F?e=F:e!==F&&(e+=(s??``)+i[o+1]),this._$AH[o]=s}a&&!r&&this.j(e)}j(e){e===F?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,e??``)}},he=class extends V{constructor(){super(...arguments),this.type=3}j(e){this.element[this.name]=e===F?void 0:e}},ge=class extends V{constructor(){super(...arguments),this.type=4}j(e){this.element.toggleAttribute(this.name,!!e&&e!==F)}},_e=class extends V{constructor(e,t,n,r,i){super(e,t,n,r,i),this.type=5}_$AI(e,t=this){if((e=z(this,e,t,0)??F)===P)return;let n=this._$AH,r=e===F&&n!==F||e.capture!==n.capture||e.once!==n.once||e.passive!==n.passive,i=e!==F&&(n===F||r);r&&this.element.removeEventListener(this.name,this,n),i&&this.element.addEventListener(this.name,this,e),this._$AH=e}handleEvent(e){typeof this._$AH==`function`?this._$AH.call(this.options?.host??this.element,e):this._$AH.handleEvent(e)}},ve=class{constructor(e,t,n){this.element=e,this.type=6,this._$AN=void 0,this._$AM=t,this.options=n}get _$AU(){return this._$AM._$AU}_$AI(e){z(this,e)}};const ye=v.litHtmlPolyfillSupport;ye?.(R,B),(v.litHtmlVersions??=[]).push(`3.3.2`);const be=(e,t,n)=>{let r=n?.renderBefore??t,i=r._$litPart$;if(i===void 0){let e=n?.renderBefore??null;r._$litPart$=i=new B(t.insertBefore(S(),e),e,void 0,n??{})}return i._$AI(e),i},H=globalThis
 /**
 * @license
 * Copyright 2017 Google LLC
 * SPDX-License-Identifier: BSD-3-Clause
 */
-;var U=class extends g{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){let e=super.createRenderRoot();return this.renderOptions.renderBefore??=e.firstChild,e}update(e){let t=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(e),this._$Do=be(t,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return P}};U._$litElement$=!0,U.finalized=!0,H.litElementHydrateSupport?.({LitElement:U});const xe=H.litElementPolyfillSupport;xe?.({LitElement:U}),(H.litElementVersions??=[]).push(`4.2.2`);
+;var U=class extends _{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){let e=super.createRenderRoot();return this.renderOptions.renderBefore??=e.firstChild,e}update(e){let t=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(e),this._$Do=be(t,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return P}};U._$litElement$=!0,U.finalized=!0,H.litElementHydrateSupport?.({LitElement:U});const xe=H.litElementPolyfillSupport;xe?.({LitElement:U}),(H.litElementVersions??=[]).push(`4.2.2`);
 /**
 * @license
 * Copyright 2017 Google LLC
@@ -40,7 +40,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
 * @license
 * Copyright 2017 Google LLC
 * SPDX-License-Identifier: BSD-3-Clause
-*/function G(e){return W({...e,state:!0,attribute:!1})}const Te={nextbike_wr:`#DC2026`,nextbike_la:`#004E9E`,nextbike_si:`#C8102E`,nextbike_vt:`#009D58`,nextbike_al:`#E30613`,nextbike_ka:`#FFC20E`},K={en:{no_entities_available:`No nextbike sensors found`,no_entities_unavailable:`Selected station is currently unavailable`,rack_summary:`Bike rack: {available} of {capacity} bikes available`,offline:`offline`,no_rental:`no rental`,no_return:`no return`,virtual_station:`virtual station`,bikes:`bikes`,bike:`bike`,docks:`docks`,dock:`dock`,ebikes:`e-bikes`,capacity:`capacity`,last_updated:`updated`,now:`just now`,seconds_ago:`{n}s ago`,minutes_ago:`{n}min ago`,hours_ago:`{n}h ago`,rent_in_app:`Rent in app`,open_map:`Map`,legend_bike:`Bike`,legend_ebike:`E-bike`,legend_empty:`Empty dock`,legend_overflow:`Overflow`,legend_reserved:`Reserved`,reserved:`Reserved`,legend_disabled:`Out of service`,disabled:`Out of service`,battery_unknown:`battery unknown`,version_update:`Nextbike Austria updated to v{v} — please reload`,version_reload:`Reload`,version_reload_stuck:`Reload didn't pick up the new version. Close this browser tab and reopen the dashboard, or clear your browser's site data for Home Assistant.`,editor:{entities_helper:`Pick one or more nextbike-austria sensors. Use Settings → Devices & Services to add more stations.`,entity_missing:`Sensor {entity} no longer exists. Pick a different sensor or remove it from this card's entities list.`,section_display:`Display`,layout:`Multi-station layout`,layout_helper:`Stacked shows every station in one column; Tabs adds a tab strip when two or more stations are picked.`,layout_stacked:`Stacked`,layout_tabs:`Tabs`,show_rack:`Show bike rack`,show_legend:`Show legend`,show_battery:`Show battery in e-bike slot`,show_ebikes:`Show e-bikes`,show_docks:`Show docks`,show_flags:`Show status flags`,show_timestamp:`Show timestamp`,show_rent_button:`Show app-rent link`,hide_header:`Hide header`,hide_attribution:`Hide attribution`}},de:{no_entities_available:`Keine Nextbike-Sensoren gefunden`,no_entities_unavailable:`Ausgewählte Station ist gerade nicht verfügbar`,rack_summary:`Radständer: {available} von {capacity} Rädern verfügbar`,offline:`offline`,no_rental:`keine Ausleihe`,no_return:`keine Rückgabe`,virtual_station:`virtuelle Station`,bikes:`Räder`,bike:`Rad`,docks:`Plätze`,dock:`Platz`,ebikes:`E-Bikes`,capacity:`Kapazität`,last_updated:`aktualisiert`,now:`gerade eben`,seconds_ago:`vor {n}s`,minutes_ago:`vor {n}min`,hours_ago:`vor {n}h`,rent_in_app:`In App mieten`,open_map:`Karte`,legend_bike:`Rad`,legend_ebike:`E-Bike`,legend_empty:`Freier Platz`,legend_overflow:`Überzählig`,legend_reserved:`Reserviert`,reserved:`Reserviert`,legend_disabled:`Außer Betrieb`,disabled:`Außer Betrieb`,battery_unknown:`Batterie unbekannt`,version_update:`Nextbike Austria wurde auf v{v} aktualisiert — bitte neu laden`,version_reload:`Neu laden`,version_reload_stuck:`Neu laden hat die neue Version nicht übernommen. Schließe diesen Browser-Tab und öffne das Dashboard erneut, oder lösche die Website-Daten für Home Assistant in den Browser-Einstellungen.`,editor:{entities_helper:`Eine oder mehrere Nextbike-Austria-Sensoren auswählen. Über Einstellungen → Geräte & Dienste lassen sich weitere Stationen hinzufügen.`,entity_missing:`Sensor {entity} existiert nicht mehr. Wähle einen anderen Sensor oder entferne ihn aus den Entitäten dieser Karte.`,section_display:`Anzeige`,layout:`Layout für mehrere Stationen`,layout_helper:`„Gestapelt“ zeigt alle Stationen untereinander, „Reiter“ blendet ab zwei Stationen einen Reiter-Streifen ein.`,layout_stacked:`Gestapelt`,layout_tabs:`Reiter`,show_rack:`Bike-Rack anzeigen`,show_legend:`Legende anzeigen`,show_battery:`Batterie im E-Bike-Slot anzeigen`,show_ebikes:`E-Bike-Anzeige`,show_docks:`Plätze anzeigen`,show_flags:`Statussymbole anzeigen`,show_timestamp:`Zeitstempel anzeigen`,show_rent_button:`App-Mietlink anzeigen`,hide_header:`Kopfzeile ausblenden`,hide_attribution:`Datenquelle ausblenden`}}};function Ee(e){return(e?.language||`en`).startsWith(`de`)?`de`:`en`}function q(e,t){let n=e;for(let e of t){if(typeof n!=`object`||!n)return;let t=n[e];if(t===void 0)return;n=t}return typeof n==`string`?n:void 0}function De(e,t){let n=Ee(e);return q(K[n]??K.en,[t])??q(K.en,[t])??t}function Oe(e,t){let n=Ee(e);return q(K[n]??K.en,[`editor`,t])??q(K.en,[`editor`,t])??t}async function ke(e,t,n){if(!e?.callWS)return null;try{let r=await e.callWS({type:t});if(r?.version&&r.version!==n)return r.version}catch{}return null}function Ae(e){try{window.caches?.keys?.().then(e=>{e.forEach(e=>window.caches?.delete?.(e))})}catch{}if(e)try{window.sessionStorage?.setItem(`nb-reload-attempted-${e}`,`1`)}catch{}window.location.reload()}function je(e){if(!e)return!1;try{return window.sessionStorage?.getItem(`nb-reload-attempted-${e}`)===`1`}catch{return!1}}function Me(e,t){if(!e)return F;if(je(e)){let e=t(`version_reload_stuck`);return N`
+*/function G(e){return W({...e,state:!0,attribute:!1})}const Te={nextbike_wr:`#DC2026`,nextbike_la:`#004E9E`,nextbike_si:`#C8102E`,nextbike_vt:`#009D58`,nextbike_al:`#E30613`,nextbike_ka:`#FFC20E`},K={en:{no_entities_available:`No nextbike sensors found`,no_entities_unavailable:`Selected station is currently unavailable`,rack_summary:`Bike rack: {available} of {capacity} bikes available`,offline:`offline`,no_rental:`no rental`,no_return:`no return`,virtual_station:`virtual station`,bikes:`bikes`,bike:`bike`,docks:`docks`,dock:`dock`,ebikes:`e-bikes`,capacity:`capacity`,last_updated:`updated`,now:`just now`,seconds_ago:`{n}s ago`,minutes_ago:`{n}min ago`,hours_ago:`{n}h ago`,rent_in_app:`Rent in app`,open_map:`Map`,legend_bike:`Bike`,legend_ebike:`E-bike`,legend_empty:`Empty dock`,legend_overflow:`Overflow`,legend_reserved:`Reserved`,reserved:`Reserved`,legend_disabled:`Out of service`,disabled:`Out of service`,battery_unknown:`battery unknown`,battery_avg:`avg. charge`,overflow_more:`{n} more bikes than docks`,stations:`Stations`,version_update:`Nextbike Austria updated to v{v} — please reload`,version_reload:`Reload`,version_reload_stuck:`Reload didn't pick up the new version. Close this browser tab and reopen the dashboard, or clear your browser's site data for Home Assistant.`,editor:{entities_helper:`Pick one or more nextbike-austria sensors. Use Settings → Devices & Services to add more stations.`,entity_missing:`Sensor {entity} no longer exists. Pick a different sensor or remove it from this card's entities list.`,section_display:`Display`,layout:`Multi-station layout`,layout_helper:`Stacked shows every station in one column; Tabs adds a tab strip when two or more stations are picked.`,layout_stacked:`Stacked`,layout_tabs:`Tabs`,show_rack:`Show bike rack`,show_legend:`Show legend`,show_battery:`Show battery in e-bike slot`,show_ebikes:`Show e-bikes`,show_docks:`Show docks`,show_flags:`Show status flags`,show_timestamp:`Show timestamp`,show_rent_button:`Show app-rent link`,hide_header:`Hide header`,hide_attribution:`Hide attribution`}},de:{no_entities_available:`Keine Nextbike-Sensoren gefunden`,no_entities_unavailable:`Ausgewählte Station ist gerade nicht verfügbar`,rack_summary:`Radständer: {available} von {capacity} Rädern verfügbar`,offline:`offline`,no_rental:`keine Ausleihe`,no_return:`keine Rückgabe`,virtual_station:`virtuelle Station`,bikes:`Räder`,bike:`Rad`,docks:`Plätze`,dock:`Platz`,ebikes:`E-Bikes`,capacity:`Kapazität`,last_updated:`aktualisiert`,now:`gerade eben`,seconds_ago:`vor {n}s`,minutes_ago:`vor {n}min`,hours_ago:`vor {n}h`,rent_in_app:`In App mieten`,open_map:`Karte`,legend_bike:`Rad`,legend_ebike:`E-Bike`,legend_empty:`Freier Platz`,legend_overflow:`Überzählig`,legend_reserved:`Reserviert`,reserved:`Reserviert`,legend_disabled:`Außer Betrieb`,disabled:`Außer Betrieb`,battery_unknown:`Batterie unbekannt`,battery_avg:`Ø Akkustand`,overflow_more:`{n} Räder mehr als Plätze`,stations:`Stationen`,version_update:`Nextbike Austria wurde auf v{v} aktualisiert — bitte neu laden`,version_reload:`Neu laden`,version_reload_stuck:`Neu laden hat die neue Version nicht übernommen. Schließe diesen Browser-Tab und öffne das Dashboard erneut, oder lösche die Website-Daten für Home Assistant in den Browser-Einstellungen.`,editor:{entities_helper:`Eine oder mehrere Nextbike-Austria-Sensoren auswählen. Über Einstellungen → Geräte & Dienste lassen sich weitere Stationen hinzufügen.`,entity_missing:`Sensor {entity} existiert nicht mehr. Wähle einen anderen Sensor oder entferne ihn aus den Entitäten dieser Karte.`,section_display:`Anzeige`,layout:`Layout für mehrere Stationen`,layout_helper:`„Gestapelt“ zeigt alle Stationen untereinander, „Reiter“ blendet ab zwei Stationen einen Reiter-Streifen ein.`,layout_stacked:`Gestapelt`,layout_tabs:`Reiter`,show_rack:`Bike-Rack anzeigen`,show_legend:`Legende anzeigen`,show_battery:`Batterie im E-Bike-Slot anzeigen`,show_ebikes:`E-Bike-Anzeige`,show_docks:`Plätze anzeigen`,show_flags:`Statussymbole anzeigen`,show_timestamp:`Zeitstempel anzeigen`,show_rent_button:`App-Mietlink anzeigen`,hide_header:`Kopfzeile ausblenden`,hide_attribution:`Datenquelle ausblenden`}}};function Ee(e){return(e?.language||`en`).startsWith(`de`)?`de`:`en`}function q(e,t){let n=e;for(let e of t){if(typeof n!=`object`||!n)return;let t=n[e];if(t===void 0)return;n=t}return typeof n==`string`?n:void 0}function De(e,t){let n=Ee(e);return q(K[n]??K.en,[t])??q(K.en,[t])??t}function Oe(e,t){let n=Ee(e);return q(K[n]??K.en,[`editor`,t])??q(K.en,[`editor`,t])??t}async function ke(e,t,n){if(!e?.callWS)return null;try{let r=await e.callWS({type:t});if(r?.version&&r.version!==n)return r.version}catch{}return null}function Ae(e){try{window.caches?.keys?.().then(e=>{e.forEach(e=>window.caches?.delete?.(e))})}catch{}if(e)try{window.sessionStorage?.setItem(`nb-reload-attempted-${e}`,`1`)}catch{}window.location.reload()}function je(e){if(!e)return!1;try{return window.sessionStorage?.getItem(`nb-reload-attempted-${e}`)===`1`}catch{return!1}}function Me(e,t){if(!e)return F;if(je(e)){let e=t(`version_reload_stuck`);return N`
       <div class="banner" role="alert" aria-live="assertive">
         <span>${e}</span>
       </div>
@@ -94,6 +94,11 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
        samples; each rack slot's own colour comes from batteryColor(). */
     --nb-ebike-amber: #ffd740;
     --nb-battery-sample: #2ecc71;
+    /* How much of a battery fill is its charge colour; the rest is the
+       theme's text colour. That darkens the fill on a light card and
+       lightens it on a dark one, which keeps it 3:1 from the pale empty
+       part in both (WCAG 1.4.11; worst case amber on white, 3.2:1). */
+    --nb-battery-depth: 70%;
 
     /* Semantic state tokens layered over HA's official semantic palette
        so theme authors can recolour the whole portfolio in one place;
@@ -165,7 +170,8 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
     justify-content: space-between;
     gap: 8px;
     background: var(--nb-warning);
-    color: #fff;
+    /* Black, not white: white on warning orange is 2:1 (WCAG 1.4.3). */
+    color: #000;
     padding: 10px 14px;
     margin: calc(var(--nb-pad-y) * -1) calc(var(--nb-pad-x) * -1) 0;
     border-radius: 0;
@@ -174,7 +180,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
   }
   .banner button {
     background: #fff;
-    color: var(--nb-warning);
+    color: #000;
     border: none;
     border-radius: 999px;
     padding: 6px 14px;
@@ -230,7 +236,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
     /* Three independent active cues: colour, weight, underline.
        Survives any single-channel deficit (low vision, protanopia,
        grayscale). */
-    color: var(--primary-color);
+    color: var(--primary-text-color);
     font-weight: var(--ha-font-weight-bold, 700);
     box-shadow: inset 0 -2px 0 var(--primary-color);
   }
@@ -285,9 +291,9 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
     font-weight: 600;
     line-height: 1.25;
     color: var(--primary-text-color);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    /* Wraps rather than truncating: a cut-off station name at 320 px or
+       under text-spacing overrides loses content (WCAG 1.4.10 / 1.4.12). */
+    overflow-wrap: anywhere;
   }
   .subtitle {
     /* <p> override. */
@@ -296,9 +302,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
     color: var(--secondary-text-color);
     font-weight: 400;
     letter-spacing: 0.1px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
   .icon-action {
     /* Map link rendered as an HA-style icon button — circular, 40×40
@@ -434,7 +438,9 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
       135deg,
       var(--nb-accent) 0%,
       var(--nb-accent) 55%,
-      var(--nb-ebike-amber) 55%,
+      var(--nb-stripe-edge, var(--nb-ebike-amber)) 55%,
+      var(--nb-stripe-edge, var(--nb-ebike-amber)) 62%,
+      var(--nb-ebike-amber) 62%,
       var(--nb-ebike-amber) 100%
     );
   }
@@ -445,7 +451,12 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
   .slot.filled.ebike.battery {
     background: linear-gradient(
       to top,
-      var(--bat-color, var(--nb-battery-sample)) var(--bat-pct, 0%),
+      color-mix(
+          in srgb,
+          var(--bat-color, var(--nb-battery-sample)) var(--nb-battery-depth),
+          var(--primary-text-color)
+        )
+        var(--bat-pct, 0%),
       color-mix(in srgb, var(--bat-color, var(--nb-battery-sample)) 15%, transparent)
         var(--bat-pct, 0%)
     );
@@ -549,14 +560,17 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
       135deg,
       var(--nb-accent) 0%,
       var(--nb-accent) 55%,
-      var(--nb-ebike-amber) 55%,
+      var(--nb-stripe-edge, var(--nb-ebike-amber)) 55%,
+      var(--nb-stripe-edge, var(--nb-ebike-amber)) 62%,
+      var(--nb-ebike-amber) 62%,
       var(--nb-ebike-amber) 100%
     );
   }
   .legend-swatch.ebike.battery {
     background: linear-gradient(
       to top,
-      var(--nb-battery-sample) 70%,
+      color-mix(in srgb, var(--nb-battery-sample) var(--nb-battery-depth), var(--primary-text-color))
+        70%,
       color-mix(in srgb, var(--nb-battery-sample) 15%, transparent) 70%
     );
     outline: 1px solid color-mix(in srgb, var(--nb-battery-sample) 60%, transparent);
@@ -621,12 +635,20 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
   .flag ha-icon {
     --mdc-icon-size: 14px;
   }
+  /* State colour on the tint and icon; the words stay in the text
+     colour, since orange and red text on their tints miss 4.5:1. */
   .flag.warn {
     background: color-mix(in srgb, var(--nb-warning) 16%, transparent);
+    color: var(--primary-text-color);
+  }
+  .flag.warn ha-icon {
     color: var(--nb-warning);
   }
   .flag.err {
     background: color-mix(in srgb, var(--nb-error) 16%, transparent);
+    color: var(--primary-text-color);
+  }
+  .flag.err ha-icon {
     color: var(--nb-error);
   }
 
@@ -652,7 +674,8 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
     height: 32px;
     border-radius: 999px;
     background: var(--nb-accent);
-    color: var(--text-primary-color, #fff);
+    /* Per-operator: white on the dark accents, dark on the light ones. */
+    color: var(--nb-accent-ink, var(--text-primary-color, #fff));
     font-size: 0.75rem;
     font-weight: 600;
     text-decoration: none;
@@ -680,7 +703,6 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
     font-size: 0.65rem;
     color: var(--secondary-text-color);
     text-align: center;
-    opacity: 0.6;
   }
 
   /* ── Empty / unavailable state ──────────────────────────────────── */
@@ -740,6 +762,20 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
      ring doesn't break out of the rounded-pill shape. */
   .btn-primary:focus-visible {
     outline-offset: 3px;
+  }
+
+  /* Read by screen readers, not drawn: the words behind a visual
+     shorthand such as the rack's "+N". */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
   }
 
   /* Forced-colors fallback (Windows High Contrast). */
@@ -816,7 +852,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
       scroll-behavior: auto !important;
     }
   }
-`,Pe=/* @__PURE__ */ new Set([`143`,`183`,`200`]);function Fe(e){let t=e?.e_bike_vehicle_type_ids;if(Array.isArray(t)&&t.length>0){let e=t.filter(e=>typeof e==`string`&&e.length>0);if(e.length>0)return new Set(e)}return Pe}function Ie(e){return typeof e==`string`&&/^https?:\/\//i.test(e)?e:``}function Le(e){return!e||!e.states?[]:Object.keys(e.states).filter(t=>{if(!t.startsWith(`sensor.`))return!1;let n=e.states[t];if(!n)return!1;let r=n.attributes;return!!r&&typeof r.station_id==`string`&&typeof r.system_id==`string`&&r.system_id.startsWith(`nextbike_`)&&typeof r.attribution==`string`&&r.attribution.startsWith(`Data: nextbike`)})}function Re(e){return typeof e==`string`?e.includes(`.`)?{entity:e}:null:!e||typeof e!=`object`||typeof e.entity!=`string`?null:{entity:e.entity}}function J(e){let t={...e||{}};return typeof t.entity==`string`&&t.entity.includes(`.`)&&(!Array.isArray(t.entities)||t.entities.length===0)&&(t.entities=[{entity:t.entity}]),delete t.entity,t.entities=(Array.isArray(t.entities)?t.entities:[]).map(Re).filter(e=>e!==null),t.show_rack=t.show_rack!==!1,t.show_legend=t.show_legend!==!1,t.show_ebikes=t.show_ebikes!==!1,t.show_battery=t.show_battery!==!1,t.show_docks=t.show_docks!==!1,t.show_flags=t.show_flags!==!1,t.show_timestamp=t.show_timestamp!==!1,t.show_rent_button=t.show_rent_button!==!1,t.hide_header=t.hide_header===!0,t.hide_attribution=t.hide_attribution===!0,t.layout!==`tabs`&&(t.layout=`stacked`),t}function ze(e){let t=e?.vehicle_types_available;if(!Array.isArray(t))return null;let n=Fe(e),r=0;for(let e of t){if(!e||typeof e!=`object`)continue;let t=e,i=String(t.vehicle_type_id??``),a=t.count;n.has(i)&&typeof a==`number`&&Number.isFinite(a)&&(r+=a)}return r}function Be(e,t,n){if(!Array.isArray(e))return null;for(let r of e){let e=String(r?.vehicle_type_id??``);if(n.has(e)&&t?.[e])return t[e]}return null}function Ve(e,t,n){let r=[];if(!Array.isArray(e))return r;for(let i of e){let e=String(i?.vehicle_type_id??``),a=typeof i?.count==`number`&&Number.isFinite(i.count)?i.count:0;if(n.has(e)||a<=0)continue;let o=t?.[e]||``;for(let e=0;e<a;e++)r.push(o)}return r}function He(e){return typeof e!=`number`||!Number.isFinite(e)||e>=75?`#2ecc71`:e>=50?`#8bc34a`:e>=25?`#ffa726`:`#e53935`}function Ue(e,t){let n=null;if(typeof e==`number`&&Number.isFinite(e))n=e>1e11?e/1e3:e;else if(typeof e==`string`&&e.length>0){let t=Date.parse(e);Number.isFinite(t)&&(n=t/1e3)}if(n===null)return null;let r=Math.max(0,Math.floor(Date.now()/1e3-n));return r<10?t(`now`):r<60?t(`seconds_ago`).replace(`{n}`,String(r)):r<3600?t(`minutes_ago`).replace(`{n}`,String(Math.floor(r/60))):t(`hours_ago`).replace(`{n}`,String(Math.floor(r/3600)))}function We(e){return String(e).replace(/\s+(Bikes available|Räder verfügbar)$/,``)}function Ge(e,t){let n=e?.station_display_name;if(typeof n==`string`&&n)return n;let r=e?.friendly_name;return We(typeof r==`string`&&r?r:t)}function Y(e,t){return typeof e==`number`?e:t}function Ke(e){return typeof e==`number`&&Number.isFinite(e)?Math.max(0,Math.trunc(e)):0}function X(e,t){return Array.isArray(e)?e:t}function qe(e){let t=parseInt(e,10);return Number.isFinite(t)?Math.max(0,t):0}function Je(e){return Te[e.system_id||``]||`var(--primary-color)`}function Ye(e){return typeof e.system_label==`string`&&e.system_label||(e.system_id||``).replace(/^nextbike_/,``)}function Xe(e){return typeof e.latitude!=`number`||typeof e.longitude!=`number`?null:Ie(`https://www.google.com/maps/search/?api=1&query=${e.latitude},${e.longitude}`)||null}function Ze(e,t){let n=t.vehicle_type_names;return{bikes:e,ebikes:ze(t),capacity:Y(t.capacity,null),batteryPct:Y(t.e_bike_avg_battery_pct,null),batterySamples:Y(t.e_bike_range_samples,0),batteryList:X(t.e_bike_battery_list,null),vehicleTypesAvailable:X(t.vehicle_types_available,[]),vehicleTypeNames:n&&typeof n==`object`?n:{},ebikeIds:Fe(t),reservedCount:Ke(t.bikes_reserved),reservedTypes:X(t.bikes_reserved_types,[]),disabledCount:Ke(t.bikes_disabled),disabledTypes:X(t.bikes_disabled_types,[])}}function Qe(e,t,n){let r=Math.min(e.bikes,t),i=Math.min(e.reservedCount,Math.max(0,t-r)),a=Math.min(e.disabledCount,Math.max(0,t-r-i)),o=typeof e.ebikes==`number`&&Number.isFinite(e.ebikes)&&e.ebikes>0?e.ebikes:0,s=n&&typeof e.batteryPct==`number`&&e.batterySamples>0;return{bikes:r,ebikes:Math.min(r,o),reserved:i,disabled:a,empty:t-r-i-a,overflow:Math.max(0,e.bikes-t),hasEbikes:o>0,showBattery:s,perBike:s&&Array.isArray(e.batteryList)?e.batteryList:[],ebikeFallbackType:Be(e.vehicleTypesAvailable,e.vehicleTypeNames,e.ebikeIds),classicNames:Ve(e.vehicleTypesAvailable,e.vehicleTypeNames,e.ebikeIds)}}const $e=o`
+`,Pe=/* @__PURE__ */ new Set([`143`,`183`,`200`]);function Fe(e){let t=e?.e_bike_vehicle_type_ids;if(Array.isArray(t)&&t.length>0){let e=t.filter(e=>typeof e==`string`&&e.length>0);if(e.length>0)return new Set(e)}return Pe}function Ie(e){return typeof e==`string`&&/^https?:\/\//i.test(e)?e:``}function Le(e){return!e||!e.states?[]:Object.keys(e.states).filter(t=>{if(!t.startsWith(`sensor.`))return!1;let n=e.states[t];if(!n)return!1;let r=n.attributes;return!!r&&typeof r.station_id==`string`&&typeof r.system_id==`string`&&r.system_id.startsWith(`nextbike_`)&&typeof r.attribution==`string`&&r.attribution.startsWith(`Data: nextbike`)})}function Re(e){return typeof e==`string`?e.includes(`.`)?{entity:e}:null:!e||typeof e!=`object`||typeof e.entity!=`string`?null:{entity:e.entity}}function J(e){let t={...e||{}};return typeof t.entity==`string`&&t.entity.includes(`.`)&&(!Array.isArray(t.entities)||t.entities.length===0)&&(t.entities=[{entity:t.entity}]),delete t.entity,t.entities=(Array.isArray(t.entities)?t.entities:[]).map(Re).filter(e=>e!==null),t.show_rack=t.show_rack!==!1,t.show_legend=t.show_legend!==!1,t.show_ebikes=t.show_ebikes!==!1,t.show_battery=t.show_battery!==!1,t.show_docks=t.show_docks!==!1,t.show_flags=t.show_flags!==!1,t.show_timestamp=t.show_timestamp!==!1,t.show_rent_button=t.show_rent_button!==!1,t.hide_header=t.hide_header===!0,t.hide_attribution=t.hide_attribution===!0,t.layout!==`tabs`&&(t.layout=`stacked`),t}function ze(e){let t=e?.vehicle_types_available;if(!Array.isArray(t))return null;let n=Fe(e),r=0;for(let e of t){if(!e||typeof e!=`object`)continue;let t=e,i=String(t.vehicle_type_id??``),a=t.count;n.has(i)&&typeof a==`number`&&Number.isFinite(a)&&(r+=a)}return r}function Be(e,t,n){if(!Array.isArray(e))return null;for(let r of e){let e=String(r?.vehicle_type_id??``);if(n.has(e)&&t?.[e])return t[e]}return null}function Ve(e,t,n){let r=[];if(!Array.isArray(e))return r;for(let i of e){let e=String(i?.vehicle_type_id??``),a=typeof i?.count==`number`&&Number.isFinite(i.count)?i.count:0;if(n.has(e)||a<=0)continue;let o=t?.[e]||``;for(let e=0;e<a;e++)r.push(o)}return r}function He(e){return typeof e!=`number`||!Number.isFinite(e)||e>=75?`#2ecc71`:e>=50?`#8bc34a`:e>=25?`#ffa726`:`#e53935`}function Ue(e,t){let n=null;if(typeof e==`number`&&Number.isFinite(e))n=e>1e11?e/1e3:e;else if(typeof e==`string`&&e.length>0){let t=Date.parse(e);Number.isFinite(t)&&(n=t/1e3)}if(n===null)return null;let r=Math.max(0,Math.floor(Date.now()/1e3-n));return r<10?t(`now`):r<60?t(`seconds_ago`).replace(`{n}`,String(r)):r<3600?t(`minutes_ago`).replace(`{n}`,String(Math.floor(r/60))):t(`hours_ago`).replace(`{n}`,String(Math.floor(r/3600)))}function We(e){return String(e).replace(/\s+(Bikes available|Räder verfügbar)$/,``)}function Ge(e,t){let n=e?.station_display_name;if(typeof n==`string`&&n)return n;let r=e?.friendly_name;return We(typeof r==`string`&&r?r:t)}function Y(e,t){return typeof e==`number`?e:t}function Ke(e){return typeof e==`number`&&Number.isFinite(e)?Math.max(0,Math.trunc(e)):0}function X(e,t){return Array.isArray(e)?e:t}function qe(e){let t=parseInt(e,10);return Number.isFinite(t)?Math.max(0,t):0}function Je(e){return Te[e.system_id||``]||`var(--primary-color)`}function Ye(e,t){let n=e=>{let[t=0,n=0,r=0]=[1,3,5].map(t=>parseInt(e.slice(t,t+2),16)/255).map(e=>e<=.04045?e/12.92:((e+.055)/1.055)**2.4);return .2126*t+.7152*n+.0722*r},[r,i]=[n(e),n(t)].sort((e,t)=>t-e);return((r??0)+.05)/((i??0)+.05)}const Xe=`#141414`;function Ze(e){return/^#[0-9a-f]{6}$/i.test(e)?Ye(`#ffffff`,e)>=4.5?`#ffffff`:Xe:`var(--text-primary-color, #fff)`}function Qe(e){return e===`#141414`?Xe:`var(--nb-ebike-amber)`}function $e(e){return e>=95?`mdi:battery`:e<5?`mdi:battery-outline`:`mdi:battery-${Math.max(10,Math.min(90,Math.round(e/10)*10))}`}function et(e){return typeof e.system_label==`string`&&e.system_label||(e.system_id||``).replace(/^nextbike_/,``)}function tt(e){return typeof e.latitude!=`number`||typeof e.longitude!=`number`?null:Ie(`https://www.google.com/maps/search/?api=1&query=${e.latitude},${e.longitude}`)||null}function nt(e,t){let n=t.vehicle_type_names;return{bikes:e,ebikes:ze(t),capacity:Y(t.capacity,null),batteryPct:Y(t.e_bike_avg_battery_pct,null),batterySamples:Y(t.e_bike_range_samples,0),batteryList:X(t.e_bike_battery_list,null),vehicleTypesAvailable:X(t.vehicle_types_available,[]),vehicleTypeNames:n&&typeof n==`object`?n:{},ebikeIds:Fe(t),reservedCount:Ke(t.bikes_reserved),reservedTypes:X(t.bikes_reserved_types,[]),disabledCount:Ke(t.bikes_disabled),disabledTypes:X(t.bikes_disabled_types,[])}}function rt(e,t,n){let r=Math.min(e.bikes,t),i=Math.min(e.reservedCount,Math.max(0,t-r)),a=Math.min(e.disabledCount,Math.max(0,t-r-i)),o=typeof e.ebikes==`number`&&Number.isFinite(e.ebikes)&&e.ebikes>0?e.ebikes:0,s=n&&typeof e.batteryPct==`number`&&e.batterySamples>0;return{bikes:r,ebikes:Math.min(r,o),reserved:i,disabled:a,empty:t-r-i-a,overflow:Math.max(0,e.bikes-t),hasEbikes:o>0,showBattery:s,perBike:s&&Array.isArray(e.batteryList)?e.batteryList:[],ebikeFallbackType:Be(e.vehicleTypesAvailable,e.vehicleTypeNames,e.ebikeIds),classicNames:Ve(e.vehicleTypesAvailable,e.vehicleTypeNames,e.ebikeIds)}}const it=o`
   :host {
     color-scheme: light dark;
     display: block;
@@ -830,7 +866,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
   ha-form {
     display: block;
   }
-`;function Z(e,t,n,r){var i=arguments.length,a=i<3?t:r===null?r=Object.getOwnPropertyDescriptor(t,n):r,o;if(typeof Reflect==`object`&&typeof Reflect.decorate==`function`)a=Reflect.decorate(e,t,n,r);else for(var s=e.length-1;s>=0;s--)(o=e[s])&&(a=(i<3?o(a):i>3?o(t,n,a):o(t,n))||a);return i>3&&a&&Object.defineProperty(t,n,a),a}function et(e,t,n){let r=new CustomEvent(t,{detail:n,bubbles:!0,composed:!0});e.dispatchEvent(r)}let Q=class extends U{constructor(...e){super(...e),this._config={type:`nextbike-austria-card`,entities:[]},this._computeLabel=e=>{let t=`ui.panel.lovelace.editor.card.generic.${e.name}`,n=this.hass?.localize?.(t);if(n)return n;let r=this._t(e.name);return r===e.name?e.name:r},this._computeHelper=e=>{let t=`${e.name}_helper`,n=this._t(t);return n===t?void 0:n},this._onFormChanged=e=>{let t=e.detail.value,n=t.entities,r=Array.isArray(n)?n.filter(e=>typeof e==`string`&&e.length>0).map(e=>({entity:e})):[],i=J({...t,entities:r});this._config=i,et(this,`config-changed`,{config:i})}}static{this.styles=$e}setConfig(e){this._config=J(e)}_t(e){return Oe(this.hass,e)}_schema(){return[{name:`entities`,required:!0,selector:{entity:{multiple:!0,filter:{domain:`sensor`,integration:`nextbike_austria`}}}},{name:`layout`,selector:{select:{mode:`dropdown`,options:[{value:`stacked`,label:this._t(`layout_stacked`)},{value:`tabs`,label:this._t(`layout_tabs`)}]}}},{type:`expandable`,name:`display`,title:this._t(`section_display`),flatten:!0,schema:[{name:`hide_header`,selector:{boolean:{}}},{name:`show_rack`,selector:{boolean:{}}},{name:`show_legend`,selector:{boolean:{}}},{name:`show_battery`,selector:{boolean:{}}},{name:`show_ebikes`,selector:{boolean:{}}},{name:`show_docks`,selector:{boolean:{}}},{name:`show_flags`,selector:{boolean:{}}},{name:`show_timestamp`,selector:{boolean:{}}},{name:`show_rent_button`,selector:{boolean:{}}},{name:`hide_attribution`,selector:{boolean:{}}}]}]}_formData(){let e=(this._config.entities??[]).map(e=>e.entity).filter(e=>typeof e==`string`&&e.length>0);return{...this._config,entities:e}}render(){if(!this._config)return F;let e=this.hass?this._config.entities.map(e=>e.entity).filter(e=>!this.hass.states[e]):[];return N`
+`;function Z(e,t,n,r){var i=arguments.length,a=i<3?t:r===null?r=Object.getOwnPropertyDescriptor(t,n):r,o;if(typeof Reflect==`object`&&typeof Reflect.decorate==`function`)a=Reflect.decorate(e,t,n,r);else for(var s=e.length-1;s>=0;s--)(o=e[s])&&(a=(i<3?o(a):i>3?o(t,n,a):o(t,n))||a);return i>3&&a&&Object.defineProperty(t,n,a),a}function at(e,t,n){let r=new CustomEvent(t,{detail:n,bubbles:!0,composed:!0});e.dispatchEvent(r)}let Q=class extends U{constructor(...e){super(...e),this._config={type:`nextbike-austria-card`,entities:[]},this._computeLabel=e=>{let t=`ui.panel.lovelace.editor.card.generic.${e.name}`,n=this.hass?.localize?.(t);if(n)return n;let r=this._t(e.name);return r===e.name?e.name:r},this._computeHelper=e=>{let t=`${e.name}_helper`,n=this._t(t);return n===t?void 0:n},this._onFormChanged=e=>{let t=e.detail.value,n=t.entities,r=Array.isArray(n)?n.filter(e=>typeof e==`string`&&e.length>0).map(e=>({entity:e})):[],i=J({...t,entities:r});this._config=i,at(this,`config-changed`,{config:i})}}static{this.styles=it}setConfig(e){this._config=J(e)}_t(e){return Oe(this.hass,e)}_schema(){return[{name:`entities`,required:!0,selector:{entity:{multiple:!0,filter:{domain:`sensor`,integration:`nextbike_austria`}}}},{name:`layout`,selector:{select:{mode:`dropdown`,options:[{value:`stacked`,label:this._t(`layout_stacked`)},{value:`tabs`,label:this._t(`layout_tabs`)}]}}},{type:`expandable`,name:`display`,title:this._t(`section_display`),flatten:!0,schema:[{name:`hide_header`,selector:{boolean:{}}},{name:`show_rack`,selector:{boolean:{}}},{name:`show_legend`,selector:{boolean:{}}},{name:`show_battery`,selector:{boolean:{}}},{name:`show_ebikes`,selector:{boolean:{}}},{name:`show_docks`,selector:{boolean:{}}},{name:`show_flags`,selector:{boolean:{}}},{name:`show_timestamp`,selector:{boolean:{}}},{name:`show_rent_button`,selector:{boolean:{}}},{name:`hide_attribution`,selector:{boolean:{}}}]}]}_formData(){let e=(this._config.entities??[]).map(e=>e.entity).filter(e=>typeof e==`string`&&e.length>0);return{...this._config,entities:e}}render(){if(!this._config)return F;let e=this.hass?this._config.entities.map(e=>e.entity).filter(e=>!this.hass.states[e]):[];return N`
       <div class="editor">
         <ha-form
           .hass=${this.hass}
@@ -856,7 +892,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
         </div>
       </ha-card>
     `}_renderEmpty(){return N`<div class="empty-state" role="status">${this._t(`no_entities_available`)}</div>`}_renderTabs(e){return N`
-      <div class="tabs" role="tablist">
+      <div class="tabs" role="tablist" aria-label=${this._t(`stations`)}>
         ${e.map((t,n)=>{let r=this.hass?.states[t.entity]?.attributes||{},i=typeof r.friendly_name==`string`&&r.friendly_name.length>0,a=Ge(r,t.entity),o=n===this._activeTab;return N`
             <button
               type="button"
@@ -873,23 +909,23 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
             </button>
           `})}
       </div>
-    `}_setActiveTab(e){Number.isFinite(e)&&e!==this._activeTab&&(this._activeTab=e)}_onTabKeydown(e,t,n){let r=t;switch(e.key){case`ArrowRight`:r=(t+1)%n;break;case`ArrowLeft`:r=(t-1+n)%n;break;case`Home`:r=0;break;case`End`:r=n-1;break;default:return}e.preventDefault(),this._setActiveTab(r),this.updateComplete.then(()=>{(this.shadowRoot?.querySelectorAll(`.tabs [role="tab"]`))?.[r]?.focus()})}_renderStation(e,t){let n=this.hass?.states[e.entity];if(!n)return N`<div class="empty-state" role="status">${this._t(`no_entities_unavailable`)}</div>`;let r=n.attributes||{},i=Je(r),a=Ze(qe(n.state),r),o=Ge(r,e.entity),s=typeof t==`number`;return N`
+    `}_setActiveTab(e){Number.isFinite(e)&&e!==this._activeTab&&(this._activeTab=e)}_onTabKeydown(e,t,n){let r=t;switch(e.key){case`ArrowRight`:r=(t+1)%n;break;case`ArrowLeft`:r=(t-1+n)%n;break;case`Home`:r=0;break;case`End`:r=n-1;break;default:return}e.preventDefault(),this._setActiveTab(r),this.updateComplete.then(()=>{(this.shadowRoot?.querySelectorAll(`.tabs [role="tab"]`))?.[r]?.focus()})}_renderStation(e,t){let n=this.hass?.states[e.entity];if(!n)return N`<div class="empty-state" role="status">${this._t(`no_entities_unavailable`)}</div>`;let r=n.attributes||{},i=Je(r),a=Ze(i),o=nt(qe(n.state),r),s=Ge(r,e.entity),c=typeof t==`number`;return N`
       <section
         class="station"
-        aria-label=${o}
-        role=${s?`tabpanel`:F}
-        id=${s?`nbpanel-${t}`:F}
-        aria-labelledby=${s?`nbtab-${t}`:F}
-        tabindex=${s?`-1`:F}
-        style=${`--nb-accent:${i};`}
+        aria-label=${s}
+        role=${c?`tabpanel`:F}
+        id=${c?`nbpanel-${t}`:F}
+        aria-labelledby=${c?`nbtab-${t}`:F}
+        tabindex=${c?`-1`:F}
+        style=${`--nb-accent:${i};--nb-accent-ink:${a};--nb-stripe-edge:${Qe(a)};`}
       >
-        ${this._config.hide_header?F:this._renderHeader(r,o)}
-        ${this._renderHero(a,Y(r.num_docks_available,null))}
-        ${this._config.show_rack&&a.capacity!==null&&a.capacity>0?this._renderRack(a,a.capacity):F}
+        ${this._config.hide_header?F:this._renderHeader(r,s)}
+        ${this._renderHero(o,Y(r.num_docks_available,null))}
+        ${this._config.show_rack&&o.capacity!==null&&o.capacity>0?this._renderRack(o,o.capacity):F}
         ${this._config.show_flags?this._renderFlags(r):F}
         ${this._renderFooter(r,Ie(r.rental_uri))}
       </section>
-    `}_renderHeader(e,t){let n=typeof e.friendly_name==`string`&&e.friendly_name.length>0,r=Xe(e);return N`<header class="header">
+    `}_renderHeader(e,t){let n=typeof e.friendly_name==`string`&&e.friendly_name.length>0,r=tt(e);return N`<header class="header">
       <div class="icon-tile" aria-hidden="true">
         <ha-icon icon="mdi:bicycle"></ha-icon>
       </div>
@@ -897,7 +933,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
         <h2 class="title">
           ${n?N`<span lang="de">${t}</span>`:t}
         </h2>
-        <p class="subtitle">${Ye(e)}</p>
+        <p class="subtitle">${et(e)}</p>
       </div>
       ${r?N`
             <a
@@ -911,7 +947,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
               <ha-icon icon="mdi:map-marker" aria-hidden="true"></ha-icon>
             </a>
           `:F}
-    </header>`}_renderHero(e,t){let n=e.bikes===1?this._t(`bike`):this._t(`bikes`),r=this._renderPills(e.ebikes,t,e.capacity);return N`
+    </header>`}_renderHero(e,t){let n=e.bikes===1?this._t(`bike`):this._t(`bikes`),r=this._config.show_ebikes&&this._config.show_battery&&typeof e.batteryPct==`number`&&e.batterySamples>0?e.batteryPct:null,i=this._renderPills(e.ebikes,r,t,e.capacity);return N`
       <div class="hero">
         <div class="metric">
           <div class="metric-value">
@@ -920,26 +956,32 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
           </div>
           <div class="metric-label">${n}</div>
         </div>
-        ${r.length?N`<div class="chip-row">${r}</div>`:F}
+        ${i.length?N`<div class="chip-row">${i}</div>`:F}
       </div>
-    `}_renderPills(e,t,n){let r=[];if(this._config.show_ebikes&&typeof e==`number`&&Number.isFinite(e)&&e>0&&r.push(N`
+    `}_renderPills(e,t,n,r){let i=[];if(this._config.show_ebikes&&typeof e==`number`&&Number.isFinite(e)&&e>0&&i.push(N`
         <span class="chip ebike">
-          <ha-icon icon="mdi:lightning-bolt"></ha-icon>${e}
+          <ha-icon icon="mdi:lightning-bolt" aria-hidden="true"></ha-icon>${e}
           ${this._t(`ebikes`)}
         </span>
-      `),this._config.show_docks&&t!==null&&n!==null){let e=t===1?this._t(`dock`):this._t(`docks`);r.push(N`
+      `),t!==null&&i.push(N`
         <span class="chip muted">
-          <ha-icon icon="mdi:parking"></ha-icon>${t} ${e}
+          <ha-icon icon=${$e(t)} aria-hidden="true"></ha-icon>${Math.round(t)}%
+          ${this._t(`battery_avg`)}
         </span>
-      `)}return r}_renderRack(e,t){let n=Qe(e,t,!!this._config.show_battery),r=this._t(`rack_summary`).replace(`{available}`,String(n.bikes)).replace(`{capacity}`,String(t));return N`
+      `),this._config.show_docks&&n!==null&&r!==null){let e=n===1?this._t(`dock`):this._t(`docks`);i.push(N`
+        <span class="chip muted">
+          <ha-icon icon="mdi:parking" aria-hidden="true"></ha-icon>${n} ${e}
+        </span>
+      `)}return i}_renderRack(e,t){let n=rt(e,t,!!this._config.show_battery),r=this._t(`rack_summary`).replace(`{available}`,String(n.bikes)).replace(`{capacity}`,String(t));return N`
       <div class="rack-block">
         <div class="rack" role="group" aria-label=${r}>
           ${this._bikeSlots(n)}
           ${this._dockSlots(n,e)}
-          ${n.overflow>0?N`<span
-                class="rack-note"
-                aria-label=${`+${n.overflow}`}
-                >+${n.overflow}</span
+          ${n.overflow>0?N`<span class="rack-note"
+                ><span aria-hidden="true">+${n.overflow}</span
+                ><span class="visually-hidden"
+                  >${this._t(`overflow_more`).replace(`{n}`,String(n.overflow))}</span
+                ></span
               >`:F}
         </div>
         ${this._config.show_legend?this._renderLegend({hasEbikes:n.hasEbikes,hasOverflow:n.overflow>0,hasEmptyVisible:n.empty>0,battery:n.showBattery&&typeof e.batteryPct==`number`?{pct:e.batteryPct,color:He(e.batteryPct)}:null,hasReservedVisible:n.reserved>0,hasDisabledVisible:n.disabled>0}):F}
@@ -1027,19 +1069,19 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
         </div>
       `),N`<dl class="legend">${s}</dl>`}_renderFlags(e){let t=[];return e.is_installed===!1&&t.push(N`
         <span class="flag err">
-          <ha-icon icon="mdi:alert-circle"></ha-icon>${this._t(`offline`)}
+          <ha-icon icon="mdi:alert-circle" aria-hidden="true"></ha-icon>${this._t(`offline`)}
         </span>
       `),e.is_renting===!1&&t.push(N`
         <span class="flag warn">
-          <ha-icon icon="mdi:cancel"></ha-icon>${this._t(`no_rental`)}
+          <ha-icon icon="mdi:cancel" aria-hidden="true"></ha-icon>${this._t(`no_rental`)}
         </span>
       `),e.is_returning===!1&&t.push(N`
         <span class="flag warn">
-          <ha-icon icon="mdi:cancel"></ha-icon>${this._t(`no_return`)}
+          <ha-icon icon="mdi:cancel" aria-hidden="true"></ha-icon>${this._t(`no_return`)}
         </span>
       `),e.is_virtual_station===!0&&t.push(N`
         <span class="flag">
-          <ha-icon icon="mdi:map-marker-radius"></ha-icon>${this._t(`virtual_station`)}
+          <ha-icon icon="mdi:map-marker-radius" aria-hidden="true"></ha-icon>${this._t(`virtual_station`)}
         </span>
       `),t.length?N`<div class="flags">${t}</div>`:F}_renderFooter(e,t){let n=!!this._config.show_rent_button&&!!t,r=this._config.show_timestamp?Ue(e.last_reported,e=>this._t(e)):null;return!n&&!r?F:N`
       <div class="actions">
@@ -1061,4 +1103,4 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
               >${this._t(`last_updated`)} ${r}</span
             >`:F}
       </div>
-    `}};Z([W({attribute:!1})],$.prototype,`hass`,void 0),Z([G()],$.prototype,`_config`,void 0),Z([G()],$.prototype,`_activeTab`,void 0),Z([G()],$.prototype,`_versionMismatch`,void 0),Z([G()],$.prototype,`_tickKey`,void 0),$=Z([Se(`nextbike-austria-card`)],$);const tt=window;tt.customCards??=[],tt.customCards.push({type:`nextbike-austria-card`,name:`Nextbike Austria Card`,description:`Station dashboard for nextbike-operated bike-sharing in Austria — bikes, docks, e-bikes, rental deep-link.`,preview:!0,documentationURL:`https://github.com/rolandzeiner/nextbike-austria`,getEntitySuggestion:(e,t)=>!t.startsWith(`sensor.`)||e?.entities?.[t]?.platform!==`nextbike_austria`?null:{config:{type:`custom:nextbike-austria-card`,entities:[{entity:t}]}}});
+    `}};Z([W({attribute:!1})],$.prototype,`hass`,void 0),Z([G()],$.prototype,`_config`,void 0),Z([G()],$.prototype,`_activeTab`,void 0),Z([G()],$.prototype,`_versionMismatch`,void 0),Z([G()],$.prototype,`_tickKey`,void 0),$=Z([Se(`nextbike-austria-card`)],$);const ot=window;ot.customCards??=[],ot.customCards.push({type:`nextbike-austria-card`,name:`Nextbike Austria Card`,description:`Station dashboard for nextbike-operated bike-sharing in Austria — bikes, docks, e-bikes, rental deep-link.`,preview:!0,documentationURL:`https://github.com/rolandzeiner/nextbike-austria`,getEntitySuggestion:(e,t)=>!t.startsWith(`sensor.`)||e?.entities?.[t]?.platform!==`nextbike_austria`?null:{config:{type:`custom:nextbike-austria-card`,entities:[{entity:t}]}}});

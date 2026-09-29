@@ -261,6 +261,46 @@ export function systemAccent(attrs: HassEntityAttributes): string {
   return SYSTEM_ACCENT[attrs.system_id || ""] || "var(--primary-color)";
 }
 
+/** WCAG 2.2 contrast ratio between two `#rrggbb` colours. */
+export function contrastRatio(a: string, b: string): number {
+  const luminance = (hex: string): number => {
+    const channels = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+    const [r = 0, g = 0, bl = 0] = channels.map((c) =>
+      c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4,
+    );
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return ((hi ?? 0) + 0.05) / ((lo ?? 0) + 0.05);
+}
+
+/** Dark text for an operator colour too light for white text. */
+export const ACCENT_INK_DARK = "#141414";
+
+/** Text colour for labels on the operator's accent (the rent button).
+ *  White where it reaches 4.5:1 (WCAG 1.4.3), so the dark accents keep
+ *  their look; dark text on the light ones (VVT green, Klagenfurt
+ *  yellow). A theme colour can't be measured here, so a non-hex accent
+ *  gets the theme's own text-on-primary colour. */
+export function accentInk(accent: string): string {
+  if (!/^#[0-9a-f]{6}$/i.test(accent)) return "var(--text-primary-color, #fff)";
+  return contrastRatio("#ffffff", accent) >= 4.5 ? "#ffffff" : ACCENT_INK_DARK;
+}
+
+/** The band between an e-bike slot's accent and its amber stripe. On a
+ *  light accent the amber would blend in (WCAG 1.4.11), so a thin dark
+ *  band separates them; elsewhere the band is amber and invisible. */
+export function stripeEdge(ink: string): string {
+  return ink === ACCENT_INK_DARK ? ACCENT_INK_DARK : "var(--nb-ebike-amber)";
+}
+
+/** An MDI battery icon for a charge percentage, in steps of ten. */
+export function batteryIcon(pct: number): string {
+  if (pct >= 95) return "mdi:battery";
+  if (pct < 5) return "mdi:battery-outline";
+  return `mdi:battery-${Math.max(10, Math.min(90, Math.round(pct / 10) * 10))}`;
+}
+
 /** The header subtitle. `system_label` ships from the Python sensor
  *  (single source of truth in const.py::AUSTRIAN_SYSTEMS); older sensors
  *  only carry the `nextbike_xx` slug. */

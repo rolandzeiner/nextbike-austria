@@ -1,9 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { HassEntityAttributes, HomeAssistant, RackInputs } from "./types";
+import { SYSTEM_ACCENT } from "./const";
 import {
+  ACCENT_INK_DARK,
+  accentInk,
   arrayOr,
   batteryColor,
+  batteryIcon,
+  contrastRatio,
   cleanStationName,
   countEbikesAvailable,
   countOf,
@@ -20,6 +25,7 @@ import {
   resolveDisplayName,
   safeHttpsUri,
   stationMapUrl,
+  stripeEdge,
   systemAccent,
   systemLabel,
 } from "./utils";
@@ -497,5 +503,51 @@ describe("rackLayout — filling the docks", () => {
     );
     expect(layout.ebikeFallbackType).toBe("E-Bike");
     expect(layout.classicNames).toEqual(["Classic", "Classic"]);
+  });
+});
+
+describe("operator colours meet WCAG contrast", () => {
+  const AMBER = "#ffd740";
+  const accents = Object.entries(SYSTEM_ACCENT);
+
+  it("measures contrast the WCAG way", () => {
+    expect(contrastRatio("#ffffff", "#000000")).toBeCloseTo(21, 5);
+    expect(contrastRatio("#009ac7", "#ffffff")).toBeCloseTo(3.26, 2);
+  });
+
+  it.each(accents)("rent-button text on %s reaches 4.5:1", (_system, accent) => {
+    expect(contrastRatio(accentInk(accent), accent)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("keeps white text on the dark accents", () => {
+    expect(accentInk(SYSTEM_ACCENT.nextbike_wr!)).toBe("#ffffff");
+    expect(accentInk(SYSTEM_ACCENT.nextbike_ka!)).toBe(ACCENT_INK_DARK);
+    expect(accentInk(SYSTEM_ACCENT.nextbike_vt!)).toBe(ACCENT_INK_DARK);
+    expect(accentInk("var(--primary-color)")).toBe("var(--text-primary-color, #fff)");
+  });
+
+  it.each(accents)("the e-bike stripe on %s stands out at 3:1", (_system, accent) => {
+    const edge = stripeEdge(accentInk(accent));
+    if (edge === ACCENT_INK_DARK) {
+      // A dark band sits between the accent and the amber.
+      expect(contrastRatio(edge, accent)).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(edge, AMBER)).toBeGreaterThanOrEqual(3);
+    } else {
+      // No band: the amber meets the accent directly.
+      expect(edge).toBe("var(--nb-ebike-amber)");
+      expect(contrastRatio(AMBER, accent)).toBeGreaterThanOrEqual(3);
+    }
+  });
+});
+
+describe("batteryIcon — average-charge chip", () => {
+  it.each([
+    [100, "mdi:battery"],
+    [96, "mdi:battery"],
+    [64, "mdi:battery-60"],
+    [12, "mdi:battery-10"],
+    [3, "mdi:battery-outline"],
+  ])("shows %d%% as %s", (pct, icon) => {
+    expect(batteryIcon(pct)).toBe(icon);
   });
 });

@@ -454,6 +454,46 @@ describe("tab layout", () => {
 
 // --- rendered markup --------------------------------------------------------------
 
+describe("accessibility", () => {
+  it("names the tab strip", async () => {
+    const el = await mount(
+      { entities: ["sensor.nb_a", "sensor.nb_b"], layout: "tabs" },
+      hass({ "sensor.nb_a": ["3", FULL], "sensor.nb_b": ["12", OVERFLOW] }),
+    );
+    expect(root(el).querySelector('[role="tablist"]')?.getAttribute("aria-label")).toBe(
+      "Stations",
+    );
+  });
+
+  it("spells out the rack's +N for screen readers", async () => {
+    const el = await mount({ entities: ["sensor.nb_b"] }, hass({ "sensor.nb_b": ["12", OVERFLOW] }));
+    const note = root(el).querySelector(".rack-note")!;
+    expect(note.querySelector('[aria-hidden="true"]')?.textContent).toBe("+4");
+    expect(note.querySelector(".visually-hidden")?.textContent).toBe("4 more bikes than docks");
+  });
+
+  it("shows the average charge as text when the battery display is on", async () => {
+    const chips = (el: Card): string =>
+      (root(el).querySelector(".chip-row")?.textContent ?? "").replace(/\s+/g, " ");
+    const on = await mount({ entities: ["sensor.nb_a"] }, hass({ "sensor.nb_a": ["3", FULL] }));
+    expect(chips(on)).toContain("55% avg. charge");
+
+    document.body.replaceChildren();
+    const off = await mount(
+      { entities: ["sensor.nb_a"], show_battery: false },
+      hass({ "sensor.nb_a": ["3", FULL] }),
+    );
+    expect(chips(off)).not.toContain("avg. charge");
+  });
+
+  it("gives each station the text colour its accent needs", async () => {
+    const el = await mount({ entities: ["sensor.nb_a"] }, hass({ "sensor.nb_a": ["3", FULL] }));
+    const style = root(el).querySelector("section.station")?.getAttribute("style") ?? "";
+    expect(style).toContain("--nb-accent-ink:#ffffff");
+    expect(style).toContain("--nb-stripe-edge:var(--nb-ebike-amber)");
+  });
+});
+
 describe("rack colours", () => {
   it("come from the stylesheet, never from inline styles", async () => {
     // One source for every slot and legend colour. An inline background

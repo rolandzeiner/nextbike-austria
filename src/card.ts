@@ -25,6 +25,8 @@ import type {
   RackLayout,
 } from "./types";
 import {
+  accentInk,
+  batteryIcon,
   findNextbikeEntities,
   normaliseConfig,
   batteryColor,
@@ -36,6 +38,7 @@ import {
   rackInputs,
   rackLayout,
   stationMapUrl,
+  stripeEdge,
   systemAccent,
   systemLabel,
 } from "./utils";
@@ -276,7 +279,7 @@ export class NextbikeAustriaCard extends LitElement {
 
   private _renderTabs(stations: NextbikeStationEntry[]): TemplateResult {
     return html`
-      <div class="tabs" role="tablist">
+      <div class="tabs" role="tablist" aria-label=${this._t("stations")}>
         ${stations.map((s, i) => {
           const a = this.hass?.states[s.entity]?.attributes || {};
           const hasFriendlyName = typeof a.friendly_name === "string" && a.friendly_name.length > 0;
@@ -357,6 +360,7 @@ export class NextbikeAustriaCard extends LitElement {
     }
     const a = state.attributes || ({} as HassEntityAttributes);
     const accent = systemAccent(a);
+    const ink = accentInk(accent);
     const rack = rackInputs(parseBikeCount(state.state), a);
     const title = resolveDisplayName(a, stopCfg.entity);
 
@@ -372,7 +376,7 @@ export class NextbikeAustriaCard extends LitElement {
         id=${inTabs ? `nbpanel-${tabIndex}` : nothing}
         aria-labelledby=${inTabs ? `nbtab-${tabIndex}` : nothing}
         tabindex=${inTabs ? "-1" : nothing}
-        style=${`--nb-accent:${accent};`}
+        style=${`--nb-accent:${accent};--nb-accent-ink:${ink};--nb-stripe-edge:${stripeEdge(ink)};`}
       >
         ${this._config.hide_header ? nothing : this._renderHeader(a, title)}
         ${this._renderHero(rack, numberOr(a.num_docks_available, null))}
@@ -419,7 +423,15 @@ export class NextbikeAustriaCard extends LitElement {
 
   private _renderHero(rack: RackInputs, docks: number | null): TemplateResult {
     const bikeWord = rack.bikes === 1 ? this._t("bike") : this._t("bikes");
-    const chips = this._renderPills(rack.ebikes, docks, rack.capacity);
+    // Shown beside the e-bike count, so it follows that chip's option too.
+    const avgCharge =
+      this._config.show_ebikes &&
+      this._config.show_battery &&
+      typeof rack.batteryPct === "number" &&
+      rack.batterySamples > 0
+        ? rack.batteryPct
+        : null;
+    const chips = this._renderPills(rack.ebikes, avgCharge, docks, rack.capacity);
     return html`
       <div class="hero">
         <div class="metric">
@@ -440,6 +452,7 @@ export class NextbikeAustriaCard extends LitElement {
 
   private _renderPills(
     ebikes: number | null,
+    avgCharge: number | null,
     docks: number | null,
     capacity: number | null,
   ): TemplateResult[] {
@@ -455,8 +468,19 @@ export class NextbikeAustriaCard extends LitElement {
       // data is known.
       out.push(html`
         <span class="chip ebike">
-          <ha-icon icon="mdi:lightning-bolt"></ha-icon>${ebikes}
+          <ha-icon icon="mdi:lightning-bolt" aria-hidden="true"></ha-icon>${ebikes}
           ${this._t("ebikes")}
+        </span>
+      `);
+    }
+    // The station's average charge as text. Each slot's own charge is
+    // only a fill height plus a hover tooltip, which keyboard and touch
+    // users can't open; this gives them the number.
+    if (avgCharge !== null) {
+      out.push(html`
+        <span class="chip muted">
+          <ha-icon icon=${batteryIcon(avgCharge)} aria-hidden="true"></ha-icon>${Math.round(avgCharge)}%
+          ${this._t("battery_avg")}
         </span>
       `);
     }
@@ -468,7 +492,7 @@ export class NextbikeAustriaCard extends LitElement {
       const dockWord = docks === 1 ? this._t("dock") : this._t("docks");
       out.push(html`
         <span class="chip muted">
-          <ha-icon icon="mdi:parking"></ha-icon>${docks} ${dockWord}
+          <ha-icon icon="mdi:parking" aria-hidden="true"></ha-icon>${docks} ${dockWord}
         </span>
       `);
     }
@@ -486,10 +510,11 @@ export class NextbikeAustriaCard extends LitElement {
           ${this._bikeSlots(layout)}
           ${this._dockSlots(layout, rack)}
           ${layout.overflow > 0
-            ? html`<span
-                class="rack-note"
-                aria-label=${`+${layout.overflow}`}
-                >+${layout.overflow}</span
+            ? html`<span class="rack-note"
+                ><span aria-hidden="true">+${layout.overflow}</span
+                ><span class="visually-hidden"
+                  >${this._t("overflow_more").replace("{n}", String(layout.overflow))}</span
+                ></span
               >`
             : nothing}
         </div>
@@ -689,28 +714,28 @@ export class NextbikeAustriaCard extends LitElement {
     if (a.is_installed === false) {
       flags.push(html`
         <span class="flag err">
-          <ha-icon icon="mdi:alert-circle"></ha-icon>${this._t("offline")}
+          <ha-icon icon="mdi:alert-circle" aria-hidden="true"></ha-icon>${this._t("offline")}
         </span>
       `);
     }
     if (a.is_renting === false) {
       flags.push(html`
         <span class="flag warn">
-          <ha-icon icon="mdi:cancel"></ha-icon>${this._t("no_rental")}
+          <ha-icon icon="mdi:cancel" aria-hidden="true"></ha-icon>${this._t("no_rental")}
         </span>
       `);
     }
     if (a.is_returning === false) {
       flags.push(html`
         <span class="flag warn">
-          <ha-icon icon="mdi:cancel"></ha-icon>${this._t("no_return")}
+          <ha-icon icon="mdi:cancel" aria-hidden="true"></ha-icon>${this._t("no_return")}
         </span>
       `);
     }
     if (a.is_virtual_station === true) {
       flags.push(html`
         <span class="flag">
-          <ha-icon icon="mdi:map-marker-radius"></ha-icon>${this._t("virtual_station")}
+          <ha-icon icon="mdi:map-marker-radius" aria-hidden="true"></ha-icon>${this._t("virtual_station")}
         </span>
       `);
     }

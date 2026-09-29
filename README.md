@@ -110,7 +110,7 @@ Point `entities` at `Bikes available` sensors: that's the sensor carrying the st
 | `show_rack` | boolean | `true` | The bike rack, one slot per dock. Only for stations that publish a capacity. |
 | `show_legend` | boolean | `true` | The key under the rack. |
 | `show_ebikes` | boolean | `true` | The e-bike count chip. |
-| `show_battery` | boolean | `true` | Fills each e-bike slot to its charge. Needs **Track e-bike battery state** on the station's entry. |
+| `show_battery` | boolean | `true` | Fills each e-bike slot to its charge and shows the station's average charge beside the e-bike count. Needs **Track e-bike battery state** on the station's entry. |
 | `show_docks` | boolean | `true` | The free-docks chip. Stays hidden for stations without a published capacity. |
 | `show_flags` | boolean | `true` | Warnings when the station is offline, not renting or not taking returns, and a note on virtual stations. |
 | `show_timestamp` | boolean | `true` | How long ago the station last reported. |

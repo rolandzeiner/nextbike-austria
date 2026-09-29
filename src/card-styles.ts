@@ -39,6 +39,11 @@ export const cardStyles: CSSResultGroup = css`
        samples; each rack slot's own colour comes from batteryColor(). */
     --nb-ebike-amber: #ffd740;
     --nb-battery-sample: #2ecc71;
+    /* How much of a battery fill is its charge colour; the rest is the
+       theme's text colour. That darkens the fill on a light card and
+       lightens it on a dark one, which keeps it 3:1 from the pale empty
+       part in both (WCAG 1.4.11; worst case amber on white, 3.2:1). */
+    --nb-battery-depth: 70%;
 
     /* Semantic state tokens layered over HA's official semantic palette
        so theme authors can recolour the whole portfolio in one place;
@@ -110,7 +115,8 @@ export const cardStyles: CSSResultGroup = css`
     justify-content: space-between;
     gap: 8px;
     background: var(--nb-warning);
-    color: #fff;
+    /* Black, not white: white on warning orange is 2:1 (WCAG 1.4.3). */
+    color: #000;
     padding: 10px 14px;
     margin: calc(var(--nb-pad-y) * -1) calc(var(--nb-pad-x) * -1) 0;
     border-radius: 0;
@@ -119,7 +125,7 @@ export const cardStyles: CSSResultGroup = css`
   }
   .banner button {
     background: #fff;
-    color: var(--nb-warning);
+    color: #000;
     border: none;
     border-radius: 999px;
     padding: 6px 14px;
@@ -175,7 +181,7 @@ export const cardStyles: CSSResultGroup = css`
     /* Three independent active cues: colour, weight, underline.
        Survives any single-channel deficit (low vision, protanopia,
        grayscale). */
-    color: var(--primary-color);
+    color: var(--primary-text-color);
     font-weight: var(--ha-font-weight-bold, 700);
     box-shadow: inset 0 -2px 0 var(--primary-color);
   }
@@ -230,9 +236,9 @@ export const cardStyles: CSSResultGroup = css`
     font-weight: 600;
     line-height: 1.25;
     color: var(--primary-text-color);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    /* Wraps rather than truncating: a cut-off station name at 320 px or
+       under text-spacing overrides loses content (WCAG 1.4.10 / 1.4.12). */
+    overflow-wrap: anywhere;
   }
   .subtitle {
     /* <p> override. */
@@ -241,9 +247,7 @@ export const cardStyles: CSSResultGroup = css`
     color: var(--secondary-text-color);
     font-weight: 400;
     letter-spacing: 0.1px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
   .icon-action {
     /* Map link rendered as an HA-style icon button — circular, 40×40
@@ -379,7 +383,9 @@ export const cardStyles: CSSResultGroup = css`
       135deg,
       var(--nb-accent) 0%,
       var(--nb-accent) 55%,
-      var(--nb-ebike-amber) 55%,
+      var(--nb-stripe-edge, var(--nb-ebike-amber)) 55%,
+      var(--nb-stripe-edge, var(--nb-ebike-amber)) 62%,
+      var(--nb-ebike-amber) 62%,
       var(--nb-ebike-amber) 100%
     );
   }
@@ -390,7 +396,12 @@ export const cardStyles: CSSResultGroup = css`
   .slot.filled.ebike.battery {
     background: linear-gradient(
       to top,
-      var(--bat-color, var(--nb-battery-sample)) var(--bat-pct, 0%),
+      color-mix(
+          in srgb,
+          var(--bat-color, var(--nb-battery-sample)) var(--nb-battery-depth),
+          var(--primary-text-color)
+        )
+        var(--bat-pct, 0%),
       color-mix(in srgb, var(--bat-color, var(--nb-battery-sample)) 15%, transparent)
         var(--bat-pct, 0%)
     );
@@ -494,14 +505,17 @@ export const cardStyles: CSSResultGroup = css`
       135deg,
       var(--nb-accent) 0%,
       var(--nb-accent) 55%,
-      var(--nb-ebike-amber) 55%,
+      var(--nb-stripe-edge, var(--nb-ebike-amber)) 55%,
+      var(--nb-stripe-edge, var(--nb-ebike-amber)) 62%,
+      var(--nb-ebike-amber) 62%,
       var(--nb-ebike-amber) 100%
     );
   }
   .legend-swatch.ebike.battery {
     background: linear-gradient(
       to top,
-      var(--nb-battery-sample) 70%,
+      color-mix(in srgb, var(--nb-battery-sample) var(--nb-battery-depth), var(--primary-text-color))
+        70%,
       color-mix(in srgb, var(--nb-battery-sample) 15%, transparent) 70%
     );
     outline: 1px solid color-mix(in srgb, var(--nb-battery-sample) 60%, transparent);
@@ -566,12 +580,20 @@ export const cardStyles: CSSResultGroup = css`
   .flag ha-icon {
     --mdc-icon-size: 14px;
   }
+  /* State colour on the tint and icon; the words stay in the text
+     colour, since orange and red text on their tints miss 4.5:1. */
   .flag.warn {
     background: color-mix(in srgb, var(--nb-warning) 16%, transparent);
+    color: var(--primary-text-color);
+  }
+  .flag.warn ha-icon {
     color: var(--nb-warning);
   }
   .flag.err {
     background: color-mix(in srgb, var(--nb-error) 16%, transparent);
+    color: var(--primary-text-color);
+  }
+  .flag.err ha-icon {
     color: var(--nb-error);
   }
 
@@ -597,7 +619,8 @@ export const cardStyles: CSSResultGroup = css`
     height: 32px;
     border-radius: 999px;
     background: var(--nb-accent);
-    color: var(--text-primary-color, #fff);
+    /* Per-operator: white on the dark accents, dark on the light ones. */
+    color: var(--nb-accent-ink, var(--text-primary-color, #fff));
     font-size: 0.75rem;
     font-weight: 600;
     text-decoration: none;
@@ -625,7 +648,6 @@ export const cardStyles: CSSResultGroup = css`
     font-size: 0.65rem;
     color: var(--secondary-text-color);
     text-align: center;
-    opacity: 0.6;
   }
 
   /* ── Empty / unavailable state ──────────────────────────────────── */
@@ -685,6 +707,20 @@ export const cardStyles: CSSResultGroup = css`
      ring doesn't break out of the rounded-pill shape. */
   .btn-primary:focus-visible {
     outline-offset: 3px;
+  }
+
+  /* Read by screen readers, not drawn: the words behind a visual
+     shorthand such as the rack's "+N". */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
   }
 
   /* Forced-colors fallback (Windows High Contrast). */
