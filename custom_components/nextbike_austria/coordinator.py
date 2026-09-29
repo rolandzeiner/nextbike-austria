@@ -600,7 +600,11 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             hass,
             _LOGGER,
             config_entry=entry,
-            name=f"{DOMAIN}_{self._station_id}",
+            # Just the domain, as in every sibling: HA puts this name into
+            # each coordinator log line ("Error fetching … data"), and a
+            # station id there would tell anyone reading a pasted log which
+            # station the user tracks.
+            name=DOMAIN,
             update_interval=normal_interval,
             # Absorb request storms (options-flow save, manual reload,
             # dashboard edit-mode flip) so the GBFS feed isn't pulled
@@ -712,13 +716,14 @@ class NextbikeStationCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 system_id=self._system_id,
             )
             self._note_failure()
+            # No station id here: HA logs this message, and logs get pasted
+            # into public issues. The id resolves to the station, and so to
+            # roughly where the user lives or works. The Repairs issue above
+            # keeps it, since that one only shows inside the user's own HA.
             raise UpdateFailed(
                 translation_domain=DOMAIN,
                 translation_key="station_gone",
-                translation_placeholders={
-                    "station_id": self._station_id,
-                    "system_id": self._system_id,
-                },
+                translation_placeholders={"system_id": self._system_id},
             )
 
         self._clear_degraded_issue("station_gone")

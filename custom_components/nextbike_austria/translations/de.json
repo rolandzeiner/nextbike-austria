@@ -71,7 +71,7 @@
       "message": "Nextbike-GBFS-API liefert unerwartete Antwort (Status {status}): {error}"
     },
     "station_gone": {
-      "message": "Station {station_id} ist nicht mehr im GBFS-Feed von {system_id} enthalten."
+      "message": "Die gewählte Station ist nicht mehr im GBFS-Feed von {system_id} enthalten."
     }
   },
   "issues": {

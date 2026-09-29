@@ -71,7 +71,7 @@
       "message": "Nextbike GBFS API returned an unexpected response (status {status}): {error}"
     },
     "station_gone": {
-      "message": "Station {station_id} is no longer published in the {system_id} GBFS feed."
+      "message": "The configured station is no longer published in the {system_id} GBFS feed."
     }
   },
   "issues": {

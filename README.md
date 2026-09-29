@@ -242,6 +242,7 @@ card:
 - **Sensor state stuck at `unavailable`.** The station may have been retired upstream. Check for a Repairs notification (`station_gone`) — if present, add a different station and delete this entry; the notification disappears with the next restart. Without a Repairs notification, the feed was probably down: polling backs off to once an hour during an outage, so recovery can take up to an hour. Reload the entry to fetch right away.
 - **All three sensors read 0 for a Wien or Innsbruck station.** The station is real, it just happens to be empty (or full). Watch for a couple of minutes; city-center stations turn over constantly.
 - **Collecting diagnostics for a bug report.** Settings → Devices & Services → Nextbike Austria → ⋮ → Download diagnostics. Coordinates are redacted automatically; the station name and id stay in so the report makes sense.
+- **Posting a log in an issue.** The integration's own log lines name only the system (the city), never your station. Home Assistant itself can put the station's name into a setup error ("Error setting up entry Hoher Markt for nextbike_austria"), so search the log for it before you post.
 - **Debug logs.** Settings → Devices & Services → Nextbike Austria → ⋮ → **Enable debug logging**, reproduce the problem, then disable it to download the log. Or in YAML:
   ```yaml
   # configuration.yaml

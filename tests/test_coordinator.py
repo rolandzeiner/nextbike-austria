@@ -163,6 +163,32 @@ async def test_reloaded_coordinator_clears_its_predecessors_issue(
     assert registry.async_get_issue(DOMAIN, f"station_gone_{entry.entry_id}") is None
 
 
+async def test_failure_log_does_not_name_the_station(
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+) -> None:
+    """HA logs the coordinator name and the error text on a failed poll.
+
+    Logs get pasted into public issues, and a station id resolves to the
+    station, so to roughly where the user lives or works.
+    """
+    entry = _make_entry()
+    entry.add_to_hass(hass)
+    station_id = entry.data[CONF_STATION_ID]
+
+    fake = FakeClient()
+    fake.set_stations({})
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=fake,
+    ):
+        coordinator = NextbikeStationCoordinator(hass, entry)
+        await coordinator.async_refresh()
+
+    assert not coordinator.last_update_success
+    assert "Error fetching" in caplog.text
+    assert station_id not in caplog.text
+
+
 async def test_transport_error_raises_update_failed(hass: HomeAssistant) -> None:
     """A GBFSError from the client becomes UpdateFailed with translation keys."""
     entry = _make_entry()
