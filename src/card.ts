@@ -8,7 +8,7 @@ import {
 } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
-import { CARD_VERSION, SYSTEM_ACCENT } from "./const";
+import { CARD_VERSION } from "./const";
 import { t } from "./localize/localize";
 import {
   checkCardVersionWS,
@@ -16,22 +16,28 @@ import {
 } from "./shared-render";
 import { cardStyles } from "./card-styles";
 import type {
+  BatteryEntry,
   HomeAssistant,
   HassEntityAttributes,
   NextbikeAustriaCardConfig,
   NextbikeStationEntry,
+  RackInputs,
+  RackLayout,
 } from "./types";
 import {
   findNextbikeEntities,
   normaliseConfig,
-  countEbikesAvailable,
-  firstEbikeTypeName,
-  expandClassicTypes,
   batteryColor,
   relativeTime,
   resolveDisplayName,
-  getEbikeIds,
   safeHttpsUri,
+  numberOr,
+  parseBikeCount,
+  rackInputs,
+  rackLayout,
+  stationMapUrl,
+  systemAccent,
+  systemLabel,
 } from "./utils";
 
 // Eagerly register the editor. With inlineDynamicImports=true the editor
@@ -350,76 +356,9 @@ export class NextbikeAustriaCard extends LitElement {
       return html`<div class="empty-state" role="status">${this._t("no_entities_unavailable")}</div>`;
     }
     const a = state.attributes || ({} as HassEntityAttributes);
-    // Clamp at the boundary: a malformed negative sensor state would
-    // otherwise drive `bikesVis` negative in _renderRack and run the
-    // empty-slot loop one slot too long.
-    const parsedBikes = parseInt(state.state, 10);
-    const bikes = Number.isFinite(parsedBikes) ? Math.max(0, parsedBikes) : 0;
-    const capacity = typeof a.capacity === "number" ? a.capacity : null;
-    const docks =
-      typeof a.num_docks_available === "number" ? a.num_docks_available : null;
-    const ebikes = countEbikesAvailable(a);
-    // Battery state only present when the options flow has
-    // `track_e_bike_range` enabled AND upstream reported
-    // `current_fuel_percent` for ≥1 e-bike at this station.
-    const batteryPct =
-      typeof a.e_bike_avg_battery_pct === "number"
-        ? a.e_bike_avg_battery_pct
-        : null;
-    const batterySamples =
-      typeof a.e_bike_range_samples === "number" ? a.e_bike_range_samples : 0;
-    const batteryList = Array.isArray(a.e_bike_battery_list)
-      ? a.e_bike_battery_list
-      : null;
-    const vehicleTypeNames =
-      a.vehicle_type_names && typeof a.vehicle_type_names === "object"
-        ? a.vehicle_type_names
-        : {};
-    const vehicleTypesAvailable = Array.isArray(a.vehicle_types_available)
-      ? a.vehicle_types_available
-      : [];
-    // Live e-bike id set surfaced by the Python coordinator (with a
-    // small fallback for old coordinators). Built once per render and
-    // threaded through the rack helpers.
-    const ebikeIds = getEbikeIds(a);
-    // Reserved bikes occupy extra rack slots beyond `num_bikes_available`.
-    const reservedCount =
-      typeof a.bikes_reserved === "number" ? a.bikes_reserved : 0;
-    const reservedTypes = Array.isArray(a.bikes_reserved_types)
-      ? a.bikes_reserved_types
-      : [];
-    const disabledCount =
-      typeof a.bikes_disabled === "number" ? a.bikes_disabled : 0;
-    const disabledTypes = Array.isArray(a.bikes_disabled_types)
-      ? a.bikes_disabled_types
-      : [];
-    const systemId = a.system_id || "";
-    const accent = SYSTEM_ACCENT[systemId] || "var(--primary-color)";
-    // `system_label` ships from the Python sensor (single source of
-    // truth in const.py::AUSTRIAN_SYSTEMS); fall back to a slug strip
-    // for older bundles that pre-date the attribute.
-    const systemName =
-      (typeof a.system_label === "string" && a.system_label) ||
-      systemId.replace(/^nextbike_/, "");
-    const rentUri = safeHttpsUri(a.rental_uri);
-    const hasFriendlyName = typeof a.friendly_name === "string" && a.friendly_name.length > 0;
+    const accent = systemAccent(a);
+    const rack = rackInputs(parseBikeCount(state.state), a, accent);
     const title = resolveDisplayName(a, stopCfg.entity);
-    // mapUrl is built from numeric lat/lon so the literal is always
-    // https://, but pipe it through the same trust-boundary guard as
-    // the rental URI so a future contributor can't add a stop-URL
-    // attribute and bypass the allowlist. safeHttpsUri returns "" for
-    // anything non-HTTP(S); we lift "" to null so the call site's
-    // existing nullish gate keeps the link off entirely on a miss.
-    const mapUrl: string | null =
-      typeof a.latitude === "number" && typeof a.longitude === "number"
-        ? safeHttpsUri(
-            `https://www.google.com/maps/search/?api=1&query=${a.latitude},${a.longitude}`,
-          ) || null
-        : null;
-
-    const bikeWord = bikes === 1 ? this._t("bike") : this._t("bikes");
-
-    const chips = this._renderPills(ebikes, docks, capacity);
 
     // WAI-ARIA tabpanel pattern: when rendered inside the tab strip,
     // tie the section back to the active tab so AT users hear the
@@ -435,73 +374,67 @@ export class NextbikeAustriaCard extends LitElement {
         tabindex=${inTabs ? "-1" : nothing}
         style=${`--nb-accent:${accent};`}
       >
-        ${this._config.hide_header
-          ? nothing
-          : html`<header class="header">
-              <div class="icon-tile" aria-hidden="true">
-                <ha-icon icon="mdi:bicycle"></ha-icon>
-              </div>
-              <div class="header-text">
-                <h2 class="title">
-                  ${hasFriendlyName
-                    ? html`<span lang="de">${title}</span>`
-                    : title}
-                </h2>
-                <p class="subtitle">${systemName}</p>
-              </div>
-              ${mapUrl
-                ? html`
-                    <a
-                      class="icon-action"
-                      href=${mapUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label=${`${this._t("open_map")}: ${title}`}
-                      title=${this._t("open_map")}
-                    >
-                      <ha-icon icon="mdi:map-marker" aria-hidden="true"></ha-icon>
-                    </a>
-                  `
-                : nothing}
-            </header>`}
-
-        <div class="hero">
-          <div class="metric">
-            <div class="metric-value">
-              <span class="metric-num">${bikes}</span>
-              ${capacity !== null
-                ? html`<span class="metric-of">/ ${capacity}</span>`
-                : nothing}
-            </div>
-            <div class="metric-label">${bikeWord}</div>
-          </div>
-          ${chips.length
-            ? html`<div class="chip-row">${chips}</div>`
-            : nothing}
-        </div>
-
-        ${this._config.show_rack && capacity !== null && capacity > 0
-          ? this._renderRack({
-              bikes,
-              ebikes,
-              capacity,
-              accent,
-              batteryPct,
-              batterySamples,
-              batteryList,
-              vehicleTypesAvailable,
-              vehicleTypeNames,
-              ebikeIds,
-              reservedCount,
-              reservedTypes,
-              disabledCount,
-              disabledTypes,
-            })
+        ${this._config.hide_header ? nothing : this._renderHeader(a, title)}
+        ${this._renderHero(rack, numberOr(a.num_docks_available, null))}
+        ${this._config.show_rack && rack.capacity !== null && rack.capacity > 0
+          ? this._renderRack(rack, rack.capacity)
           : nothing}
-
         ${this._config.show_flags ? this._renderFlags(a) : nothing}
-        ${this._renderFooter(a, rentUri)}
+        ${this._renderFooter(a, safeHttpsUri(a.rental_uri))}
       </section>
+    `;
+  }
+
+  private _renderHeader(a: HassEntityAttributes, title: string): TemplateResult {
+    const hasFriendlyName = typeof a.friendly_name === "string" && a.friendly_name.length > 0;
+    const mapUrl = stationMapUrl(a);
+    return html`<header class="header">
+      <div class="icon-tile" aria-hidden="true">
+        <ha-icon icon="mdi:bicycle"></ha-icon>
+      </div>
+      <div class="header-text">
+        <h2 class="title">
+          ${hasFriendlyName
+            ? html`<span lang="de">${title}</span>`
+            : title}
+        </h2>
+        <p class="subtitle">${systemLabel(a)}</p>
+      </div>
+      ${mapUrl
+        ? html`
+            <a
+              class="icon-action"
+              href=${mapUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label=${`${this._t("open_map")}: ${title}`}
+              title=${this._t("open_map")}
+            >
+              <ha-icon icon="mdi:map-marker" aria-hidden="true"></ha-icon>
+            </a>
+          `
+        : nothing}
+    </header>`;
+  }
+
+  private _renderHero(rack: RackInputs, docks: number | null): TemplateResult {
+    const bikeWord = rack.bikes === 1 ? this._t("bike") : this._t("bikes");
+    const chips = this._renderPills(rack.ebikes, docks, rack.capacity);
+    return html`
+      <div class="hero">
+        <div class="metric">
+          <div class="metric-value">
+            <span class="metric-num">${rack.bikes}</span>
+            ${rack.capacity !== null
+              ? html`<span class="metric-of">/ ${rack.capacity}</span>`
+              : nothing}
+          </div>
+          <div class="metric-label">${bikeWord}</div>
+        </div>
+        ${chips.length
+          ? html`<div class="chip-row">${chips}</div>`
+          : nothing}
+      </div>
     `;
   }
 
@@ -542,122 +475,107 @@ export class NextbikeAustriaCard extends LitElement {
     return out;
   }
 
-  private _renderRack(args: {
-    bikes: number;
-    ebikes: number | null;
-    capacity: number;
-    accent: string;
-    batteryPct: number | null;
-    batterySamples: number;
-    batteryList: Array<{ type?: string; pct?: number }> | null;
-    vehicleTypesAvailable: Array<{ vehicle_type_id?: string; count?: number }>;
-    vehicleTypeNames: Record<string, string>;
-    ebikeIds: ReadonlySet<string>;
-    reservedCount: number;
-    reservedTypes: string[];
-    disabledCount: number;
-    disabledTypes: string[];
-  }): TemplateResult {
-    const {
-      bikes,
-      ebikes,
-      capacity,
-      accent,
-      batteryPct,
-      batterySamples,
-      batteryList,
-      vehicleTypesAvailable,
-      vehicleTypeNames,
-      ebikeIds,
-      reservedCount,
-      reservedTypes,
-      disabledCount,
-      disabledTypes,
-    } = args;
-    // One visual slot per dock, always. Overflow (bikes > capacity) is
-    // carried by the "+N" note below the rack, not by extra slots.
-    const totalSlots = capacity;
-    const bikesVis = Math.min(bikes, capacity);
-    // Reserved + disabled slots each eat into what would otherwise
-    // render as empty docks. Order: bikes, reserved, disabled, empty.
-    // reservedCount / disabledCount are already coerced to a finite
-    // number (0 on miss) by _renderStation, so no guard is needed here.
-    const reservedVis = Math.min(reservedCount, Math.max(0, totalSlots - bikesVis));
-    const disabledVis = Math.min(
-      disabledCount,
-      Math.max(0, totalSlots - bikesVis - reservedVis),
-    );
-    const hasEbikes = typeof ebikes === "number" && Number.isFinite(ebikes) && ebikes > 0;
-    const ebikesVis = hasEbikes ? Math.min(bikesVis, ebikes as number) : 0;
-    const showBattery =
-      !!this._config.show_battery &&
-      typeof batteryPct === "number" &&
-      batterySamples > 0;
-    const perBike = showBattery && Array.isArray(batteryList) ? batteryList : [];
-    // Skip the vehicle-type lookup when no e-bikes flow AND no docks
-    // would be rendered — `firstEbikeTypeName` / `expandClassicTypes`
-    // walk `vehicleTypesAvailable` and don't need to fire when the
-    // result is unused.
-    const needsTypeLookup = hasEbikes || totalSlots > 0;
-    const ebikeFallbackType = needsTypeLookup
-      ? firstEbikeTypeName(vehicleTypesAvailable, vehicleTypeNames, ebikeIds)
-      : null;
-    const classicSequence = needsTypeLookup
-      ? expandClassicTypes(vehicleTypesAvailable, vehicleTypeNames, ebikeIds)
-      : [];
-    let classicCursor = 0;
+  private _renderRack(rack: RackInputs, capacity: number): TemplateResult {
+    const layout = rackLayout(rack, capacity, !!this._config.show_battery);
+    const rackAriaLabel = this._t("rack_summary")
+      .replace("{available}", String(layout.bikes))
+      .replace("{capacity}", String(capacity));
+    return html`
+      <div class="rack-block">
+        <div class="rack" role="group" aria-label=${rackAriaLabel}>
+          ${this._bikeSlots(layout, rack.accent)}
+          ${this._dockSlots(layout, rack)}
+          ${layout.overflow > 0
+            ? html`<span
+                class="rack-note"
+                aria-label=${`+${layout.overflow}`}
+                >+${layout.overflow}</span
+              >`
+            : nothing}
+        </div>
+        ${this._config.show_legend
+          ? this._renderLegend({
+              accent: rack.accent,
+              hasEbikes: layout.hasEbikes,
+              hasOverflow: layout.overflow > 0,
+              hasEmptyVisible: layout.empty > 0,
+              battery:
+                layout.showBattery && typeof rack.batteryPct === "number"
+                  ? { pct: rack.batteryPct, color: batteryColor(rack.batteryPct) }
+                  : null,
+              hasReservedVisible: layout.reserved > 0,
+              hasDisabledVisible: layout.disabled > 0,
+            })
+          : nothing}
+      </div>
+    `;
+  }
 
+  /** The docks holding a bike: e-bikes first, then classic bikes. */
+  private _bikeSlots(layout: RackLayout, accent: string): TemplateResult[] {
     const slots: TemplateResult[] = [];
-    for (let i = 0; i < bikesVis; i++) {
-      const isEbike = i < ebikesVis;
-      if (isEbike) {
-        const entry = perBike[i] || null;
-        const typeName = entry?.type || ebikeFallbackType || this._t("legend_ebike");
-        if (entry && showBattery && typeof entry.pct === "number") {
-          const pct = entry.pct;
-          const color = batteryColor(pct);
-          const label = `${typeName} · ${Math.round(pct)}%`;
-          slots.push(html`
-            <div
-              class="slot filled ebike battery"
-              role="img"
-              aria-label=${label}
-              style=${`--bat-pct:${pct}%;--bat-color:${color};`}
-              title=${label}
-            ></div>
-          `);
-        } else {
-          const tooltip = showBattery
-            ? `${typeName} · ${this._t("battery_unknown")}`
-            : typeName;
-          slots.push(html`
-            <div
-              class="slot filled ebike"
-              role="img"
-              aria-label=${tooltip}
-              style=${`background:linear-gradient(135deg, ${accent} 0%, ${accent} 55%, #ffd740 55%, #ffd740 100%);`}
-              title=${tooltip}
-            ></div>
-          `);
-        }
-      } else {
-        const typeName =
-          classicSequence[classicCursor++] || this._t("legend_bike");
-        slots.push(html`
-          <div
-            class="slot filled"
-            role="img"
-            aria-label=${typeName}
-            style=${`background:${accent};`}
-            title=${typeName}
-          ></div>
-        `);
-      }
+    for (let i = 0; i < layout.ebikes; i++) {
+      slots.push(this._ebikeSlot(layout.perBike[i] || null, layout, accent));
     }
+    for (let i = 0; i < layout.bikes - layout.ebikes; i++) {
+      const typeName = layout.classicNames[i] || this._t("legend_bike");
+      slots.push(html`
+        <div
+          class="slot filled"
+          role="img"
+          aria-label=${typeName}
+          style=${`background:${accent};`}
+          title=${typeName}
+        ></div>
+      `);
+    }
+    return slots;
+  }
+
+  /** An e-bike slot: filled to its charge when that is known, otherwise
+   *  the accent with the amber e-bike stripe. */
+  private _ebikeSlot(
+    entry: BatteryEntry | null,
+    layout: RackLayout,
+    accent: string,
+  ): TemplateResult {
+    const typeName = entry?.type || layout.ebikeFallbackType || this._t("legend_ebike");
+    if (entry && layout.showBattery && typeof entry.pct === "number") {
+      const pct = entry.pct;
+      const color = batteryColor(pct);
+      const label = `${typeName} · ${Math.round(pct)}%`;
+      return html`
+        <div
+          class="slot filled ebike battery"
+          role="img"
+          aria-label=${label}
+          style=${`--bat-pct:${pct}%;--bat-color:${color};`}
+          title=${label}
+        ></div>
+      `;
+    }
+    const tooltip = layout.showBattery
+      ? `${typeName} · ${this._t("battery_unknown")}`
+      : typeName;
+    return html`
+      <div
+        class="slot filled ebike"
+        role="img"
+        aria-label=${tooltip}
+        style=${`background:linear-gradient(135deg, ${accent} 0%, ${accent} 55%, #ffd740 55%, #ffd740 100%);`}
+        title=${tooltip}
+      ></div>
+    `;
+  }
+
+  /** The docks without an available bike: reserved, out of service, empty. */
+  private _dockSlots(layout: RackLayout, rack: RackInputs): TemplateResult[] {
+    const slots: TemplateResult[] = [];
+    const withType = (typeName: string | undefined, label: string): string =>
+      typeName ? `${typeName} · ${label}` : label;
     const reservedLabel = this._t("reserved");
-    for (let i = 0; i < reservedVis; i++) {
-      const typeName = reservedTypes?.[i];
-      const tooltip = typeName ? `${typeName} · ${reservedLabel}` : reservedLabel;
+    for (let i = 0; i < layout.reserved; i++) {
+      const tooltip = withType(rack.reservedTypes[i], reservedLabel);
       slots.push(html`
         <div
           class="slot reserved"
@@ -670,9 +588,8 @@ export class NextbikeAustriaCard extends LitElement {
       `);
     }
     const disabledLabel = this._t("disabled");
-    for (let i = 0; i < disabledVis; i++) {
-      const typeName = disabledTypes?.[i];
-      const tooltip = typeName ? `${typeName} · ${disabledLabel}` : disabledLabel;
+    for (let i = 0; i < layout.disabled; i++) {
+      const tooltip = withType(rack.disabledTypes[i], disabledLabel);
       slots.push(html`
         <div
           class="slot disabled"
@@ -684,8 +601,8 @@ export class NextbikeAustriaCard extends LitElement {
         </div>
       `);
     }
-    for (let i = bikesVis + reservedVis + disabledVis; i < totalSlots; i++) {
-      const emptyLabel = this._t("legend_empty");
+    const emptyLabel = this._t("legend_empty");
+    for (let i = 0; i < layout.empty; i++) {
       slots.push(html`
         <div
           class="slot empty"
@@ -695,43 +612,7 @@ export class NextbikeAustriaCard extends LitElement {
         ></div>
       `);
     }
-
-    const hasOverflow = bikes > capacity;
-    const hasEmptyVisible = bikesVis + reservedVis + disabledVis < totalSlots;
-    const hasReservedVisible = reservedVis > 0;
-    const hasDisabledVisible = disabledVis > 0;
-
-    const rackAriaLabel = this._t("rack_summary")
-      .replace("{available}", String(bikesVis))
-      .replace("{capacity}", String(capacity));
-    return html`
-      <div class="rack-block">
-        <div class="rack" role="group" aria-label=${rackAriaLabel}>
-          ${slots}
-          ${hasOverflow
-            ? html`<span
-                class="rack-note"
-                aria-label=${`+${bikes - capacity}`}
-                >+${bikes - capacity}</span
-              >`
-            : nothing}
-        </div>
-        ${this._config.show_legend
-          ? this._renderLegend({
-              accent,
-              hasEbikes,
-              hasOverflow,
-              hasEmptyVisible,
-              battery:
-                showBattery && typeof batteryPct === "number"
-                  ? { pct: batteryPct, color: batteryColor(batteryPct) }
-                  : null,
-              hasReservedVisible,
-              hasDisabledVisible,
-            })
-          : nothing}
-      </div>
-    `;
+    return slots;
   }
 
   private _renderLegend(args: {

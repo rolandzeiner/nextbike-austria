@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { HassEntityAttributes, HomeAssistant } from "./types";
+import type { HassEntityAttributes, HomeAssistant, RackInputs } from "./types";
 import {
+  arrayOr,
   batteryColor,
   cleanStationName,
   countEbikesAvailable,
@@ -10,9 +11,16 @@ import {
   firstEbikeTypeName,
   getEbikeIds,
   normaliseConfig,
+  numberOr,
+  parseBikeCount,
+  rackInputs,
+  rackLayout,
   relativeTime,
   resolveDisplayName,
   safeHttpsUri,
+  stationMapUrl,
+  systemAccent,
+  systemLabel,
 } from "./utils";
 
 const NAMES = { "143": "E-Bike", "196": "Classic Bike", "200": "Cargo E-Bike" };
@@ -325,5 +333,145 @@ describe("station display names", () => {
       "sensor.nb_karlsplatz",
     );
     expect(resolveDisplayName(undefined, "sensor.nb_karlsplatz")).toBe("sensor.nb_karlsplatz");
+  });
+});
+
+describe("attribute coercion", () => {
+  it("keeps numbers and arrays, and falls back for anything else", () => {
+    expect(numberOr(0, null)).toBe(0);
+    expect(numberOr("4", null)).toBeNull();
+    expect(numberOr(undefined, 7)).toBe(7);
+    expect(arrayOr(["a"], null)).toEqual(["a"]);
+    expect(arrayOr(undefined, [])).toEqual([]);
+    expect(arrayOr("a" as unknown as string[], null)).toBeNull();
+  });
+
+  it.each([
+    ["7", 7],
+    ["0", 0],
+    ["-3", 0],
+    ["unavailable", 0],
+    ["", 0],
+  ])("reads the bike count %j as %d", (state, bikes) => {
+    expect(parseBikeCount(state)).toBe(bikes);
+  });
+});
+
+describe("station header", () => {
+  it("tints known operators and falls back to the theme colour", () => {
+    expect(systemAccent({ system_id: "nextbike_wr" })).toBe("#DC2026");
+    expect(systemAccent({ system_id: "nextbike_zz" })).toBe("var(--primary-color)");
+    expect(systemAccent({})).toBe("var(--primary-color)");
+  });
+
+  it("labels the operator, stripping the slug for older sensors", () => {
+    expect(systemLabel({ system_label: "WienMobil Rad", system_id: "nextbike_wr" })).toBe(
+      "WienMobil Rad",
+    );
+    expect(systemLabel({ system_id: "nextbike_la" })).toBe("la");
+    expect(systemLabel({})).toBe("");
+  });
+
+  it("links the map only with both coordinates", () => {
+    expect(stationMapUrl({ latitude: 48.2, longitude: 16.37 })).toBe(
+      "https://www.google.com/maps/search/?api=1&query=48.2,16.37",
+    );
+    expect(stationMapUrl({ latitude: 48.2 })).toBeNull();
+    expect(stationMapUrl({})).toBeNull();
+  });
+});
+
+describe("rackInputs — what the rack reads off the sensor", () => {
+  it("defaults every missing or malformed attribute", () => {
+    const junk = {
+      capacity: "10",
+      vehicle_type_names: "names",
+      bikes_reserved_types: "x",
+      e_bike_battery_list: {},
+    } as unknown as HassEntityAttributes;
+    expect(rackInputs(3, junk, "red")).toEqual({
+      bikes: 3,
+      ebikes: null,
+      capacity: null,
+      accent: "red",
+      batteryPct: null,
+      batterySamples: 0,
+      batteryList: null,
+      vehicleTypesAvailable: [],
+      vehicleTypeNames: {},
+      ebikeIds: new Set(["143", "183", "200"]),
+      reservedCount: 0,
+      reservedTypes: [],
+      disabledCount: 0,
+      disabledTypes: [],
+    });
+  });
+});
+
+describe("rackLayout — filling the docks", () => {
+  const rack = (over: Partial<RackInputs> = {}): RackInputs => ({
+    ...rackInputs(0, {}, "red"),
+    ...over,
+  });
+  const counts = (r: RackInputs, capacity: number, battery = true) => {
+    const { bikes, ebikes, reserved, disabled, empty, overflow } = rackLayout(r, capacity, battery);
+    return { bikes, ebikes, reserved, disabled, empty, overflow };
+  };
+
+  it("fills bikes, then reserved, then out of service, then empty", () => {
+    expect(
+      counts(rack({ bikes: 4, ebikes: 1, reservedCount: 2, disabledCount: 1 }), 10),
+    ).toEqual({ bikes: 4, ebikes: 1, reserved: 2, disabled: 1, empty: 3, overflow: 0 });
+  });
+
+  it("caps bikes at the dock count and carries the rest as overflow", () => {
+    expect(counts(rack({ bikes: 12, reservedCount: 1 }), 8)).toEqual({
+      bikes: 8,
+      ebikes: 0,
+      reserved: 0,
+      disabled: 0,
+      empty: 0,
+      overflow: 4,
+    });
+  });
+
+  it("lets reserved bikes crowd out the out-of-service ones, never the capacity", () => {
+    expect(counts(rack({ bikes: 5, reservedCount: 4, disabledCount: 4 }), 8)).toEqual({
+      bikes: 5,
+      ebikes: 0,
+      reserved: 3,
+      disabled: 0,
+      empty: 0,
+      overflow: 0,
+    });
+  });
+
+  it("never shows more e-bikes than bikes", () => {
+    expect(counts(rack({ bikes: 2, ebikes: 5 }), 4).ebikes).toBe(2);
+    expect(counts(rack({ bikes: 2, ebikes: Number.NaN }), 4).ebikes).toBe(0);
+  });
+
+  it("shows charge only when enabled and sampled", () => {
+    const charged = rack({ batteryPct: 60, batterySamples: 2, batteryList: [{ pct: 60 }] });
+    expect(rackLayout(charged, 4, true)).toMatchObject({ showBattery: true, perBike: [{ pct: 60 }] });
+    expect(rackLayout(charged, 4, false)).toMatchObject({ showBattery: false, perBike: [] });
+    expect(rackLayout({ ...charged, batterySamples: 0 }, 4, true).showBattery).toBe(false);
+    expect(rackLayout({ ...charged, batteryList: null }, 4, true).perBike).toEqual([]);
+  });
+
+  it("names e-bike and classic slots from the vehicle types", () => {
+    const layout = rackLayout(
+      rack({
+        vehicleTypesAvailable: [
+          { vehicle_type_id: "143", count: 1 },
+          { vehicle_type_id: "196", count: 2 },
+        ],
+        vehicleTypeNames: { "143": "E-Bike", "196": "Classic" },
+      }),
+      4,
+      true,
+    );
+    expect(layout.ebikeFallbackType).toBe("E-Bike");
+    expect(layout.classicNames).toEqual(["Classic", "Classic"]);
   });
 });

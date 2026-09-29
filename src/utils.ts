@@ -1,8 +1,11 @@
+import { SYSTEM_ACCENT } from "./const";
 import type {
   HassEntityAttributes,
   HomeAssistant,
   NextbikeAustriaCardConfig,
   NextbikeStationEntry,
+  RackInputs,
+  RackLayout,
 } from "./types";
 
 // Fallback set of e-bike vehicle-type ids for users on a Python
@@ -225,4 +228,124 @@ export function resolveDisplayName(
   if (typeof display === "string" && display) return display;
   const friendly = attrs?.friendly_name;
   return cleanStationName(typeof friendly === "string" && friendly ? friendly : fallbackEntity);
+}
+
+/** A numeric attribute, or `fallback` when upstream sent anything else. */
+export function numberOr<F extends number | null>(value: unknown, fallback: F): number | F {
+  return typeof value === "number" ? value : fallback;
+}
+
+/** An array attribute, or `fallback` when upstream sent anything else. */
+export function arrayOr<T, F extends T[] | null>(value: T[] | undefined, fallback: F): T[] | F {
+  return Array.isArray(value) ? value : fallback;
+}
+
+/** Bikes available, from the sensor state. Clamped at the boundary: a
+ *  malformed or negative state reads as 0, so the rack can't run its
+ *  empty-slot loop past the dock count. */
+export function parseBikeCount(state: string): number {
+  const parsed = parseInt(state, 10);
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+}
+
+/** The operator's brand tint, or the theme's primary colour. */
+export function systemAccent(attrs: HassEntityAttributes): string {
+  return SYSTEM_ACCENT[attrs.system_id || ""] || "var(--primary-color)";
+}
+
+/** The header subtitle. `system_label` ships from the Python sensor
+ *  (single source of truth in const.py::AUSTRIAN_SYSTEMS); older sensors
+ *  only carry the `nextbike_xx` slug. */
+export function systemLabel(attrs: HassEntityAttributes): string {
+  return (
+    (typeof attrs.system_label === "string" && attrs.system_label) ||
+    (attrs.system_id || "").replace(/^nextbike_/, "")
+  );
+}
+
+/** Google Maps link for the station, or null without coordinates.
+ *  Built from numeric lat/lon so the literal is always https://, but piped
+ *  through the same trust-boundary guard as the rental URI so a future
+ *  stop-URL attribute can't bypass the allowlist. */
+export function stationMapUrl(attrs: HassEntityAttributes): string | null {
+  if (typeof attrs.latitude !== "number" || typeof attrs.longitude !== "number") {
+    return null;
+  }
+  return (
+    safeHttpsUri(
+      `https://www.google.com/maps/search/?api=1&query=${attrs.latitude},${attrs.longitude}`,
+    ) || null
+  );
+}
+
+/** Everything the station view draws, read off the sensor attributes. */
+export function rackInputs(
+  bikes: number,
+  attrs: HassEntityAttributes,
+  accent: string,
+): RackInputs {
+  const names = attrs.vehicle_type_names;
+  return {
+    bikes,
+    ebikes: countEbikesAvailable(attrs),
+    capacity: numberOr(attrs.capacity, null),
+    accent,
+    // Battery state is only present when the options flow has
+    // `track_e_bike_range` enabled AND upstream reported
+    // `current_fuel_percent` for at least one e-bike at this station.
+    batteryPct: numberOr(attrs.e_bike_avg_battery_pct, null),
+    batterySamples: numberOr(attrs.e_bike_range_samples, 0),
+    batteryList: arrayOr(attrs.e_bike_battery_list, null),
+    vehicleTypesAvailable: arrayOr(attrs.vehicle_types_available, []),
+    vehicleTypeNames: names && typeof names === "object" ? names : {},
+    // Live e-bike id set surfaced by the Python coordinator (with a small
+    // fallback for old coordinators), resolved once per station.
+    ebikeIds: getEbikeIds(attrs),
+    // Reserved bikes occupy extra rack slots beyond `num_bikes_available`.
+    reservedCount: numberOr(attrs.bikes_reserved, 0),
+    reservedTypes: arrayOr(attrs.bikes_reserved_types, []),
+    disabledCount: numberOr(attrs.bikes_disabled, 0),
+    disabledTypes: arrayOr(attrs.bikes_disabled_types, []),
+  };
+}
+
+/** Fill `capacity` docks from the station's counts. One visual slot per
+ *  dock, always: bikes first (e-bikes leading), then reserved, then out of
+ *  service, then empty. Bikes beyond the capacity become the "+N" note, not
+ *  extra slots. */
+export function rackLayout(
+  rack: RackInputs,
+  capacity: number,
+  batteryOption: boolean,
+): RackLayout {
+  const bikes = Math.min(rack.bikes, capacity);
+  const reserved = Math.min(rack.reservedCount, Math.max(0, capacity - bikes));
+  const disabled = Math.min(rack.disabledCount, Math.max(0, capacity - bikes - reserved));
+  const ebikeCount =
+    typeof rack.ebikes === "number" && Number.isFinite(rack.ebikes) && rack.ebikes > 0
+      ? rack.ebikes
+      : 0;
+  const showBattery =
+    batteryOption && typeof rack.batteryPct === "number" && rack.batterySamples > 0;
+  return {
+    bikes,
+    ebikes: Math.min(bikes, ebikeCount),
+    reserved,
+    disabled,
+    empty: capacity - bikes - reserved - disabled,
+    overflow: Math.max(0, rack.bikes - capacity),
+    hasEbikes: ebikeCount > 0,
+    showBattery,
+    perBike: showBattery && Array.isArray(rack.batteryList) ? rack.batteryList : [],
+    ebikeFallbackType: firstEbikeTypeName(
+      rack.vehicleTypesAvailable,
+      rack.vehicleTypeNames,
+      rack.ebikeIds,
+    ),
+    classicNames: expandClassicTypes(
+      rack.vehicleTypesAvailable,
+      rack.vehicleTypeNames,
+      rack.ebikeIds,
+    ),
+  };
 }

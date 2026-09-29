@@ -96,6 +96,53 @@ export interface NextbikeAustriaCardConfig {
 }
 
 // ---------------------------------------------------------------------------
+// Rack model
+// ---------------------------------------------------------------------------
+
+export interface BatteryEntry {
+  type?: string;
+  pct?: number;
+}
+
+/** What the station view draws, read defensively off the sensor. */
+export interface RackInputs {
+  bikes: number;
+  ebikes: number | null;
+  capacity: number | null;
+  accent: string;
+  batteryPct: number | null;
+  batterySamples: number;
+  batteryList: BatteryEntry[] | null;
+  vehicleTypesAvailable: Array<{ vehicle_type_id?: string; count?: number }>;
+  vehicleTypeNames: Record<string, string>;
+  ebikeIds: ReadonlySet<string>;
+  reservedCount: number;
+  reservedTypes: string[];
+  disabledCount: number;
+  disabledTypes: string[];
+}
+
+/** How the rack's docks are filled. The slot counts are in rack order and
+ *  always sum to the capacity. */
+export interface RackLayout {
+  /** Docks holding a bike; the first `ebikes` of them hold e-bikes. */
+  bikes: number;
+  ebikes: number;
+  reserved: number;
+  disabled: number;
+  empty: number;
+  /** Bikes beyond the dock count, shown as "+N" after the last slot. */
+  overflow: number;
+  hasEbikes: boolean;
+  showBattery: boolean;
+  /** Per-e-bike charge, in slot order; empty unless `showBattery`. */
+  perBike: BatteryEntry[];
+  ebikeFallbackType: string | null;
+  /** One type name per classic bike, in feed order ("" when unnamed). */
+  classicNames: string[];
+}
+
+// ---------------------------------------------------------------------------
 // <ha-form> schema types
 // ---------------------------------------------------------------------------
 //
