@@ -6,8 +6,9 @@ Three-step flow:
   2. `search_station`  — user types a fragment of the station name.
   3. `select_station`  — dropdown of matches; picking one creates the entry.
 
-`async_step_reconfigure` re-enters the scan-interval form for an existing
-entry, preserving unique_id. The options flow tweaks the scan interval too.
+There is no reconfigure step: the station is the entry's identity (the
+unique_id is `{system_id}_{station_id}`), so changing it means a new
+entry, and the only other settings live in the options flow.
 
 No credentials involved — nextbike's GBFS is unauthenticated — so there is
 no `async_step_reauth`, and `reauthentication-flow` is marked exempt in
@@ -159,7 +160,10 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
         self._system_id: str | None = None
         self._query: str = ""
         self._matches: list[dict[str, Any]] = []
-        self._reconfigure_entry: ConfigEntry | None = None
+        # The system's station list, fetched once per flow: a second search
+        # or "Search again" filters it locally instead of re-downloading it
+        # (~11 KB gzipped for Wien). An empty list means "not fetched yet".
+        self._catalogue: list[dict[str, Any]] = []
 
     @staticmethod
     @callback
@@ -227,11 +231,12 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
             if len(self._query) < _MIN_QUERY_LENGTH:
                 errors[CONF_SEARCH_QUERY] = "query_too_short"
             else:
-                stations = await _fetch_stations(self.hass, self._system_id)
-                if not stations:
+                if not self._catalogue:
+                    self._catalogue = await _fetch_stations(self.hass, self._system_id)
+                if not self._catalogue:
                     errors["base"] = "cannot_connect"
                 else:
-                    self._matches = _match_stations(stations, self._query)
+                    self._matches = _match_stations(self._catalogue, self._query)
                     if not self._matches:
                         errors[CONF_SEARCH_QUERY] = "no_matches"
                     else:
@@ -282,15 +287,6 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_STATION_NAME: station_name,
                 CONF_SCAN_INTERVAL: interval,
             }
-
-            if self._reconfigure_entry is not None:
-                await self.async_set_unique_id(f"{self._system_id}_{station_id}")
-                self._abort_if_unique_id_mismatch()
-                return self.async_update_and_abort(
-                    self._reconfigure_entry,
-                    data=data,
-                )
-
             await self.async_set_unique_id(f"{self._system_id}_{station_id}")
             self._abort_if_unique_id_configured(reload_on_update=False)
             return self.async_create_entry(title=station_name, data=data)
@@ -326,20 +322,6 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     # ------------------------------------------------------------------
-    # Reconfigure
-    # ------------------------------------------------------------------
-
-    async def async_step_reconfigure(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Re-enter the station search for an existing entry."""
-        entry = self._get_reconfigure_entry()
-        self._reconfigure_entry = entry
-        current = {**entry.data, **entry.options}
-        self._system_id = str(current[CONF_SYSTEM_ID])
-        return await self.async_step_search_station()
-
-    # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
 
@@ -354,9 +336,8 @@ class NextbikeAustriaConfigFlow(ConfigFlow, domain=DOMAIN):
 class NextbikeAustriaOptionsFlow(OptionsFlow):
     """Options flow: scan interval + optional e-bike battery tracking.
 
-    Station / system changes go through `async_step_reconfigure` in the
-    main flow so the entry's unique_id stays stable and entities are
-    preserved.
+    The system and station are the entry's identity and can't change here;
+    tracking a different station means adding a new entry.
     """
 
     async def async_step_init(

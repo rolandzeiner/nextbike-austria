@@ -89,7 +89,7 @@ jobs:
         # resolver surfaces hard PHACC transitive pins (e.g.
         # pytest-asyncio==1.3.0) just as clearly as pip 26.1 did, so the
         # lockstep with the test floors is preserved.
-        uses: astral-sh/setup-uv@v10.0.1
+        uses: astral-sh/setup-uv@v10.2.0
         with:
           enable-cache: true
       - name: Install dependencies
@@ -151,15 +151,22 @@ jobs:
       - name: Install card deps
         run: npm ci
       - name: Audit production deps
-        # --omit=dev keeps the gate enforceable; without it Rollup-plugin
+        # --omit=dev keeps the gate enforceable; without it build-tooling
         # advisories (which never ship to users) flood the report and the
         # team learns to ignore failures.
         run: npm audit --omit=dev --audit-level=high
       - name: Type-check (strict)
-        # Rollup's @rollup/plugin-typescript is more permissive than tsc
-        # in strict mode. Run tsc separately so TS regressions surface in
-        # CI instead of slipping into the bundle.
+        # The ONLY type-check in the pipeline. Rolldown transpiles without
+        # type-checking, exactly as swc did, so nothing else in
+        # this workflow would notice a type error — a broken build would go
+        # green all the way to the bundle. Never make this step conditional.
         run: npx tsc --noEmit
+      - name: Card unit tests
+        # Rolldown strips types without checking them and tsc checks types
+        # without running anything, so this is the only step that proves the
+        # card's logic still behaves. Ahead of the build so a logic
+        # regression fails before we spend time bundling.
+        run: npm test
       - name: Build card bundle
         run: npm run build
       - name: Assert the committed bundle matches a fresh build
@@ -181,5 +188,5 @@ jobs:
           fi
       - name: Syntax-check bundle
         # `node -c` parses without executing — cheapest possible check that
-        # Rollup didn't somehow produce malformed JS.
+        # Rolldown didn't somehow produce malformed JS.
         run: node -c custom_components/nextbike_austria/www/nextbike-austria-card.js

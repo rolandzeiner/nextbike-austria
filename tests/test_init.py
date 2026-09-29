@@ -5,7 +5,8 @@ config-flow, coordinator, or card_registration tests:
 
 * the ``nextbike_austria/card_version`` WebSocket command,
 * ``async_unload_entry`` happy path + per-system client cleanup,
-* ``async_remove_entry`` honouring the LAST-entry guard.
+* ``async_remove_entry`` honouring the LAST-entry guard and deleting the
+  entry's Repairs issue.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import issue_registry as ir
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.nextbike_austria import (
@@ -178,6 +180,30 @@ async def test_remove_entry_keeps_card_when_others_remain(
         await async_remove_entry(hass, entry_a)
 
     fake_unregister.assert_not_awaited()
+
+
+async def test_remove_entry_deletes_its_repair_issue(hass: HomeAssistant) -> None:
+    """The removed entry's issue goes, even while other entries remain."""
+    entry_a = _make_entry()
+    entry_a.add_to_hass(hass)
+    entry_b = _make_entry(station_id="68586882", station_name="Hauptbahnhof S U")
+    entry_b.add_to_hass(hass)
+    for entry in (entry_a, entry_b):
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            f"station_gone_{entry.entry_id}",
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="station_gone",
+        )
+
+    with patch("custom_components.nextbike_austria.JSModuleRegistration"):
+        await async_remove_entry(hass, entry_a)
+
+    registry = ir.async_get(hass)
+    assert registry.async_get_issue(DOMAIN, f"station_gone_{entry_a.entry_id}") is None
+    assert registry.async_get_issue(DOMAIN, f"station_gone_{entry_b.entry_id}")
 
 
 async def test_setup_uses_no_deprecated_ha_api(

@@ -2,8 +2,8 @@ Data: nextbike GmbH, CC0-1.0
 
 Data source
 -----------
-nextbike GBFS 2.3 feeds (system_information / station_information /
-station_status / vehicle_types / system_pricing_plans)
+nextbike GBFS 2.3 feeds (station_information / station_status /
+vehicle_types, plus free_bike_status when e-bike battery tracking is on)
 https://github.com/MobilityData/gbfs
 
 License
@@ -30,7 +30,7 @@ station and bike-availability data is provided through public GBFS 2.3 feeds
 operated by nextbike and its Austrian partners. The developer assumes no
 liability for the accuracy, completeness, or timeliness of the displayed
 data — including bike availability, dock availability, station operational
-status, or estimated e-bike range. Use at your own risk.
+status, or e-bike battery charge. Use at your own risk.
 
 Diese Integration steht in keiner Verbindung zur nextbike GmbH und wird
 von dieser nicht unterstützt. Für die Richtigkeit, Vollständigkeit und

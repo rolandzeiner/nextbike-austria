@@ -31,23 +31,21 @@
       "no_matches": "Keine Stationen gefunden — bitte mit einem anderen Suchbegriff erneut versuchen."
     },
     "abort": {
-      "already_configured": "Diese Station wird bereits verfolgt.",
-      "reconfigure_successful": "Neukonfiguration erfolgreich.",
-      "unique_id_mismatch": "Die gewählte Station passt nicht zu dieser ID. Bitte den Eintrag löschen und die neue Station hinzufügen."
+      "already_configured": "Diese Station wird bereits verfolgt."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Nextbike Austria – Optionen",
-        "description": "Abfrage und optionales E-Bike-Batterietracking konfigurieren. Um System oder Station dieses Eintrags zu ändern, **Neukonfigurieren** verwenden.",
+        "description": "Abfrage und optionales E-Bike-Batterietracking konfigurieren. Um eine andere Station zu verfolgen, füge sie als neuen Eintrag hinzu.",
         "data": {
           "scan_interval": "Aktualisierungsintervall (Sekunden)",
           "track_e_bike_range": "E-Bike-Batteriestand tracken"
         },
         "data_description": {
           "scan_interval": "Abfragezyklus pro Station (mindestens 60 Sek.).",
-          "track_e_bike_range": "Lädt zusätzlich alle 20 Minuten einen Feed — ~75 KB übertragen (gzip-komprimiert), also ca. 5,3 MB pro Tag / 160 MB pro Monat pro aktiviertem System. Bei begrenzten Datenvolumen besser deaktiviert lassen."
+          "track_e_bike_range": "Lädt zusätzlich alle 20 Minuten einen Feed. Für Wien werden dabei ca. 80 KB übertragen (gzip-komprimiert), rund 6 MB pro Tag / 180 MB pro Monat; die anderen Systeme brauchen weniger. Bei begrenztem Datenvolumen besser deaktiviert lassen."
         }
       }
     }
@@ -73,7 +71,7 @@
       "message": "Nextbike-GBFS-API liefert unerwartete Antwort (Status {status}): {error}"
     },
     "station_gone": {
-      "message": "Station {station_id} ist nicht mehr im GBFS-Feed von {system_id} enthalten."
+      "message": "Die gewählte Station ist nicht mehr im GBFS-Feed von {system_id} enthalten."
     }
   },
   "issues": {

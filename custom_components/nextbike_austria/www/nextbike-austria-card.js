@@ -1,20 +1,61 @@
-// Nextbike Austria Card — bundled by Rollup. Edit sources in src/, then `npm run build`.
-function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPropertyDescriptor(t,i):s;if("object"==typeof Reflect&&"function"==typeof Reflect.decorate)a=Reflect.decorate(e,t,i,s);else for(var o=e.length-1;o>=0;o--)(n=e[o])&&(a=(r<3?n(a):r>3?n(t,i,a):n(t,i))||a);return r>3&&a&&Object.defineProperty(t,i,a),a}"function"==typeof SuppressedError&&SuppressedError;const t=globalThis,i=t.ShadowRoot&&(void 0===t.ShadyCSS||t.ShadyCSS.nativeShadow)&&"adoptedStyleSheets"in Document.prototype&&"replace"in CSSStyleSheet.prototype,s=Symbol(),n=new WeakMap;let r=class{constructor(e,t,i){if(this._$cssResult$=!0,i!==s)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=e,this.t=t}get styleSheet(){let e=this.o;const t=this.t;if(i&&void 0===e){const i=void 0!==t&&1===t.length;i&&(e=n.get(t)),void 0===e&&((this.o=e=new CSSStyleSheet).replaceSync(this.cssText),i&&n.set(t,e))}return e}toString(){return this.cssText}};const a=(e,...t)=>{const i=1===e.length?e[0]:t.reduce((t,i,s)=>t+(e=>{if(!0===e._$cssResult$)return e.cssText;if("number"==typeof e)return e;throw Error("Value passed to 'css' function must be a 'css' function result: "+e+". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.")})(i)+e[s+1],e[0]);return new r(i,e,s)},o=i?e=>e:e=>e instanceof CSSStyleSheet?(e=>{let t="";for(const i of e.cssRules)t+=i.cssText;return(e=>new r("string"==typeof e?e:e+"",void 0,s))(t)})(e):e,{is:l,defineProperty:c,getOwnPropertyDescriptor:d,getOwnPropertyNames:h,getOwnPropertySymbols:p,getPrototypeOf:u}=Object,b=globalThis,g=b.trustedTypes,f=g?g.emptyScript:"",m=b.reactiveElementPolyfillSupport,_=(e,t)=>e,v={toAttribute(e,t){switch(t){case Boolean:e=e?f:null;break;case Object:case Array:e=null==e?e:JSON.stringify(e)}return e},fromAttribute(e,t){let i=e;switch(t){case Boolean:i=null!==e;break;case Number:i=null===e?null:Number(e);break;case Object:case Array:try{i=JSON.parse(e)}catch(e){i=null}}return i}},y=(e,t)=>!l(e,t),x={attribute:!0,type:String,converter:v,reflect:!1,useDefault:!1,hasChanged:y};Symbol.metadata??=Symbol("metadata"),b.litPropertyMetadata??=new WeakMap;let w=class extends HTMLElement{static addInitializer(e){this._$Ei(),(this.l??=[]).push(e)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(e,t=x){if(t.state&&(t.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(e)&&((t=Object.create(t)).wrapped=!0),this.elementProperties.set(e,t),!t.noAccessor){const i=Symbol(),s=this.getPropertyDescriptor(e,i,t);void 0!==s&&c(this.prototype,e,s)}}static getPropertyDescriptor(e,t,i){const{get:s,set:n}=d(this.prototype,e)??{get(){return this[t]},set(e){this[t]=e}};return{get:s,set(t){const r=s?.call(this);n?.call(this,t),this.requestUpdate(e,r,i)},configurable:!0,enumerable:!0}}static getPropertyOptions(e){return this.elementProperties.get(e)??x}static _$Ei(){if(this.hasOwnProperty(_("elementProperties")))return;const e=u(this);e.finalize(),void 0!==e.l&&(this.l=[...e.l]),this.elementProperties=new Map(e.elementProperties)}static finalize(){if(this.hasOwnProperty(_("finalized")))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(_("properties"))){const e=this.properties,t=[...h(e),...p(e)];for(const i of t)this.createProperty(i,e[i])}const e=this[Symbol.metadata];if(null!==e){const t=litPropertyMetadata.get(e);if(void 0!==t)for(const[e,i]of t)this.elementProperties.set(e,i)}this._$Eh=new Map;for(const[e,t]of this.elementProperties){const i=this._$Eu(e,t);void 0!==i&&this._$Eh.set(i,e)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(e){const t=[];if(Array.isArray(e)){const i=new Set(e.flat(1/0).reverse());for(const e of i)t.unshift(o(e))}else void 0!==e&&t.push(o(e));return t}static _$Eu(e,t){const i=t.attribute;return!1===i?void 0:"string"==typeof i?i:"string"==typeof e?e.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(e=>this.enableUpdating=e),this._$AL=new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(e=>e(this))}addController(e){(this._$EO??=new Set).add(e),void 0!==this.renderRoot&&this.isConnected&&e.hostConnected?.()}removeController(e){this._$EO?.delete(e)}_$E_(){const e=new Map,t=this.constructor.elementProperties;for(const i of t.keys())this.hasOwnProperty(i)&&(e.set(i,this[i]),delete this[i]);e.size>0&&(this._$Ep=e)}createRenderRoot(){const e=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return((e,s)=>{if(i)e.adoptedStyleSheets=s.map(e=>e instanceof CSSStyleSheet?e:e.styleSheet);else for(const i of s){const s=document.createElement("style"),n=t.litNonce;void 0!==n&&s.setAttribute("nonce",n),s.textContent=i.cssText,e.appendChild(s)}})(e,this.constructor.elementStyles),e}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(e=>e.hostConnected?.())}enableUpdating(e){}disconnectedCallback(){this._$EO?.forEach(e=>e.hostDisconnected?.())}attributeChangedCallback(e,t,i){this._$AK(e,i)}_$ET(e,t){const i=this.constructor.elementProperties.get(e),s=this.constructor._$Eu(e,i);if(void 0!==s&&!0===i.reflect){const n=(void 0!==i.converter?.toAttribute?i.converter:v).toAttribute(t,i.type);this._$Em=e,null==n?this.removeAttribute(s):this.setAttribute(s,n),this._$Em=null}}_$AK(e,t){const i=this.constructor,s=i._$Eh.get(e);if(void 0!==s&&this._$Em!==s){const e=i.getPropertyOptions(s),n="function"==typeof e.converter?{fromAttribute:e.converter}:void 0!==e.converter?.fromAttribute?e.converter:v;this._$Em=s;const r=n.fromAttribute(t,e.type);this[s]=r??this._$Ej?.get(s)??r,this._$Em=null}}requestUpdate(e,t,i,s=!1,n){if(void 0!==e){const r=this.constructor;if(!1===s&&(n=this[e]),i??=r.getPropertyOptions(e),!((i.hasChanged??y)(n,t)||i.useDefault&&i.reflect&&n===this._$Ej?.get(e)&&!this.hasAttribute(r._$Eu(e,i))))return;this.C(e,t,i)}!1===this.isUpdatePending&&(this._$ES=this._$EP())}C(e,t,{useDefault:i,reflect:s,wrapped:n},r){i&&!(this._$Ej??=new Map).has(e)&&(this._$Ej.set(e,r??t??this[e]),!0!==n||void 0!==r)||(this._$AL.has(e)||(this.hasUpdated||i||(t=void 0),this._$AL.set(e,t)),!0===s&&this._$Em!==e&&(this._$Eq??=new Set).add(e))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(e){Promise.reject(e)}const e=this.scheduleUpdate();return null!=e&&await e,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(const[e,t]of this._$Ep)this[e]=t;this._$Ep=void 0}const e=this.constructor.elementProperties;if(e.size>0)for(const[t,i]of e){const{wrapped:e}=i,s=this[t];!0!==e||this._$AL.has(t)||void 0===s||this.C(t,void 0,i,s)}}let e=!1;const t=this._$AL;try{e=this.shouldUpdate(t),e?(this.willUpdate(t),this._$EO?.forEach(e=>e.hostUpdate?.()),this.update(t)):this._$EM()}catch(t){throw e=!1,this._$EM(),t}e&&this._$AE(t)}willUpdate(e){}_$AE(e){this._$EO?.forEach(e=>e.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(e)),this.updated(e)}_$EM(){this._$AL=new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(e){return!0}update(e){this._$Eq&&=this._$Eq.forEach(e=>this._$ET(e,this[e])),this._$EM()}updated(e){}firstUpdated(e){}};w.elementStyles=[],w.shadowRootOptions={mode:"open"},w[_("elementProperties")]=new Map,w[_("finalized")]=new Map,m?.({ReactiveElement:w}),(b.reactiveElementVersions??=[]).push("2.1.2");const $=globalThis,k=e=>e,A=$.trustedTypes,S=A?A.createPolicy("lit-html",{createHTML:e=>e}):void 0,E="$lit$",C=`lit$${Math.random().toFixed(9).slice(2)}$`,z="?"+C,T=`<${z}>`,P=document,M=()=>P.createComment(""),R=e=>null===e||"object"!=typeof e&&"function"!=typeof e,H=Array.isArray,N="[ \t\n\f\r]",O=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,U=/-->/g,j=/>/g,D=RegExp(`>|${N}(?:([^\\s"'>=/]+)(${N}*=${N}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`,"g"),B=/'/g,L=/"/g,F=/^(?:script|style|textarea|title)$/i,W=(e=>(t,...i)=>({_$litType$:e,strings:t,values:i}))(1),I=Symbol.for("lit-noChange"),V=Symbol.for("lit-nothing"),q=new WeakMap,K=P.createTreeWalker(P,129);function G(e,t){if(!H(e)||!e.hasOwnProperty("raw"))throw Error("invalid template strings array");return void 0!==S?S.createHTML(t):t}const Z=(e,t)=>{const i=e.length-1,s=[];let n,r=2===t?"<svg>":3===t?"<math>":"",a=O;for(let t=0;t<i;t++){const i=e[t];let o,l,c=-1,d=0;for(;d<i.length&&(a.lastIndex=d,l=a.exec(i),null!==l);)d=a.lastIndex,a===O?"!--"===l[1]?a=U:void 0!==l[1]?a=j:void 0!==l[2]?(F.test(l[2])&&(n=RegExp("</"+l[2],"g")),a=D):void 0!==l[3]&&(a=D):a===D?">"===l[0]?(a=n??O,c=-1):void 0===l[1]?c=-2:(c=a.lastIndex-l[2].length,o=l[1],a=void 0===l[3]?D:'"'===l[3]?L:B):a===L||a===B?a=D:a===U||a===j?a=O:(a=D,n=void 0);const h=a===D&&e[t+1].startsWith("/>")?" ":"";r+=a===O?i+T:c>=0?(s.push(o),i.slice(0,c)+E+i.slice(c)+C+h):i+C+(-2===c?t:h)}return[G(e,r+(e[i]||"<?>")+(2===t?"</svg>":3===t?"</math>":"")),s]};class J{constructor({strings:e,_$litType$:t},i){let s;this.parts=[];let n=0,r=0;const a=e.length-1,o=this.parts,[l,c]=Z(e,t);if(this.el=J.createElement(l,i),K.currentNode=this.el.content,2===t||3===t){const e=this.el.content.firstChild;e.replaceWith(...e.childNodes)}for(;null!==(s=K.nextNode())&&o.length<a;){if(1===s.nodeType){if(s.hasAttributes())for(const e of s.getAttributeNames())if(e.endsWith(E)){const t=c[r++],i=s.getAttribute(e).split(C),a=/([.?@])?(.*)/.exec(t);o.push({type:1,index:n,name:a[2],strings:i,ctor:"."===a[1]?te:"?"===a[1]?ie:"@"===a[1]?se:ee}),s.removeAttribute(e)}else e.startsWith(C)&&(o.push({type:6,index:n}),s.removeAttribute(e));if(F.test(s.tagName)){const e=s.textContent.split(C),t=e.length-1;if(t>0){s.textContent=A?A.emptyScript:"";for(let i=0;i<t;i++)s.append(e[i],M()),K.nextNode(),o.push({type:2,index:++n});s.append(e[t],M())}}}else if(8===s.nodeType)if(s.data===z)o.push({type:2,index:n});else{let e=-1;for(;-1!==(e=s.data.indexOf(C,e+1));)o.push({type:7,index:n}),e+=C.length-1}n++}}static createElement(e,t){const i=P.createElement("template");return i.innerHTML=e,i}}function Y(e,t,i=e,s){if(t===I)return t;let n=void 0!==s?i._$Co?.[s]:i._$Cl;const r=R(t)?void 0:t._$litDirective$;return n?.constructor!==r&&(n?._$AO?.(!1),void 0===r?n=void 0:(n=new r(e),n._$AT(e,i,s)),void 0!==s?(i._$Co??=[])[s]=n:i._$Cl=n),void 0!==n&&(t=Y(e,n._$AS(e,t.values),n,s)),t}class Q{constructor(e,t){this._$AV=[],this._$AN=void 0,this._$AD=e,this._$AM=t}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(e){const{el:{content:t},parts:i}=this._$AD,s=(e?.creationScope??P).importNode(t,!0);K.currentNode=s;let n=K.nextNode(),r=0,a=0,o=i[0];for(;void 0!==o;){if(r===o.index){let t;2===o.type?t=new X(n,n.nextSibling,this,e):1===o.type?t=new o.ctor(n,o.name,o.strings,this,e):6===o.type&&(t=new ne(n,this,e)),this._$AV.push(t),o=i[++a]}r!==o?.index&&(n=K.nextNode(),r++)}return K.currentNode=P,s}p(e){let t=0;for(const i of this._$AV)void 0!==i&&(void 0!==i.strings?(i._$AI(e,i,t),t+=i.strings.length-2):i._$AI(e[t])),t++}}class X{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(e,t,i,s){this.type=2,this._$AH=V,this._$AN=void 0,this._$AA=e,this._$AB=t,this._$AM=i,this.options=s,this._$Cv=s?.isConnected??!0}get parentNode(){let e=this._$AA.parentNode;const t=this._$AM;return void 0!==t&&11===e?.nodeType&&(e=t.parentNode),e}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(e,t=this){e=Y(this,e,t),R(e)?e===V||null==e||""===e?(this._$AH!==V&&this._$AR(),this._$AH=V):e!==this._$AH&&e!==I&&this._(e):void 0!==e._$litType$?this.$(e):void 0!==e.nodeType?this.T(e):(e=>H(e)||"function"==typeof e?.[Symbol.iterator])(e)?this.k(e):this._(e)}O(e){return this._$AA.parentNode.insertBefore(e,this._$AB)}T(e){this._$AH!==e&&(this._$AR(),this._$AH=this.O(e))}_(e){this._$AH!==V&&R(this._$AH)?this._$AA.nextSibling.data=e:this.T(P.createTextNode(e)),this._$AH=e}$(e){const{values:t,_$litType$:i}=e,s="number"==typeof i?this._$AC(e):(void 0===i.el&&(i.el=J.createElement(G(i.h,i.h[0]),this.options)),i);if(this._$AH?._$AD===s)this._$AH.p(t);else{const e=new Q(s,this),i=e.u(this.options);e.p(t),this.T(i),this._$AH=e}}_$AC(e){let t=q.get(e.strings);return void 0===t&&q.set(e.strings,t=new J(e)),t}k(e){H(this._$AH)||(this._$AH=[],this._$AR());const t=this._$AH;let i,s=0;for(const n of e)s===t.length?t.push(i=new X(this.O(M()),this.O(M()),this,this.options)):i=t[s],i._$AI(n),s++;s<t.length&&(this._$AR(i&&i._$AB.nextSibling,s),t.length=s)}_$AR(e=this._$AA.nextSibling,t){for(this._$AP?.(!1,!0,t);e!==this._$AB;){const t=k(e).nextSibling;k(e).remove(),e=t}}setConnected(e){void 0===this._$AM&&(this._$Cv=e,this._$AP?.(e))}}class ee{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(e,t,i,s,n){this.type=1,this._$AH=V,this._$AN=void 0,this.element=e,this.name=t,this._$AM=s,this.options=n,i.length>2||""!==i[0]||""!==i[1]?(this._$AH=Array(i.length-1).fill(new String),this.strings=i):this._$AH=V}_$AI(e,t=this,i,s){const n=this.strings;let r=!1;if(void 0===n)e=Y(this,e,t,0),r=!R(e)||e!==this._$AH&&e!==I,r&&(this._$AH=e);else{const s=e;let a,o;for(e=n[0],a=0;a<n.length-1;a++)o=Y(this,s[i+a],t,a),o===I&&(o=this._$AH[a]),r||=!R(o)||o!==this._$AH[a],o===V?e=V:e!==V&&(e+=(o??"")+n[a+1]),this._$AH[a]=o}r&&!s&&this.j(e)}j(e){e===V?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,e??"")}}class te extends ee{constructor(){super(...arguments),this.type=3}j(e){this.element[this.name]=e===V?void 0:e}}class ie extends ee{constructor(){super(...arguments),this.type=4}j(e){this.element.toggleAttribute(this.name,!!e&&e!==V)}}class se extends ee{constructor(e,t,i,s,n){super(e,t,i,s,n),this.type=5}_$AI(e,t=this){if((e=Y(this,e,t,0)??V)===I)return;const i=this._$AH,s=e===V&&i!==V||e.capture!==i.capture||e.once!==i.once||e.passive!==i.passive,n=e!==V&&(i===V||s);s&&this.element.removeEventListener(this.name,this,i),n&&this.element.addEventListener(this.name,this,e),this._$AH=e}handleEvent(e){"function"==typeof this._$AH?this._$AH.call(this.options?.host??this.element,e):this._$AH.handleEvent(e)}}class ne{constructor(e,t,i){this.element=e,this.type=6,this._$AN=void 0,this._$AM=t,this.options=i}get _$AU(){return this._$AM._$AU}_$AI(e){Y(this,e)}}const re=$.litHtmlPolyfillSupport;re?.(J,X),($.litHtmlVersions??=[]).push("3.3.2");const ae=globalThis;class oe extends w{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){const e=super.createRenderRoot();return this.renderOptions.renderBefore??=e.firstChild,e}update(e){const t=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(e),this._$Do=((e,t,i)=>{const s=i?.renderBefore??t;let n=s._$litPart$;if(void 0===n){const e=i?.renderBefore??null;s._$litPart$=n=new X(t.insertBefore(M(),e),e,void 0,i??{})}return n._$AI(e),n})(t,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return I}}oe._$litElement$=!0,oe.finalized=!0,ae.litElementHydrateSupport?.({LitElement:oe});const le=ae.litElementPolyfillSupport;le?.({LitElement:oe}),(ae.litElementVersions??=[]).push("4.2.2");const ce=e=>(t,i)=>{void 0!==i?i.addInitializer(()=>{customElements.define(e,t)}):customElements.define(e,t)},de={attribute:!0,type:String,converter:v,reflect:!1,hasChanged:y},he=(e=de,t,i)=>{const{kind:s,metadata:n}=i;let r=globalThis.litPropertyMetadata.get(n);if(void 0===r&&globalThis.litPropertyMetadata.set(n,r=new Map),"setter"===s&&((e=Object.create(e)).wrapped=!0),r.set(i.name,e),"accessor"===s){const{name:s}=i;return{set(i){const n=t.get.call(this);t.set.call(this,i),this.requestUpdate(s,n,e,!0,i)},init(t){return void 0!==t&&this.C(s,void 0,e,t),t}}}if("setter"===s){const{name:s}=i;return function(i){const n=this[s];t.call(this,i),this.requestUpdate(s,n,e,!0,i)}}throw Error("Unsupported decorator location: "+s)};function pe(e){return(t,i)=>"object"==typeof i?he(e,t,i):((e,t,i)=>{const s=t.hasOwnProperty(i);return t.constructor.createProperty(i,e),s?Object.getOwnPropertyDescriptor(t,i):void 0})(e,t,i)}function ue(e){return pe({...e,state:!0,attribute:!1})}const be={nextbike_wr:"#DC2026",nextbike_la:"#004E9E",nextbike_si:"#C8102E",nextbike_vt:"#009D58",nextbike_al:"#E30613",nextbike_ka:"#FFC20E"};const ge={en:{no_entities_picked:"No station selected",no_entities_available:"No nextbike sensors found",no_entities_unavailable:"Selected station is currently unavailable",rack_summary:"Bike rack: {available} of {capacity} bikes available",offline:"offline",no_rental:"no rental",no_return:"no return",virtual_station:"virtual station",bikes:"bikes",bike:"bike",docks:"docks",dock:"dock",ebikes:"e-bikes",capacity:"capacity",last_updated:"updated",now:"just now",seconds_ago:"{n}s ago",minutes_ago:"{n}min ago",hours_ago:"{n}h ago",rent_in_app:"Rent in app",open_map:"Map",legend_bike:"Bike",legend_ebike:"E-bike",legend_empty:"Empty dock",legend_overflow:"Overflow",legend_reserved:"Reserved",reserved:"Reserved",legend_disabled:"Out of service",disabled:"Out of service",battery_unknown:"battery unknown",version_update:"Nextbike Austria updated to v{v} — please reload",version_reload:"Reload",version_reload_stuck:"Reload didn't pick up the new version. Close this browser tab and reopen the dashboard, or clear your browser's site data for Home Assistant.",editor:{entities_helper:"Pick one or more nextbike-austria sensors. Use Settings → Devices & Services to add more stations.",section_display:"Display",layout:"Multi-station layout",layout_helper:"Stacked shows every station in one column; Tabs adds a tab strip when two or more stations are picked.",layout_stacked:"Stacked",layout_tabs:"Tabs",show_rack:"Show bike rack",show_legend:"Show legend",show_battery:"Show battery in e-bike slot",show_ebikes:"Show e-bikes",show_docks:"Show docks",show_flags:"Show status flags",show_timestamp:"Show timestamp",show_rent_button:"Show app-rent link",hide_header:"Hide header",hide_attribution:"Hide attribution"}},de:{no_entities_picked:"Keine Station ausgewählt",no_entities_available:"Keine Nextbike-Sensoren gefunden",no_entities_unavailable:"Ausgewählte Station ist gerade nicht verfügbar",rack_summary:"Radständer: {available} von {capacity} Rädern verfügbar",offline:"offline",no_rental:"keine Ausleihe",no_return:"keine Rückgabe",virtual_station:"virtuelle Station",bikes:"Räder",bike:"Rad",docks:"Plätze",dock:"Platz",ebikes:"E-Bikes",capacity:"Kapazität",last_updated:"aktualisiert",now:"gerade eben",seconds_ago:"vor {n}s",minutes_ago:"vor {n}min",hours_ago:"vor {n}h",rent_in_app:"In App mieten",open_map:"Karte",legend_bike:"Rad",legend_ebike:"E-Bike",legend_empty:"Freier Platz",legend_overflow:"Überzählig",legend_reserved:"Reserviert",reserved:"Reserviert",legend_disabled:"Außer Betrieb",disabled:"Außer Betrieb",battery_unknown:"Batterie unbekannt",version_update:"Nextbike Austria wurde auf v{v} aktualisiert — bitte neu laden",version_reload:"Neu laden",version_reload_stuck:"Neu laden hat die neue Version nicht übernommen. Schließen Sie diesen Browser-Tab und öffnen Sie das Dashboard erneut, oder löschen Sie die Website-Daten für Home Assistant in den Browser-Einstellungen.",editor:{entities_helper:"Eine oder mehrere Nextbike-Austria-Sensoren auswählen. Über Einstellungen → Geräte & Dienste lassen sich weitere Stationen hinzufügen.",section_display:"Anzeige",layout:"Layout für mehrere Stationen",layout_helper:"„Gestapelt“ zeigt alle Stationen untereinander, „Reiter“ blendet ab zwei Stationen einen Reiter-Streifen ein.",layout_stacked:"Gestapelt",layout_tabs:"Reiter",show_rack:"Bike-Rack anzeigen",show_legend:"Legende anzeigen",show_battery:"Batterie im E-Bike-Slot anzeigen",show_ebikes:"E-Bike-Anzeige",show_docks:"Plätze anzeigen",show_flags:"Statussymbole anzeigen",show_timestamp:"Zeitstempel anzeigen",show_rent_button:"App-Mietlink anzeigen",hide_header:"Kopfzeile ausblenden",hide_attribution:"Datenquelle ausblenden"}}};function fe(e){return(e?.language||"en").startsWith("de")?"de":"en"}function me(e,t){let i=e;for(const e of t){if("object"!=typeof i||null===i)return;const t=i[e];if(void 0===t)return;i=t}return"string"==typeof i?i:void 0}function _e(e,t){if(!e)return V;if(function(e){if(!e)return!1;try{return"1"===window.sessionStorage?.getItem(`nb-reload-attempted-${e}`)}catch{return!1}}(e)){const e=t("version_reload_stuck");return W`
+/*! Nextbike Austria Card — bundled by Rolldown. Edit sources in src/, then `npm run build`. */
+/**
+* @license
+* Copyright 2019 Google LLC
+* SPDX-License-Identifier: BSD-3-Clause
+*/
+const e=globalThis,t=e.ShadowRoot&&(e.ShadyCSS===void 0||e.ShadyCSS.nativeShadow)&&`adoptedStyleSheets`in Document.prototype&&`replace`in CSSStyleSheet.prototype,n=Symbol(),r=/* @__PURE__ */ new WeakMap;var i=class{constructor(e,t,r){if(this._$cssResult$=!0,r!==n)throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");this.cssText=e,this.t=t}get styleSheet(){let e=this.o,n=this.t;if(t&&e===void 0){let t=n!==void 0&&n.length===1;t&&(e=r.get(n)),e===void 0&&((this.o=e=new CSSStyleSheet).replaceSync(this.cssText),t&&r.set(n,e))}return e}toString(){return this.cssText}};const a=e=>new i(typeof e==`string`?e:e+``,void 0,n),o=(e,...t)=>new i(e.length===1?e[0]:t.reduce((t,n,r)=>t+(e=>{if(!0===e._$cssResult$)return e.cssText;if(typeof e==`number`)return e;throw Error(`Value passed to 'css' function must be a 'css' function result: `+e+`. Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.`)})(n)+e[r+1],e[0]),e,n),s=(n,r)=>{if(t)n.adoptedStyleSheets=r.map(e=>e instanceof CSSStyleSheet?e:e.styleSheet);else for(let t of r){let r=document.createElement(`style`),i=e.litNonce;i!==void 0&&r.setAttribute(`nonce`,i),r.textContent=t.cssText,n.appendChild(r)}},c=t?e=>e:e=>e instanceof CSSStyleSheet?(e=>{let t=``;for(let n of e.cssRules)t+=n.cssText;return a(t)})(e):e,{is:l,defineProperty:u,getOwnPropertyDescriptor:d,getOwnPropertyNames:ee,getOwnPropertySymbols:te,getPrototypeOf:ne}=Object,f=globalThis,re=f.trustedTypes,ie=re?re.emptyScript:``,ae=f.reactiveElementPolyfillSupport,p=(e,t)=>e,m={toAttribute(e,t){
+/**
+* @license
+* Copyright 2017 Google LLC
+* SPDX-License-Identifier: BSD-3-Clause
+*/
+switch(t){case Boolean:e=e?ie:null;break;case Object:case Array:e=e==null?e:JSON.stringify(e)}return e},fromAttribute(e,t){let n=e;switch(t){case Boolean:n=e!==null;break;case Number:n=e===null?null:Number(e);break;case Object:case Array:try{n=JSON.parse(e)}catch{n=null}}return n}},h=(e,t)=>!l(e,t),g={attribute:!0,type:String,converter:m,reflect:!1,useDefault:!1,hasChanged:h};Symbol.metadata??=Symbol(`metadata`),f.litPropertyMetadata??=/* @__PURE__ */ new WeakMap;var _=class extends HTMLElement{static addInitializer(e){this._$Ei(),(this.l??=[]).push(e)}static get observedAttributes(){return this.finalize(),this._$Eh&&[...this._$Eh.keys()]}static createProperty(e,t=g){if(t.state&&(t.attribute=!1),this._$Ei(),this.prototype.hasOwnProperty(e)&&((t=Object.create(t)).wrapped=!0),this.elementProperties.set(e,t),!t.noAccessor){let n=Symbol(),r=this.getPropertyDescriptor(e,n,t);r!==void 0&&u(this.prototype,e,r)}}static getPropertyDescriptor(e,t,n){let{get:r,set:i}=d(this.prototype,e)??{get(){return this[t]},set(e){this[t]=e}};return{get:r,set(t){let a=r?.call(this);i?.call(this,t),this.requestUpdate(e,a,n)},configurable:!0,enumerable:!0}}static getPropertyOptions(e){return this.elementProperties.get(e)??g}static _$Ei(){if(this.hasOwnProperty(p(`elementProperties`)))return;let e=ne(this);e.finalize(),e.l!==void 0&&(this.l=[...e.l]),this.elementProperties=new Map(e.elementProperties)}static finalize(){if(this.hasOwnProperty(p(`finalized`)))return;if(this.finalized=!0,this._$Ei(),this.hasOwnProperty(p(`properties`))){let e=this.properties,t=[...ee(e),...te(e)];for(let n of t)this.createProperty(n,e[n])}let e=this[Symbol.metadata];if(e!==null){let t=litPropertyMetadata.get(e);if(t!==void 0)for(let[e,n]of t)this.elementProperties.set(e,n)}this._$Eh=/* @__PURE__ */ new Map;for(let[e,t]of this.elementProperties){let n=this._$Eu(e,t);n!==void 0&&this._$Eh.set(n,e)}this.elementStyles=this.finalizeStyles(this.styles)}static finalizeStyles(e){let t=[];if(Array.isArray(e)){let n=new Set(e.flat(1/0).reverse());for(let e of n)t.unshift(c(e))}else e!==void 0&&t.push(c(e));return t}static _$Eu(e,t){let n=t.attribute;return!1===n?void 0:typeof n==`string`?n:typeof e==`string`?e.toLowerCase():void 0}constructor(){super(),this._$Ep=void 0,this.isUpdatePending=!1,this.hasUpdated=!1,this._$Em=null,this._$Ev()}_$Ev(){this._$ES=new Promise(e=>this.enableUpdating=e),this._$AL=/* @__PURE__ */ new Map,this._$E_(),this.requestUpdate(),this.constructor.l?.forEach(e=>e(this))}addController(e){(this._$EO??=/* @__PURE__ */ new Set).add(e),this.renderRoot!==void 0&&this.isConnected&&e.hostConnected?.()}removeController(e){this._$EO?.delete(e)}_$E_(){let e=/* @__PURE__ */ new Map,t=this.constructor.elementProperties;for(let n of t.keys())this.hasOwnProperty(n)&&(e.set(n,this[n]),delete this[n]);e.size>0&&(this._$Ep=e)}createRenderRoot(){let e=this.shadowRoot??this.attachShadow(this.constructor.shadowRootOptions);return s(e,this.constructor.elementStyles),e}connectedCallback(){this.renderRoot??=this.createRenderRoot(),this.enableUpdating(!0),this._$EO?.forEach(e=>e.hostConnected?.())}enableUpdating(e){}disconnectedCallback(){this._$EO?.forEach(e=>e.hostDisconnected?.())}attributeChangedCallback(e,t,n){this._$AK(e,n)}_$ET(e,t){let n=this.constructor.elementProperties.get(e),r=this.constructor._$Eu(e,n);if(r!==void 0&&!0===n.reflect){let i=(n.converter?.toAttribute===void 0?m:n.converter).toAttribute(t,n.type);this._$Em=e,i==null?this.removeAttribute(r):this.setAttribute(r,i),this._$Em=null}}_$AK(e,t){let n=this.constructor,r=n._$Eh.get(e);if(r!==void 0&&this._$Em!==r){let e=n.getPropertyOptions(r),i=typeof e.converter==`function`?{fromAttribute:e.converter}:e.converter?.fromAttribute===void 0?m:e.converter;this._$Em=r;let a=i.fromAttribute(t,e.type);this[r]=a??this._$Ej?.get(r)??a,this._$Em=null}}requestUpdate(e,t,n,r=!1,i){if(e!==void 0){let a=this.constructor;if(!1===r&&(i=this[e]),n??=a.getPropertyOptions(e),!((n.hasChanged??h)(i,t)||n.useDefault&&n.reflect&&i===this._$Ej?.get(e)&&!this.hasAttribute(a._$Eu(e,n))))return;this.C(e,t,n)}!1===this.isUpdatePending&&(this._$ES=this._$EP())}C(e,t,{useDefault:n,reflect:r,wrapped:i},a){n&&!(this._$Ej??=/* @__PURE__ */ new Map).has(e)&&(this._$Ej.set(e,a??t??this[e]),!0!==i||a!==void 0)||(this._$AL.has(e)||(this.hasUpdated||n||(t=void 0),this._$AL.set(e,t)),!0===r&&this._$Em!==e&&(this._$Eq??=/* @__PURE__ */ new Set).add(e))}async _$EP(){this.isUpdatePending=!0;try{await this._$ES}catch(e){Promise.reject(e)}let e=this.scheduleUpdate();return e!=null&&await e,!this.isUpdatePending}scheduleUpdate(){return this.performUpdate()}performUpdate(){if(!this.isUpdatePending)return;if(!this.hasUpdated){if(this.renderRoot??=this.createRenderRoot(),this._$Ep){for(let[e,t]of this._$Ep)this[e]=t;this._$Ep=void 0}let e=this.constructor.elementProperties;if(e.size>0)for(let[t,n]of e){let{wrapped:e}=n,r=this[t];!0!==e||this._$AL.has(t)||r===void 0||this.C(t,void 0,n,r)}}let e=!1,t=this._$AL;try{e=this.shouldUpdate(t),e?(this.willUpdate(t),this._$EO?.forEach(e=>e.hostUpdate?.()),this.update(t)):this._$EM()}catch(t){throw e=!1,this._$EM(),t}e&&this._$AE(t)}willUpdate(e){}_$AE(e){this._$EO?.forEach(e=>e.hostUpdated?.()),this.hasUpdated||(this.hasUpdated=!0,this.firstUpdated(e)),this.updated(e)}_$EM(){this._$AL=/* @__PURE__ */ new Map,this.isUpdatePending=!1}get updateComplete(){return this.getUpdateComplete()}getUpdateComplete(){return this._$ES}shouldUpdate(e){return!0}update(e){this._$Eq&&=this._$Eq.forEach(e=>this._$ET(e,this[e])),this._$EM()}updated(e){}firstUpdated(e){}};_.elementStyles=[],_.shadowRootOptions={mode:`open`},_[p(`elementProperties`)]=/* @__PURE__ */ new Map,_[p(`finalized`)]=/* @__PURE__ */ new Map,ae?.({ReactiveElement:_}),(f.reactiveElementVersions??=[]).push(`2.1.2`);
+/**
+* @license
+* Copyright 2017 Google LLC
+* SPDX-License-Identifier: BSD-3-Clause
+*/
+const v=globalThis,oe=e=>e,y=v.trustedTypes,se=y?y.createPolicy(`lit-html`,{createHTML:e=>e}):void 0,ce=`$lit$`,b=`lit$${Math.random().toFixed(9).slice(2)}$`,le=`?`+b,ue=`<${le}>`,x=document,S=()=>x.createComment(``),C=e=>e===null||typeof e!=`object`&&typeof e!=`function`,w=Array.isArray,de=e=>w(e)||typeof e?.[Symbol.iterator]==`function`,T=`[ 	
+\f\r]`,E=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,D=/-->/g,O=/>/g,k=RegExp(`>|${T}(?:([^\\s"'>=/]+)(${T}*=${T}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`,`g`),A=/'/g,j=/"/g,M=/^(?:script|style|textarea|title)$/i,N=(e=>(t,...n)=>({_$litType$:e,strings:t,values:n}))(1),P=Symbol.for(`lit-noChange`),F=Symbol.for(`lit-nothing`),I=/* @__PURE__ */ new WeakMap,L=x.createTreeWalker(x,129);function fe(e,t){if(!w(e)||!e.hasOwnProperty(`raw`))throw Error(`invalid template strings array`);return se===void 0?t:se.createHTML(t)}const pe=(e,t)=>{let n=e.length-1,r=[],i,a=t===2?`<svg>`:t===3?`<math>`:``,o=E;for(let t=0;t<n;t++){let n=e[t],s,c,l=-1,u=0;for(;u<n.length&&(o.lastIndex=u,c=o.exec(n),c!==null);)u=o.lastIndex,o===E?c[1]===`!--`?o=D:c[1]===void 0?c[2]===void 0?c[3]!==void 0&&(o=k):(M.test(c[2])&&(i=RegExp(`</`+c[2],`g`)),o=k):o=O:o===k?c[0]===`>`?(o=i??E,l=-1):c[1]===void 0?l=-2:(l=o.lastIndex-c[2].length,s=c[1],o=c[3]===void 0?k:c[3]===`"`?j:A):o===j||o===A?o=k:o===D||o===O?o=E:(o=k,i=void 0);let d=o===k&&e[t+1].startsWith(`/>`)?` `:``;a+=o===E?n+ue:l>=0?(r.push(s),n.slice(0,l)+ce+n.slice(l)+b+d):n+b+(l===-2?t:d)}return[fe(e,a+(e[n]||`<?>`)+(t===2?`</svg>`:t===3?`</math>`:``)),r]};var R=class e{constructor({strings:t,_$litType$:n},r){let i;this.parts=[];let a=0,o=0,s=t.length-1,c=this.parts,[l,u]=pe(t,n);if(this.el=e.createElement(l,r),L.currentNode=this.el.content,n===2||n===3){let e=this.el.content.firstChild;e.replaceWith(...e.childNodes)}for(;(i=L.nextNode())!==null&&c.length<s;){if(i.nodeType===1){if(i.hasAttributes())for(let e of i.getAttributeNames())if(e.endsWith(ce)){let t=u[o++],n=i.getAttribute(e).split(b),r=/([.?@])?(.*)/.exec(t);c.push({type:1,index:a,name:r[2],strings:n,ctor:r[1]===`.`?he:r[1]===`?`?ge:r[1]===`@`?_e:V}),i.removeAttribute(e)}else e.startsWith(b)&&(c.push({type:6,index:a}),i.removeAttribute(e));if(M.test(i.tagName)){let e=i.textContent.split(b),t=e.length-1;if(t>0){i.textContent=y?y.emptyScript:``;for(let n=0;n<t;n++)i.append(e[n],S()),L.nextNode(),c.push({type:2,index:++a});i.append(e[t],S())}}}else if(i.nodeType===8){if(i.data===le)c.push({type:2,index:a});else{let e=-1;for(;(e=i.data.indexOf(b,e+1))!==-1;)c.push({type:7,index:a}),e+=b.length-1}}a++}}static createElement(e,t){let n=x.createElement(`template`);return n.innerHTML=e,n}};function z(e,t,n=e,r){if(t===P)return t;let i=r===void 0?n._$Cl:n._$Co?.[r],a=C(t)?void 0:t._$litDirective$;return i?.constructor!==a&&(i?._$AO?.(!1),a===void 0?i=void 0:(i=new a(e),i._$AT(e,n,r)),r===void 0?n._$Cl=i:(n._$Co??=[])[r]=i),i!==void 0&&(t=z(e,i._$AS(e,t.values),i,r)),t}var me=class{constructor(e,t){this._$AV=[],this._$AN=void 0,this._$AD=e,this._$AM=t}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(e){let{el:{content:t},parts:n}=this._$AD,r=(e?.creationScope??x).importNode(t,!0);L.currentNode=r;let i=L.nextNode(),a=0,o=0,s=n[0];for(;s!==void 0;){if(a===s.index){let t;s.type===2?t=new B(i,i.nextSibling,this,e):s.type===1?t=new s.ctor(i,s.name,s.strings,this,e):s.type===6&&(t=new ve(i,this,e)),this._$AV.push(t),s=n[++o]}a!==s?.index&&(i=L.nextNode(),a++)}return L.currentNode=x,r}p(e){let t=0;for(let n of this._$AV)n!==void 0&&(n.strings===void 0?n._$AI(e[t]):(n._$AI(e,n,t),t+=n.strings.length-2)),t++}},B=class e{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(e,t,n,r){this.type=2,this._$AH=F,this._$AN=void 0,this._$AA=e,this._$AB=t,this._$AM=n,this.options=r,this._$Cv=r?.isConnected??!0}get parentNode(){let e=this._$AA.parentNode,t=this._$AM;return t!==void 0&&e?.nodeType===11&&(e=t.parentNode),e}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(e,t=this){e=z(this,e,t),C(e)?e===F||e==null||e===``?(this._$AH!==F&&this._$AR(),this._$AH=F):e!==this._$AH&&e!==P&&this._(e):e._$litType$===void 0?e.nodeType===void 0?de(e)?this.k(e):this._(e):this.T(e):this.$(e)}O(e){return this._$AA.parentNode.insertBefore(e,this._$AB)}T(e){this._$AH!==e&&(this._$AR(),this._$AH=this.O(e))}_(e){this._$AH!==F&&C(this._$AH)?this._$AA.nextSibling.data=e:this.T(x.createTextNode(e)),this._$AH=e}$(e){let{values:t,_$litType$:n}=e,r=typeof n==`number`?this._$AC(e):(n.el===void 0&&(n.el=R.createElement(fe(n.h,n.h[0]),this.options)),n);if(this._$AH?._$AD===r)this._$AH.p(t);else{let e=new me(r,this),n=e.u(this.options);e.p(t),this.T(n),this._$AH=e}}_$AC(e){let t=I.get(e.strings);return t===void 0&&I.set(e.strings,t=new R(e)),t}k(t){w(this._$AH)||(this._$AH=[],this._$AR());let n=this._$AH,r,i=0;for(let a of t)i===n.length?n.push(r=new e(this.O(S()),this.O(S()),this,this.options)):r=n[i],r._$AI(a),i++;i<n.length&&(this._$AR(r&&r._$AB.nextSibling,i),n.length=i)}_$AR(e=this._$AA.nextSibling,t){for(this._$AP?.(!1,!0,t);e!==this._$AB;){let t=oe(e).nextSibling;oe(e).remove(),e=t}}setConnected(e){this._$AM===void 0&&(this._$Cv=e,this._$AP?.(e))}},V=class{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(e,t,n,r,i){this.type=1,this._$AH=F,this._$AN=void 0,this.element=e,this.name=t,this._$AM=r,this.options=i,n.length>2||n[0]!==``||n[1]!==``?(this._$AH=Array(n.length-1).fill(/* @__PURE__ */ new String),this.strings=n):this._$AH=F}_$AI(e,t=this,n,r){let i=this.strings,a=!1;if(i===void 0)e=z(this,e,t,0),a=!C(e)||e!==this._$AH&&e!==P,a&&(this._$AH=e);else{let r=e,o,s;for(e=i[0],o=0;o<i.length-1;o++)s=z(this,r[n+o],t,o),s===P&&(s=this._$AH[o]),a||=!C(s)||s!==this._$AH[o],s===F?e=F:e!==F&&(e+=(s??``)+i[o+1]),this._$AH[o]=s}a&&!r&&this.j(e)}j(e){e===F?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,e??``)}},he=class extends V{constructor(){super(...arguments),this.type=3}j(e){this.element[this.name]=e===F?void 0:e}},ge=class extends V{constructor(){super(...arguments),this.type=4}j(e){this.element.toggleAttribute(this.name,!!e&&e!==F)}},_e=class extends V{constructor(e,t,n,r,i){super(e,t,n,r,i),this.type=5}_$AI(e,t=this){if((e=z(this,e,t,0)??F)===P)return;let n=this._$AH,r=e===F&&n!==F||e.capture!==n.capture||e.once!==n.once||e.passive!==n.passive,i=e!==F&&(n===F||r);r&&this.element.removeEventListener(this.name,this,n),i&&this.element.addEventListener(this.name,this,e),this._$AH=e}handleEvent(e){typeof this._$AH==`function`?this._$AH.call(this.options?.host??this.element,e):this._$AH.handleEvent(e)}},ve=class{constructor(e,t,n){this.element=e,this.type=6,this._$AN=void 0,this._$AM=t,this.options=n}get _$AU(){return this._$AM._$AU}_$AI(e){z(this,e)}};const ye=v.litHtmlPolyfillSupport;ye?.(R,B),(v.litHtmlVersions??=[]).push(`3.3.2`);const be=(e,t,n)=>{let r=n?.renderBefore??t,i=r._$litPart$;if(i===void 0){let e=n?.renderBefore??null;r._$litPart$=i=new B(t.insertBefore(S(),e),e,void 0,n??{})}return i._$AI(e),i},H=globalThis
+/**
+* @license
+* Copyright 2017 Google LLC
+* SPDX-License-Identifier: BSD-3-Clause
+*/
+;var U=class extends _{constructor(){super(...arguments),this.renderOptions={host:this},this._$Do=void 0}createRenderRoot(){let e=super.createRenderRoot();return this.renderOptions.renderBefore??=e.firstChild,e}update(e){let t=this.render();this.hasUpdated||(this.renderOptions.isConnected=this.isConnected),super.update(e),this._$Do=be(t,this.renderRoot,this.renderOptions)}connectedCallback(){super.connectedCallback(),this._$Do?.setConnected(!0)}disconnectedCallback(){super.disconnectedCallback(),this._$Do?.setConnected(!1)}render(){return P}};U._$litElement$=!0,U.finalized=!0,H.litElementHydrateSupport?.({LitElement:U});const xe=H.litElementPolyfillSupport;xe?.({LitElement:U}),(H.litElementVersions??=[]).push(`4.2.2`);
+/**
+* @license
+* Copyright 2017 Google LLC
+* SPDX-License-Identifier: BSD-3-Clause
+*/
+const Se=e=>(t,n)=>{n===void 0?customElements.define(e,t):n.addInitializer(()=>{customElements.define(e,t)})},Ce={attribute:!0,type:String,converter:m,reflect:!1,hasChanged:h},we=(e=Ce,t,n)=>{
+/**
+* @license
+* Copyright 2017 Google LLC
+* SPDX-License-Identifier: BSD-3-Clause
+*/
+let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&globalThis.litPropertyMetadata.set(i,a=/* @__PURE__ */ new Map),r===`setter`&&((e=Object.create(e)).wrapped=!0),a.set(n.name,e),r===`accessor`){let{name:r}=n;return{set(n){let i=t.get.call(this);t.set.call(this,n),this.requestUpdate(r,i,e,!0,n)},init(t){return t!==void 0&&this.C(r,void 0,e,t),t}}}if(r===`setter`){let{name:r}=n;return function(n){let i=this[r];t.call(this,n),this.requestUpdate(r,i,e,!0,n)}}throw Error(`Unsupported decorator location: `+r)};function W(e){return(t,n)=>typeof n==`object`?we(e,t,n):((e,t,n)=>{let r=t.hasOwnProperty(n);return t.constructor.createProperty(n,e),r?Object.getOwnPropertyDescriptor(t,n):void 0})(e,t,n)}
+/**
+* @license
+* Copyright 2017 Google LLC
+* SPDX-License-Identifier: BSD-3-Clause
+*/function G(e){return W({...e,state:!0,attribute:!1})}const Te={nextbike_wr:`#DC2026`,nextbike_la:`#004E9E`,nextbike_si:`#C8102E`,nextbike_vt:`#009D58`,nextbike_al:`#E30613`,nextbike_ka:`#FFC20E`},K={en:{no_entities_available:`No nextbike sensors found`,no_entities_unavailable:`Selected station is currently unavailable`,rack_summary:`Bike rack: {available} of {capacity} bikes available`,offline:`offline`,no_rental:`no rental`,no_return:`no return`,virtual_station:`virtual station`,bikes:`bikes`,bike:`bike`,docks:`docks`,dock:`dock`,ebikes:`e-bikes`,capacity:`capacity`,last_updated:`updated`,now:`just now`,seconds_ago:`{n}s ago`,minutes_ago:`{n}min ago`,hours_ago:`{n}h ago`,rent_in_app:`Rent in app`,open_map:`Map`,legend_bike:`Bike`,legend_ebike:`E-bike`,legend_empty:`Empty dock`,legend_overflow:`Overflow`,legend_reserved:`Reserved`,reserved:`Reserved`,legend_disabled:`Out of service`,disabled:`Out of service`,battery_unknown:`battery unknown`,battery_avg:`avg. charge`,overflow_more:`{n} more bikes than docks`,stations:`Stations`,version_update:`Nextbike Austria updated to v{v} — please reload`,version_reload:`Reload`,version_reload_stuck:`Reload didn't pick up the new version. Close this browser tab and reopen the dashboard, or clear your browser's site data for Home Assistant.`,editor:{entities_helper:`Pick one or more nextbike-austria sensors. Use Settings → Devices & Services to add more stations.`,entity_missing:`Sensor {entity} no longer exists. Pick a different sensor or remove it from this card's entities list.`,section_display:`Display`,layout:`Multi-station layout`,layout_helper:`Stacked shows every station in one column; Tabs adds a tab strip when two or more stations are picked.`,layout_stacked:`Stacked`,layout_tabs:`Tabs`,show_rack:`Show bike rack`,show_legend:`Show legend`,show_battery:`Show battery in e-bike slot`,show_ebikes:`Show e-bikes`,show_docks:`Show docks`,show_flags:`Show status flags`,show_timestamp:`Show timestamp`,show_rent_button:`Show app-rent link`,hide_header:`Hide header`,hide_attribution:`Hide attribution`}},de:{no_entities_available:`Keine Nextbike-Sensoren gefunden`,no_entities_unavailable:`Ausgewählte Station ist gerade nicht verfügbar`,rack_summary:`Radständer: {available} von {capacity} Rädern verfügbar`,offline:`offline`,no_rental:`keine Ausleihe`,no_return:`keine Rückgabe`,virtual_station:`virtuelle Station`,bikes:`Räder`,bike:`Rad`,docks:`Plätze`,dock:`Platz`,ebikes:`E-Bikes`,capacity:`Kapazität`,last_updated:`aktualisiert`,now:`gerade eben`,seconds_ago:`vor {n}s`,minutes_ago:`vor {n}min`,hours_ago:`vor {n}h`,rent_in_app:`In App mieten`,open_map:`Karte`,legend_bike:`Rad`,legend_ebike:`E-Bike`,legend_empty:`Freier Platz`,legend_overflow:`Überzählig`,legend_reserved:`Reserviert`,reserved:`Reserviert`,legend_disabled:`Außer Betrieb`,disabled:`Außer Betrieb`,battery_unknown:`Batterie unbekannt`,battery_avg:`Ø Akkustand`,overflow_more:`{n} Räder mehr als Plätze`,stations:`Stationen`,version_update:`Nextbike Austria wurde auf v{v} aktualisiert — bitte neu laden`,version_reload:`Neu laden`,version_reload_stuck:`Neu laden hat die neue Version nicht übernommen. Schließe diesen Browser-Tab und öffne das Dashboard erneut, oder lösche die Website-Daten für Home Assistant in den Browser-Einstellungen.`,editor:{entities_helper:`Eine oder mehrere Nextbike-Austria-Sensoren auswählen. Über Einstellungen → Geräte & Dienste lassen sich weitere Stationen hinzufügen.`,entity_missing:`Sensor {entity} existiert nicht mehr. Wähle einen anderen Sensor oder entferne ihn aus den Entitäten dieser Karte.`,section_display:`Anzeige`,layout:`Layout für mehrere Stationen`,layout_helper:`„Gestapelt“ zeigt alle Stationen untereinander, „Reiter“ blendet ab zwei Stationen einen Reiter-Streifen ein.`,layout_stacked:`Gestapelt`,layout_tabs:`Reiter`,show_rack:`Bike-Rack anzeigen`,show_legend:`Legende anzeigen`,show_battery:`Batterie im E-Bike-Slot anzeigen`,show_ebikes:`E-Bike-Anzeige`,show_docks:`Plätze anzeigen`,show_flags:`Statussymbole anzeigen`,show_timestamp:`Zeitstempel anzeigen`,show_rent_button:`App-Mietlink anzeigen`,hide_header:`Kopfzeile ausblenden`,hide_attribution:`Datenquelle ausblenden`}}};function Ee(e){return(e?.language||`en`).startsWith(`de`)?`de`:`en`}function q(e,t){let n=e;for(let e of t){if(typeof n!=`object`||!n)return;let t=n[e];if(t===void 0)return;n=t}return typeof n==`string`?n:void 0}function De(e,t){let n=Ee(e);return q(K[n]??K.en,[t])??q(K.en,[t])??t}function Oe(e,t){let n=Ee(e);return q(K[n]??K.en,[`editor`,t])??q(K.en,[`editor`,t])??t}async function ke(e,t,n){if(!e?.callWS)return null;try{let r=await e.callWS({type:t});if(r?.version&&r.version!==n)return r.version}catch{}return null}function Ae(e){try{window.caches?.keys?.().then(e=>{e.forEach(e=>window.caches?.delete?.(e))})}catch{}if(e)try{window.sessionStorage?.setItem(`nb-reload-attempted-${e}`,`1`)}catch{}window.location.reload()}function je(e){if(!e)return!1;try{return window.sessionStorage?.getItem(`nb-reload-attempted-${e}`)===`1`}catch{return!1}}function Me(e,t){if(!e)return F;if(je(e)){let e=t(`version_reload_stuck`);return N`
       <div class="banner" role="alert" aria-live="assertive">
         <span>${e}</span>
       </div>
-    `}const i=t("version_update").replace("{v}",e),s=t("version_reload");return W`
+    `}let n=t(`version_update`).replace(`{v}`,e),r=t(`version_reload`);return N`
     <div class="banner" role="alert" aria-live="assertive">
-      <span>${i}</span>
+      <span>${n}</span>
       <button
         type="button"
-        aria-label=${s}
-        @click=${()=>function(e){try{window.caches?.keys?.().then(e=>{e.forEach(e=>window.caches?.delete?.(e))})}catch{}if(e)try{window.sessionStorage?.setItem(`nb-reload-attempted-${e}`,"1")}catch{}window.location.reload()}(e)}
+        aria-label=${r}
+        @click=${()=>Ae(e)}
       >
-        ${s}
+        ${r}
       </button>
     </div>
-  `}const ve=a`
+  `}const Ne=o`
   :host {
     /* Card responds to its own column width, not the viewport — narrow
        dashboard columns trigger the compact layout even on wide screens.
@@ -29,11 +70,35 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
        selection (WCAG 1.4.11). HA's active theme drives the resolution. */
     color-scheme: light dark;
     display: block;
+    /* Fill the grid cell the dashboard gave us.
+       A sections view puts a fixed pixel height on the cell WRAPPER whenever
+       the card's rows are numeric -- which a user also causes by dragging the
+       row handle, since a stored grid_options overrides what getGridOptions()
+       returns -- and styles nothing inside that wrapper.
+       This host is display: block, so IT is the containing block for the
+       ha-card below, and a percentage height against a containing block whose
+       own height is auto computes to auto. Without this line ha-card therefore
+       sizes to its content, overflows a cell too short for it, and is painted
+       over the card underneath. Taking the cell's height here is what gives
+       ha-card's 100% something to resolve against.
+       In an auto-height cell it resolves to auto -- the height it already had
+       -- so it costs nothing there. */
+    block-size: 100%;
     container-type: inline-size;
     container-name: nbcard;
 
     /* Brand accent — domain-specific, no HA equivalent. */
     --nb-accent: var(--primary-color);
+    /* E-bike amber: the rack's diagonal stripe, its legend swatch and the
+       e-bike chip. The green is the charge the legend's battery swatch
+       samples; each rack slot's own colour comes from batteryColor(). */
+    --nb-ebike-amber: #ffd740;
+    --nb-battery-sample: #2ecc71;
+    /* How much of a battery fill is its charge colour; the rest is the
+       theme's text colour. That darkens the fill on a light card and
+       lightens it on a dark one, which keeps it 3:1 from the pale empty
+       part in both (WCAG 1.4.11; worst case amber on white, 3.2:1). */
+    --nb-battery-depth: 70%;
 
     /* Semantic state tokens layered over HA's official semantic palette
        so theme authors can recolour the whole portfolio in one place;
@@ -82,6 +147,13 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
     --nb-tile-size: 40px;
   }
   ha-card {
+    /* Resolves against the height :host just took from the cell, so
+       overflow: hidden clips inside the card rather than the card spilling
+       past its own cell. The two declarations only work as a pair: core cards
+       that set this one alone leave :host at its default inline display, where
+       the cell wrapper is ha-card's containing block instead. */
+    block-size: 100%;
+
     overflow: hidden;
   }
   .wrap {
@@ -98,7 +170,8 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
     justify-content: space-between;
     gap: 8px;
     background: var(--nb-warning);
-    color: #fff;
+    /* Black, not white: white on warning orange is 2:1 (WCAG 1.4.3). */
+    color: #000;
     padding: 10px 14px;
     margin: calc(var(--nb-pad-y) * -1) calc(var(--nb-pad-x) * -1) 0;
     border-radius: 0;
@@ -107,7 +180,7 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
   }
   .banner button {
     background: #fff;
-    color: var(--nb-warning);
+    color: #000;
     border: none;
     border-radius: 999px;
     padding: 6px 14px;
@@ -163,7 +236,7 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
     /* Three independent active cues: colour, weight, underline.
        Survives any single-channel deficit (low vision, protanopia,
        grayscale). */
-    color: var(--primary-color);
+    color: var(--primary-text-color);
     font-weight: var(--ha-font-weight-bold, 700);
     box-shadow: inset 0 -2px 0 var(--primary-color);
   }
@@ -218,9 +291,9 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
     font-weight: 600;
     line-height: 1.25;
     color: var(--primary-text-color);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    /* Wraps rather than truncating: a cut-off station name at 320 px or
+       under text-spacing overrides loses content (WCAG 1.4.10 / 1.4.12). */
+    overflow-wrap: anywhere;
   }
   .subtitle {
     /* <p> override. */
@@ -229,9 +302,7 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
     color: var(--secondary-text-color);
     font-weight: 400;
     letter-spacing: 0.1px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
   .icon-action {
     /* Map link rendered as an HA-style icon button — circular, 40×40
@@ -324,7 +395,7 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
   .chip.ebike {
     /* E-bike chip uses the same amber as the rack diagonal stripe so
        the visual vocabulary stays consistent. */
-    background: color-mix(in srgb, #ffd740 28%, transparent);
+    background: color-mix(in srgb, var(--nb-ebike-amber) 28%, transparent);
     color: var(--primary-text-color);
   }
   .chip.ebike ha-icon {
@@ -367,8 +438,10 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
       135deg,
       var(--nb-accent) 0%,
       var(--nb-accent) 55%,
-      #ffd740 55%,
-      #ffd740 100%
+      var(--nb-stripe-edge, var(--nb-ebike-amber)) 55%,
+      var(--nb-stripe-edge, var(--nb-ebike-amber)) 62%,
+      var(--nb-ebike-amber) 62%,
+      var(--nb-ebike-amber) 100%
     );
   }
   /* Battery-fill variant: vertical gradient bottom (filled) → top (empty).
@@ -378,12 +451,17 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
   .slot.filled.ebike.battery {
     background: linear-gradient(
       to top,
-      var(--bat-color, #2ecc71) var(--bat-pct, 0%),
-      color-mix(in srgb, var(--bat-color, #2ecc71) 15%, transparent)
+      color-mix(
+          in srgb,
+          var(--bat-color, var(--nb-battery-sample)) var(--nb-battery-depth),
+          var(--primary-text-color)
+        )
+        var(--bat-pct, 0%),
+      color-mix(in srgb, var(--bat-color, var(--nb-battery-sample)) 15%, transparent)
         var(--bat-pct, 0%)
     );
     box-shadow: inset 0 0 0 1px
-      color-mix(in srgb, var(--bat-color, #2ecc71) 60%, transparent);
+      color-mix(in srgb, var(--bat-color, var(--nb-battery-sample)) 60%, transparent);
   }
   .slot.empty {
     background: color-mix(in srgb, var(--secondary-text-color) 6%, transparent);
@@ -472,6 +550,32 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
     margin: 0;
     vertical-align: middle;
   }
+  /* Bike, e-bike and battery swatches mirror the rack slots above, so the
+     stylesheet is the one place their colours come from. */
+  .legend-swatch.filled {
+    background: var(--nb-accent);
+  }
+  .legend-swatch.ebike {
+    background: linear-gradient(
+      135deg,
+      var(--nb-accent) 0%,
+      var(--nb-accent) 55%,
+      var(--nb-stripe-edge, var(--nb-ebike-amber)) 55%,
+      var(--nb-stripe-edge, var(--nb-ebike-amber)) 62%,
+      var(--nb-ebike-amber) 62%,
+      var(--nb-ebike-amber) 100%
+    );
+  }
+  .legend-swatch.ebike.battery {
+    background: linear-gradient(
+      to top,
+      color-mix(in srgb, var(--nb-battery-sample) var(--nb-battery-depth), var(--primary-text-color))
+        70%,
+      color-mix(in srgb, var(--nb-battery-sample) 15%, transparent) 70%
+    );
+    outline: 1px solid color-mix(in srgb, var(--nb-battery-sample) 60%, transparent);
+    outline-offset: -1px;
+  }
   .legend-swatch.empty {
     background: color-mix(in srgb, var(--secondary-text-color) 6%, transparent);
     box-shadow: inset 0 0 0 1px
@@ -531,12 +635,20 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
   .flag ha-icon {
     --mdc-icon-size: 14px;
   }
+  /* State colour on the tint and icon; the words stay in the text
+     colour, since orange and red text on their tints miss 4.5:1. */
   .flag.warn {
     background: color-mix(in srgb, var(--nb-warning) 16%, transparent);
+    color: var(--primary-text-color);
+  }
+  .flag.warn ha-icon {
     color: var(--nb-warning);
   }
   .flag.err {
     background: color-mix(in srgb, var(--nb-error) 16%, transparent);
+    color: var(--primary-text-color);
+  }
+  .flag.err ha-icon {
     color: var(--nb-error);
   }
 
@@ -562,7 +674,8 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
     height: 32px;
     border-radius: 999px;
     background: var(--nb-accent);
-    color: var(--text-primary-color, #fff);
+    /* Per-operator: white on the dark accents, dark on the light ones. */
+    color: var(--nb-accent-ink, var(--text-primary-color, #fff));
     font-size: 0.75rem;
     font-weight: 600;
     text-decoration: none;
@@ -590,7 +703,6 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
     font-size: 0.65rem;
     color: var(--secondary-text-color);
     text-align: center;
-    opacity: 0.6;
   }
 
   /* ── Empty / unavailable state ──────────────────────────────────── */
@@ -652,6 +764,20 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
     outline-offset: 3px;
   }
 
+  /* Read by screen readers, not drawn: the words behind a visual
+     shorthand such as the rack's "+N". */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
   /* Forced-colors fallback (Windows High Contrast). */
   @media (forced-colors: active) {
     .tab:focus-visible,
@@ -664,6 +790,54 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
     .flag,
     .btn-primary {
       forced-color-adjust: none;
+    }
+    /* The rack draws with fills, gradients and inset shadows, and forced
+       colours drop all three: every background turns Canvas and shadows
+       vanish, leaving only the lock and wrench icons. Opt the slots and
+       their legend swatches out and redraw them in the user's palette,
+       keeping the cues that need no colour: solid for a bike, a stripe
+       for an e-bike, a fill height for its charge, an outline for a dock
+       without an available bike. */
+    .slot,
+    .legend-swatch {
+      forced-color-adjust: none;
+    }
+    .slot.filled,
+    .legend-swatch.filled {
+      background: CanvasText;
+      box-shadow: none;
+    }
+    .slot.filled.ebike,
+    .legend-swatch.ebike {
+      background: linear-gradient(
+        135deg,
+        CanvasText 0%,
+        CanvasText 55%,
+        Highlight 55%,
+        Highlight 100%
+      );
+    }
+    .slot.filled.ebike.battery {
+      background: linear-gradient(
+        to top,
+        CanvasText var(--bat-pct, 0%),
+        Canvas var(--bat-pct, 0%)
+      );
+      box-shadow: inset 0 0 0 1px CanvasText;
+    }
+    .legend-swatch.ebike.battery {
+      background: linear-gradient(to top, CanvasText 70%, Canvas 70%);
+      outline-color: CanvasText;
+    }
+    .slot.empty,
+    .legend-swatch.empty,
+    .slot.reserved,
+    .legend-swatch.reserved,
+    .slot.disabled,
+    .legend-swatch.disabled {
+      background: Canvas;
+      box-shadow: inset 0 0 0 1px CanvasText;
+      color: CanvasText;
     }
   }
 
@@ -678,7 +852,7 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
       scroll-behavior: auto !important;
     }
   }
-`,ye=new Set(["143","183","200"]);function xe(e){const t=e?.e_bike_vehicle_type_ids;if(Array.isArray(t)&&t.length>0){const e=t.filter(e=>"string"==typeof e&&e.length>0);if(e.length>0)return new Set(e)}return ye}function we(e){return"string"!=typeof e?"":/^https?:\/\//i.test(e)?e:""}function $e(e){return e&&e.states?Object.keys(e.states).filter(t=>{if(!t.startsWith("sensor."))return!1;const i=e.states[t];if(!i)return!1;const s=i.attributes;return!!s&&"string"==typeof s.station_id&&"string"==typeof s.system_id&&s.system_id.startsWith("nextbike_")&&"string"==typeof s.attribution&&s.attribution.startsWith("Data: nextbike")}):[]}function ke(e){return"string"==typeof e?e.includes(".")?{entity:e}:null:e&&"object"==typeof e&&"string"==typeof e.entity?{entity:e.entity}:null}function Ae(e){const t={...e||{}};"string"==typeof t.entity&&t.entity.includes(".")&&(Array.isArray(t.entities)&&0!==t.entities.length||(t.entities=[{entity:t.entity}])),delete t.entity;const i=Array.isArray(t.entities)?t.entities:[];return t.entities=i.map(ke).filter(e=>null!==e),t.show_rack=!1!==t.show_rack,t.show_legend=!1!==t.show_legend,t.show_ebikes=!1!==t.show_ebikes,t.show_battery=!1!==t.show_battery,t.show_docks=!1!==t.show_docks,t.show_flags=!1!==t.show_flags,t.show_timestamp=!1!==t.show_timestamp,t.show_rent_button=!1!==t.show_rent_button,t.hide_header=!0===t.hide_header,t.hide_attribution=!0===t.hide_attribution,"tabs"!==t.layout&&(t.layout="stacked"),t}function Se(e){return"number"==typeof e&&Number.isFinite(e)?e>=75?"#2ecc71":e>=50?"#8bc34a":e>=25?"#ffa726":"#e53935":"#2ecc71"}function Ee(e,t){const i=e?.station_display_name;if("string"==typeof i&&i)return i;const s=e?.friendly_name;return String("string"==typeof s&&s?s:t).replace(/\s+(Bikes available|Räder verfügbar)$/,"")}const Ce=a`
+`,Pe=/* @__PURE__ */ new Set([`143`,`183`,`200`]);function Fe(e){let t=e?.e_bike_vehicle_type_ids;if(Array.isArray(t)&&t.length>0){let e=t.filter(e=>typeof e==`string`&&e.length>0);if(e.length>0)return new Set(e)}return Pe}function Ie(e){return typeof e==`string`&&/^https?:\/\//i.test(e)?e:``}function Le(e){return!e||!e.states?[]:Object.keys(e.states).filter(t=>{if(!t.startsWith(`sensor.`))return!1;let n=e.states[t];if(!n)return!1;let r=n.attributes;return!!r&&typeof r.station_id==`string`&&typeof r.system_id==`string`&&r.system_id.startsWith(`nextbike_`)&&typeof r.attribution==`string`&&r.attribution.startsWith(`Data: nextbike`)})}function Re(e){return typeof e==`string`?e.includes(`.`)?{entity:e}:null:!e||typeof e!=`object`||typeof e.entity!=`string`?null:{entity:e.entity}}function J(e){let t={...e||{}};return typeof t.entity==`string`&&t.entity.includes(`.`)&&(!Array.isArray(t.entities)||t.entities.length===0)&&(t.entities=[{entity:t.entity}]),delete t.entity,t.entities=(Array.isArray(t.entities)?t.entities:[]).map(Re).filter(e=>e!==null),t.show_rack=t.show_rack!==!1,t.show_legend=t.show_legend!==!1,t.show_ebikes=t.show_ebikes!==!1,t.show_battery=t.show_battery!==!1,t.show_docks=t.show_docks!==!1,t.show_flags=t.show_flags!==!1,t.show_timestamp=t.show_timestamp!==!1,t.show_rent_button=t.show_rent_button!==!1,t.hide_header=t.hide_header===!0,t.hide_attribution=t.hide_attribution===!0,t.layout!==`tabs`&&(t.layout=`stacked`),t}function ze(e){let t=e?.vehicle_types_available;if(!Array.isArray(t))return null;let n=Fe(e),r=0;for(let e of t){if(!e||typeof e!=`object`)continue;let t=e,i=String(t.vehicle_type_id??``),a=t.count;n.has(i)&&typeof a==`number`&&Number.isFinite(a)&&(r+=a)}return r}function Be(e,t,n){if(!Array.isArray(e))return null;for(let r of e){let e=String(r?.vehicle_type_id??``);if(n.has(e)&&t?.[e])return t[e]}return null}function Ve(e,t,n){let r=[];if(!Array.isArray(e))return r;for(let i of e){let e=String(i?.vehicle_type_id??``),a=typeof i?.count==`number`&&Number.isFinite(i.count)?i.count:0;if(n.has(e)||a<=0)continue;let o=t?.[e]||``;for(let e=0;e<a;e++)r.push(o)}return r}function He(e){return typeof e!=`number`||!Number.isFinite(e)||e>=75?`#2ecc71`:e>=50?`#8bc34a`:e>=25?`#ffa726`:`#e53935`}function Ue(e,t){let n=null;if(typeof e==`number`&&Number.isFinite(e))n=e>1e11?e/1e3:e;else if(typeof e==`string`&&e.length>0){let t=Date.parse(e);Number.isFinite(t)&&(n=t/1e3)}if(n===null)return null;let r=Math.max(0,Math.floor(Date.now()/1e3-n));return r<10?t(`now`):r<60?t(`seconds_ago`).replace(`{n}`,String(r)):r<3600?t(`minutes_ago`).replace(`{n}`,String(Math.floor(r/60))):t(`hours_ago`).replace(`{n}`,String(Math.floor(r/3600)))}function We(e){return String(e).replace(/\s+(Bikes available|Räder verfügbar)$/,``)}function Ge(e,t){let n=e?.station_display_name;if(typeof n==`string`&&n)return n;let r=e?.friendly_name;return We(typeof r==`string`&&r?r:t)}function Y(e,t){return typeof e==`number`?e:t}function Ke(e){return typeof e==`number`&&Number.isFinite(e)?Math.max(0,Math.trunc(e)):0}function X(e,t){return Array.isArray(e)?e:t}function qe(e){let t=parseInt(e,10);return Number.isFinite(t)?Math.max(0,t):0}function Je(e){return Te[e.system_id||``]||`var(--primary-color)`}function Ye(e,t){let n=e=>{let[t=0,n=0,r=0]=[1,3,5].map(t=>parseInt(e.slice(t,t+2),16)/255).map(e=>e<=.04045?e/12.92:((e+.055)/1.055)**2.4);return .2126*t+.7152*n+.0722*r},[r,i]=[n(e),n(t)].sort((e,t)=>t-e);return((r??0)+.05)/((i??0)+.05)}const Xe=`#141414`;function Ze(e){return/^#[0-9a-f]{6}$/i.test(e)?Ye(`#ffffff`,e)>=4.5?`#ffffff`:Xe:`var(--text-primary-color, #fff)`}function Qe(e){return e===`#141414`?Xe:`var(--nb-ebike-amber)`}function $e(e){return e>=95?`mdi:battery`:e<5?`mdi:battery-outline`:`mdi:battery-${Math.max(10,Math.min(90,Math.round(e/10)*10))}`}function et(e){return typeof e.system_label==`string`&&e.system_label||(e.system_id||``).replace(/^nextbike_/,``)}function tt(e){return typeof e.latitude!=`number`||typeof e.longitude!=`number`?null:Ie(`https://www.google.com/maps/search/?api=1&query=${e.latitude},${e.longitude}`)||null}function nt(e,t){let n=t.vehicle_type_names;return{bikes:e,ebikes:ze(t),capacity:Y(t.capacity,null),batteryPct:Y(t.e_bike_avg_battery_pct,null),batterySamples:Y(t.e_bike_range_samples,0),batteryList:X(t.e_bike_battery_list,null),vehicleTypesAvailable:X(t.vehicle_types_available,[]),vehicleTypeNames:n&&typeof n==`object`?n:{},ebikeIds:Fe(t),reservedCount:Ke(t.bikes_reserved),reservedTypes:X(t.bikes_reserved_types,[]),disabledCount:Ke(t.bikes_disabled),disabledTypes:X(t.bikes_disabled_types,[])}}function rt(e,t,n){let r=Math.min(e.bikes,t),i=Math.min(e.reservedCount,Math.max(0,t-r)),a=Math.min(e.disabledCount,Math.max(0,t-r-i)),o=typeof e.ebikes==`number`&&Number.isFinite(e.ebikes)&&e.ebikes>0?e.ebikes:0,s=n&&typeof e.batteryPct==`number`&&e.batterySamples>0;return{bikes:r,ebikes:Math.min(r,o),reserved:i,disabled:a,empty:t-r-i-a,overflow:Math.max(0,e.bikes-t),hasEbikes:o>0,showBattery:s,perBike:s&&Array.isArray(e.batteryList)?e.batteryList:[],ebikeFallbackType:Be(e.vehicleTypesAvailable,e.vehicleTypeNames,e.ebikeIds),classicNames:Ve(e.vehicleTypesAvailable,e.vehicleTypeNames,e.ebikeIds)}}const it=o`
   :host {
     color-scheme: light dark;
     display: block;
@@ -692,7 +866,7 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
   ha-form {
     display: block;
   }
-`;let ze=class extends oe{constructor(){super(...arguments),this._config={type:"nextbike-austria-card",entities:[]},this._computeLabel=e=>{const t=`ui.panel.lovelace.editor.card.generic.${e.name}`,i=this.hass?.localize?.(t);if(i)return i;const s=this._t(e.name);return s!==e.name?s:e.name},this._computeHelper=e=>{const t=`${e.name}_helper`,i=this._t(t);return i===t?void 0:i},this._onFormChanged=e=>{const t=e.detail.value,i=t.entities,s=Array.isArray(i)?i.filter(e=>"string"==typeof e&&e.length>0).map(e=>({entity:e})):[],n=Ae({...t,entities:s});this._config=n,function(e,t,i){const s=new CustomEvent(t,{detail:i,bubbles:!0,composed:!0});e.dispatchEvent(s)}(this,"config-changed",{config:n})}}static{this.styles=Ce}setConfig(e){this._config=Ae(e)}_t(e){return function(e,t){const i=fe(e);return me(ge[i]??ge.en,["editor",t])??me(ge.en,["editor",t])??t}(this.hass,e)}_schema(){return[{name:"entities",required:!0,selector:{entity:{multiple:!0,filter:{domain:"sensor",integration:"nextbike_austria"}}}},{name:"layout",selector:{select:{mode:"dropdown",options:[{value:"stacked",label:this._t("layout_stacked")},{value:"tabs",label:this._t("layout_tabs")}]}}},{type:"expandable",name:"display",title:this._t("section_display"),flatten:!0,schema:[{name:"hide_header",selector:{boolean:{}}},{name:"show_rack",selector:{boolean:{}}},{name:"show_legend",selector:{boolean:{}}},{name:"show_battery",selector:{boolean:{}}},{name:"show_ebikes",selector:{boolean:{}}},{name:"show_docks",selector:{boolean:{}}},{name:"show_flags",selector:{boolean:{}}},{name:"show_timestamp",selector:{boolean:{}}},{name:"show_rent_button",selector:{boolean:{}}},{name:"hide_attribution",selector:{boolean:{}}}]}]}_formData(){const e=(this._config.entities??[]).map(e=>e.entity).filter(e=>"string"==typeof e&&e.length>0);return{...this._config,entities:e}}render(){return this._config?W`
+`;function Z(e,t,n,r){var i=arguments.length,a=i<3?t:r===null?r=Object.getOwnPropertyDescriptor(t,n):r,o;if(typeof Reflect==`object`&&typeof Reflect.decorate==`function`)a=Reflect.decorate(e,t,n,r);else for(var s=e.length-1;s>=0;s--)(o=e[s])&&(a=(i<3?o(a):i>3?o(t,n,a):o(t,n))||a);return i>3&&a&&Object.defineProperty(t,n,a),a}function at(e,t,n){let r=new CustomEvent(t,{detail:n,bubbles:!0,composed:!0});e.dispatchEvent(r)}let Q=class extends U{constructor(...e){super(...e),this._config={type:`nextbike-austria-card`,entities:[]},this._computeLabel=e=>{let t=`ui.panel.lovelace.editor.card.generic.${e.name}`,n=this.hass?.localize?.(t);if(n)return n;let r=this._t(e.name);return r===e.name?e.name:r},this._computeHelper=e=>{let t=`${e.name}_helper`,n=this._t(t);return n===t?void 0:n},this._onFormChanged=e=>{let t=e.detail.value,n=t.entities,r=Array.isArray(n)?n.filter(e=>typeof e==`string`&&e.length>0).map(e=>({entity:e})):[],i=J({...t,entities:r});this._config=i,at(this,`config-changed`,{config:i})}}static{this.styles=it}setConfig(e){this._config=J(e)}_t(e){return Oe(this.hass,e)}_schema(){return[{name:`entities`,required:!0,selector:{entity:{multiple:!0,filter:{domain:`sensor`,integration:`nextbike_austria`}}}},{name:`layout`,selector:{select:{mode:`dropdown`,options:[{value:`stacked`,label:this._t(`layout_stacked`)},{value:`tabs`,label:this._t(`layout_tabs`)}]}}},{type:`expandable`,name:`display`,title:this._t(`section_display`),flatten:!0,schema:[{name:`hide_header`,selector:{boolean:{}}},{name:`show_rack`,selector:{boolean:{}}},{name:`show_legend`,selector:{boolean:{}}},{name:`show_battery`,selector:{boolean:{}}},{name:`show_ebikes`,selector:{boolean:{}}},{name:`show_docks`,selector:{boolean:{}}},{name:`show_flags`,selector:{boolean:{}}},{name:`show_timestamp`,selector:{boolean:{}}},{name:`show_rent_button`,selector:{boolean:{}}},{name:`hide_attribution`,selector:{boolean:{}}}]}]}_formData(){let e=(this._config.entities??[]).map(e=>e.entity).filter(e=>typeof e==`string`&&e.length>0);return{...this._config,entities:e}}render(){if(!this._config)return F;let e=this.hass?this._config.entities.map(e=>e.entity).filter(e=>!this.hass.states[e]):[];return N`
       <div class="editor">
         <ha-form
           .hass=${this.hass}
@@ -702,207 +876,216 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
           .computeHelper=${this._computeHelper}
           @value-changed=${this._onFormChanged}
         ></ha-form>
+        ${e.map(e=>N`
+            <ha-alert alert-type="warning">
+              ${this._t(`entity_missing`).replace(`{entity}`,e)}
+            </ha-alert>
+          `)}
       </div>
-    `:V}};e([pe({attribute:!1})],ze.prototype,"hass",void 0),e([ue()],ze.prototype,"_config",void 0),ze=e([ce("nextbike-austria-card-editor")],ze);let Te=class extends oe{constructor(){super(...arguments),this._config={type:"nextbike-austria-card",entities:[]},this._activeTab=0,this._versionMismatch=null,this._tickKey=0,this._tickTimer=null,this._versionChecked=!1,this._resolvedEntitiesMemo=null}static{this.styles=ve}setConfig(e){if(null===e||"object"!=typeof e||Array.isArray(e))throw new Error("nextbike-austria-card: config must be an object");this._config=Ae(e)}connectedCallback(){super.connectedCallback(),this._tickTimer||(this._tickTimer=setInterval(()=>{this._tickKey++},6e4))}disconnectedCallback(){super.disconnectedCallback(),this._tickTimer&&(clearInterval(this._tickTimer),this._tickTimer=null)}willUpdate(e){if(this._resolvedEntitiesMemo=null,e.has("hass")&&this.hass&&!this._versionChecked&&(this._versionChecked=!0,this._checkCardVersion()),e.has("_config")||e.has("hass")){const e=this._resolveEntities();"tabs"===this._config.layout&&e.length>=2&&this._activeTab>=e.length&&(this._activeTab=0)}}shouldUpdate(e){if(!this._config)return!1;if(e.has("_config")||e.has("_activeTab")||e.has("_versionMismatch")||e.has("_tickKey"))return!0;if(!e.has("hass"))return!1;const t=e.get("hass");if(!t)return!0;if(!this.hass)return!1;return this._resolveEntities(this.hass,!1).some(e=>t.states[e.entity]!==this.hass.states[e.entity])}getCardSize(){const e=this.hass?this._resolveEntities().length||1:this._config.entities.length||1;return Math.min(12,3+3*e)}getGridOptions(){return{columns:12,rows:"auto",min_columns:6,min_rows:3}}static async getConfigElement(){return document.createElement("nextbike-austria-card-editor")}static getStubConfig(e){const t=$e(e)[0];return{entities:t?[{entity:t}]:[]}}async _checkCardVersion(){this._versionMismatch=await async function(e,t,i){if(!e?.callWS)return null;try{const s=await e.callWS({type:t});if(s?.version&&s.version!==i)return s.version}catch{}return null}(this.hass,"nextbike_austria/card_version","1.3.2")}_t(e){return function(e,t){const i=fe(e);return me(ge[i]??ge.en,[t])??me(ge.en,[t])??t}(this.hass,e)}_resolveEntities(e=this.hass,t=!0){const i=t&&e===this.hass;if(i&&null!==this._resolvedEntitiesMemo)return this._resolvedEntitiesMemo;const s=Array.isArray(this._config?.entities)?this._config.entities.filter(t=>e?.states[t.entity]):[];let n;if(s.length)n=s;else{const t=$e(e)[0];n=t?[{entity:t}]:[]}return i&&(this._resolvedEntitiesMemo=n),n}render(){if(!this.hass||!this._config)return V;const e=this._resolveEntities(),t="tabs"===this._config.layout&&e.length>=2,i=e.map(e=>this.hass?.states[e.entity]?.attributes?.attribution).find(e=>"string"==typeof e&&e.length>0)||"Data: nextbike GmbH, CC0-1.0";let s;if(e.length)if(t){const t=e[this._activeTab]??e[0];s=this._renderStation(t,this._activeTab)}else s=e.map(e=>this._renderStation(e));else s=this._renderEmpty();return W`
+    `}};Z([W({attribute:!1})],Q.prototype,`hass`,void 0),Z([G()],Q.prototype,`_config`,void 0),Q=Z([Se(`nextbike-austria-card-editor`)],Q);let $=class extends U{constructor(...e){super(...e),this._config={type:`nextbike-austria-card`,entities:[]},this._activeTab=0,this._versionMismatch=null,this._tickKey=0,this._tickTimer=null,this._versionChecked=!1,this._resolvedEntitiesMemo=null}static{this.styles=Ne}setConfig(e){if(typeof e!=`object`||!e||Array.isArray(e))throw Error(`nextbike-austria-card: config must be an object`);this._config=J(e)}connectedCallback(){super.connectedCallback(),this._tickTimer||=setInterval(()=>{this._tickKey++},6e4)}disconnectedCallback(){super.disconnectedCallback(),this._tickTimer&&=(clearInterval(this._tickTimer),null)}willUpdate(e){if(this._resolvedEntitiesMemo=null,e.has(`hass`)&&this.hass&&!this._versionChecked&&(this._versionChecked=!0,this._checkCardVersion()),e.has(`_config`)||e.has(`hass`)){let e=this._resolveEntities();this._config.layout===`tabs`&&e.length>=2&&this._activeTab>=e.length&&(this._activeTab=0)}}shouldUpdate(e){if(!this._config)return!1;if(e.has(`_config`)||e.has(`_activeTab`)||e.has(`_versionMismatch`)||e.has(`_tickKey`))return!0;if(!e.has(`hass`))return!1;let t=e.get(`hass`);return t?this.hass?this._resolveEntities(this.hass,!1).some(e=>t.states[e.entity]!==this.hass.states[e.entity]):!1:!0}getCardSize(){let e=this.hass?this._resolveEntities().length||1:this._config.entities.length||1;return Math.min(12,3+e*3)}getGridOptions(){return{columns:12,rows:`auto`,min_columns:6,min_rows:3}}static async getConfigElement(){return document.createElement(`nextbike-austria-card-editor`)}static getStubConfig(e){let t=Le(e)[0];return{entities:t?[{entity:t}]:[]}}async _checkCardVersion(){this._versionMismatch=await ke(this.hass,`nextbike_austria/card_version`,`1.4.0`)}_t(e){return De(this.hass,e)}_resolveEntities(e=this.hass,t=!0){let n=t&&e===this.hass;if(n&&this._resolvedEntitiesMemo!==null)return this._resolvedEntitiesMemo;let r=Array.isArray(this._config?.entities)?this._config.entities.filter(t=>e?.states[t.entity]):[],i;if(r.length)i=r;else{let t=Le(e)[0];i=t?[{entity:t}]:[]}return n&&(this._resolvedEntitiesMemo=i),i}render(){if(!this.hass||!this._config)return F;let e=this._resolveEntities(),t=this._config.layout===`tabs`&&e.length>=2,n=e.map(e=>this.hass?.states[e.entity]?.attributes?.attribution).find(e=>typeof e==`string`&&e.length>0)||`Data: nextbike GmbH, CC0-1.0`,r;if(!e.length)r=this._renderEmpty();else if(t){let t=e[this._activeTab]??e[0];r=this._renderStation(t,this._activeTab)}else r=e.map(e=>this._renderStation(e));return N`
       <ha-card>
-        ${t?this._renderTabs(e):V}
+        ${t?this._renderTabs(e):F}
         <div class="wrap">
-          ${_e(this._versionMismatch,e=>this._t(e))}
-          ${s}
-          ${this._config.hide_attribution?V:W`<div class="attr">${i}</div>`}
+          ${Me(this._versionMismatch,e=>this._t(e))}
+          ${r}
+          ${this._config.hide_attribution?F:N`<div class="attr">${n}</div>`}
         </div>
       </ha-card>
-    `}_renderEmpty(){const e=$e(this.hass).length?"no_entities_picked":"no_entities_available";return W`<div class="empty-state" role="status">${this._t(e)}</div>`}_renderTabs(e){return W`
-      <div class="tabs" role="tablist">
-        ${e.map((t,i)=>{const s=this.hass?.states[t.entity]?.attributes||{},n="string"==typeof s.friendly_name&&s.friendly_name.length>0,r=Ee(s,t.entity),a=i===this._activeTab;return W`
+    `}_renderEmpty(){return N`<div class="empty-state" role="status">${this._t(`no_entities_available`)}</div>`}_renderTabs(e){return N`
+      <div class="tabs" role="tablist" aria-label=${this._t(`stations`)}>
+        ${e.map((t,n)=>{let r=this.hass?.states[t.entity]?.attributes||{},i=typeof r.friendly_name==`string`&&r.friendly_name.length>0,a=Ge(r,t.entity),o=n===this._activeTab;return N`
             <button
               type="button"
               role="tab"
-              id=${`nbtab-${i}`}
-              aria-controls=${`nbpanel-${i}`}
-              class="tab ${a?"active":""}"
-              aria-selected=${a?"true":"false"}
-              tabindex=${a?"0":"-1"}
-              @click=${()=>this._setActiveTab(i)}
-              @keydown=${t=>this._onTabKeydown(t,i,e.length)}
+              id=${`nbtab-${n}`}
+              aria-controls=${`nbpanel-${n}`}
+              class="tab ${o?`active`:``}"
+              aria-selected=${o?`true`:`false`}
+              tabindex=${o?`0`:`-1`}
+              @click=${()=>this._setActiveTab(n)}
+              @keydown=${t=>this._onTabKeydown(t,n,e.length)}
             >
-              ${n?W`<span lang="de">${r}</span>`:r}
+              ${i?N`<span lang="de">${a}</span>`:a}
             </button>
           `})}
       </div>
-    `}_setActiveTab(e){Number.isFinite(e)&&e!==this._activeTab&&(this._activeTab=e)}_onTabKeydown(e,t,i){let s=t;switch(e.key){case"ArrowRight":s=(t+1)%i;break;case"ArrowLeft":s=(t-1+i)%i;break;case"Home":s=0;break;case"End":s=i-1;break;default:return}e.preventDefault(),this._setActiveTab(s),this.updateComplete.then(()=>{const e=this.shadowRoot?.querySelectorAll('.tabs [role="tab"]');e?.[s]?.focus()})}_renderStation(e,t){const i=this.hass?.states[e.entity];if(!i)return W`<div class="empty-state" role="status">${this._t("no_entities_unavailable")}</div>`;const s=i.attributes||{},n=parseInt(i.state,10),r=Number.isFinite(n)?Math.max(0,n):0,a="number"==typeof s.capacity?s.capacity:null,o="number"==typeof s.num_docks_available?s.num_docks_available:null,l=function(e){const t=e?.vehicle_types_available;if(!Array.isArray(t))return null;const i=xe(e);let s=0;for(const e of t){if(!e||"object"!=typeof e)continue;const t=e,n=String(t.vehicle_type_id??""),r=t.count;i.has(n)&&"number"==typeof r&&Number.isFinite(r)&&(s+=r)}return s}(s),c="number"==typeof s.e_bike_avg_battery_pct?s.e_bike_avg_battery_pct:null,d="number"==typeof s.e_bike_range_samples?s.e_bike_range_samples:0,h=Array.isArray(s.e_bike_battery_list)?s.e_bike_battery_list:null,p=s.vehicle_type_names&&"object"==typeof s.vehicle_type_names?s.vehicle_type_names:{},u=Array.isArray(s.vehicle_types_available)?s.vehicle_types_available:[],b=xe(s),g="number"==typeof s.bikes_reserved?s.bikes_reserved:0,f=Array.isArray(s.bikes_reserved_types)?s.bikes_reserved_types:[],m="number"==typeof s.bikes_disabled?s.bikes_disabled:0,_=Array.isArray(s.bikes_disabled_types)?s.bikes_disabled_types:[],v=s.system_id||"",y=be[v]||"var(--primary-color)",x="string"==typeof s.system_label&&s.system_label||v.replace(/^nextbike_/,""),w=we(s.rental_uri),$="string"==typeof s.friendly_name&&s.friendly_name.length>0,k=Ee(s,e.entity),A="number"==typeof s.latitude&&"number"==typeof s.longitude&&we(`https://www.google.com/maps/search/?api=1&query=${s.latitude},${s.longitude}`)||null,S=1===r?this._t("bike"):this._t("bikes"),E=this._renderPills(l,o,a),C="number"==typeof t;return W`
+    `}_setActiveTab(e){Number.isFinite(e)&&e!==this._activeTab&&(this._activeTab=e)}_onTabKeydown(e,t,n){let r=t;switch(e.key){case`ArrowRight`:r=(t+1)%n;break;case`ArrowLeft`:r=(t-1+n)%n;break;case`Home`:r=0;break;case`End`:r=n-1;break;default:return}e.preventDefault(),this._setActiveTab(r),this.updateComplete.then(()=>{(this.shadowRoot?.querySelectorAll(`.tabs [role="tab"]`))?.[r]?.focus()})}_renderStation(e,t){let n=this.hass?.states[e.entity];if(!n)return N`<div class="empty-state" role="status">${this._t(`no_entities_unavailable`)}</div>`;let r=n.attributes||{},i=Je(r),a=Ze(i),o=nt(qe(n.state),r),s=Ge(r,e.entity),c=typeof t==`number`;return N`
       <section
         class="station"
-        aria-label=${k}
-        role=${C?"tabpanel":V}
-        id=${C?`nbpanel-${t}`:V}
-        aria-labelledby=${C?`nbtab-${t}`:V}
-        tabindex=${C?"-1":V}
-        style=${`--nb-accent:${y};`}
+        aria-label=${s}
+        role=${c?`tabpanel`:F}
+        id=${c?`nbpanel-${t}`:F}
+        aria-labelledby=${c?`nbtab-${t}`:F}
+        tabindex=${c?`-1`:F}
+        style=${`--nb-accent:${i};--nb-accent-ink:${a};--nb-stripe-edge:${Qe(a)};`}
       >
-        ${this._config.hide_header?V:W`<header class="header">
-              <div class="icon-tile" aria-hidden="true">
-                <ha-icon icon="mdi:bicycle"></ha-icon>
-              </div>
-              <div class="header-text">
-                <h2 class="title">
-                  ${$?W`<span lang="de">${k}</span>`:k}
-                </h2>
-                <p class="subtitle">${x}</p>
-              </div>
-              ${A?W`
-                    <a
-                      class="icon-action"
-                      href=${A}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label=${`${this._t("open_map")}: ${k}`}
-                      title=${this._t("open_map")}
-                    >
-                      <ha-icon icon="mdi:map-marker" aria-hidden="true"></ha-icon>
-                    </a>
-                  `:V}
-            </header>`}
-
-        <div class="hero">
-          <div class="metric">
-            <div class="metric-value">
-              <span class="metric-num">${r}</span>
-              ${null!==a?W`<span class="metric-of">/ ${a}</span>`:V}
-            </div>
-            <div class="metric-label">${S}</div>
-          </div>
-          ${E.length?W`<div class="chip-row">${E}</div>`:V}
-        </div>
-
-        ${this._config.show_rack&&null!==a&&a>0?this._renderRack({bikes:r,ebikes:l,capacity:a,accent:y,batteryPct:c,batterySamples:d,batteryList:h,vehicleTypesAvailable:u,vehicleTypeNames:p,ebikeIds:b,reservedCount:g,reservedTypes:f,disabledCount:m,disabledTypes:_}):V}
-
-        ${this._config.show_flags?this._renderFlags(s):V}
-        ${this._renderFooter(s,w)}
+        ${this._config.hide_header?F:this._renderHeader(r,s)}
+        ${this._renderHero(o,Y(r.num_docks_available,null))}
+        ${this._config.show_rack&&o.capacity!==null&&o.capacity>0?this._renderRack(o,o.capacity):F}
+        ${this._config.show_flags?this._renderFlags(r):F}
+        ${this._renderFooter(r,Ie(r.rental_uri))}
       </section>
-    `}_renderPills(e,t,i){const s=[];if(this._config.show_ebikes&&"number"==typeof e&&Number.isFinite(e)&&e>0&&s.push(W`
+    `}_renderHeader(e,t){let n=typeof e.friendly_name==`string`&&e.friendly_name.length>0,r=tt(e);return N`<header class="header">
+      <div class="icon-tile" aria-hidden="true">
+        <ha-icon icon="mdi:bicycle"></ha-icon>
+      </div>
+      <div class="header-text">
+        <h2 class="title">
+          ${n?N`<span lang="de">${t}</span>`:t}
+        </h2>
+        <p class="subtitle">${et(e)}</p>
+      </div>
+      ${r?N`
+            <a
+              class="icon-action"
+              href=${r}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label=${`${this._t(`open_map`)}: ${t}`}
+              title=${this._t(`open_map`)}
+            >
+              <ha-icon icon="mdi:map-marker" aria-hidden="true"></ha-icon>
+            </a>
+          `:F}
+    </header>`}_renderHero(e,t){let n=e.bikes===1?this._t(`bike`):this._t(`bikes`),r=this._config.show_ebikes&&this._config.show_battery&&typeof e.batteryPct==`number`&&e.batterySamples>0?e.batteryPct:null,i=this._renderPills(e.ebikes,r,t,e.capacity);return N`
+      <div class="hero">
+        <div class="metric">
+          <div class="metric-value">
+            <span class="metric-num">${e.bikes}</span>
+            ${e.capacity===null?F:N`<span class="metric-of">/ ${e.capacity}</span>`}
+          </div>
+          <div class="metric-label">${n}</div>
+        </div>
+        ${i.length?N`<div class="chip-row">${i}</div>`:F}
+      </div>
+    `}_renderPills(e,t,n,r){let i=[];if(this._config.show_ebikes&&typeof e==`number`&&Number.isFinite(e)&&e>0&&i.push(N`
         <span class="chip ebike">
-          <ha-icon icon="mdi:lightning-bolt"></ha-icon>${e}
-          ${this._t("ebikes")}
+          <ha-icon icon="mdi:lightning-bolt" aria-hidden="true"></ha-icon>${e}
+          ${this._t(`ebikes`)}
         </span>
-      `),this._config.show_docks&&null!==t&&null!==i){const e=1===t?this._t("dock"):this._t("docks");s.push(W`
+      `),t!==null&&i.push(N`
         <span class="chip muted">
-          <ha-icon icon="mdi:parking"></ha-icon>${t} ${e}
+          <ha-icon icon=${$e(t)} aria-hidden="true"></ha-icon>${Math.round(t)}%
+          ${this._t(`battery_avg`)}
         </span>
-      `)}return s}_renderRack(e){const{bikes:t,ebikes:i,capacity:s,accent:n,batteryPct:r,batterySamples:a,batteryList:o,vehicleTypesAvailable:l,vehicleTypeNames:c,ebikeIds:d,reservedCount:h,reservedTypes:p,disabledCount:u,disabledTypes:b}=e,g=s,f=Math.min(t,s),m=Math.min(h,Math.max(0,g-f)),_=Math.min(u,Math.max(0,g-f-m)),v="number"==typeof i&&Number.isFinite(i)&&i>0,y=v?Math.min(f,i):0,x=!!this._config.show_battery&&"number"==typeof r&&a>0,w=x&&Array.isArray(o)?o:[],$=v||g>0,k=$?function(e,t,i){if(!Array.isArray(e))return null;for(const s of e){const e=String(s?.vehicle_type_id??"");if(i.has(e)&&t?.[e])return t[e]}return null}(l,c,d):null,A=$?function(e,t,i){const s=[];if(!Array.isArray(e))return s;for(const n of e){const e=String(n?.vehicle_type_id??""),r="number"==typeof n?.count&&Number.isFinite(n.count)?n.count:0;if(i.has(e)||r<=0)continue;const a=t?.[e]||"";for(let e=0;e<r;e++)s.push(a)}return s}(l,c,d):[];let S=0;const E=[];for(let e=0;e<f;e++){if(e<y){const t=w[e]||null,i=t?.type||k||this._t("legend_ebike");if(t&&x&&"number"==typeof t.pct){const e=t.pct,s=Se(e),n=`${i} · ${Math.round(e)}%`;E.push(W`
-            <div
-              class="slot filled ebike battery"
-              role="img"
-              aria-label=${n}
-              style=${`--bat-pct:${e}%;--bat-color:${s};`}
-              title=${n}
-            ></div>
-          `)}else{const e=x?`${i} · ${this._t("battery_unknown")}`:i;E.push(W`
-            <div
-              class="slot filled ebike"
-              role="img"
-              aria-label=${e}
-              style=${`background:linear-gradient(135deg, ${n} 0%, ${n} 55%, #ffd740 55%, #ffd740 100%);`}
-              title=${e}
-            ></div>
-          `)}}else{const e=A[S++]||this._t("legend_bike");E.push(W`
-          <div
-            class="slot filled"
-            role="img"
-            aria-label=${e}
-            style=${`background:${n};`}
-            title=${e}
-          ></div>
-        `)}}const C=this._t("reserved");for(let e=0;e<m;e++){const t=p?.[e],i=t?`${t} · ${C}`:C;E.push(W`
+      `),this._config.show_docks&&n!==null&&r!==null){let e=n===1?this._t(`dock`):this._t(`docks`);i.push(N`
+        <span class="chip muted">
+          <ha-icon icon="mdi:parking" aria-hidden="true"></ha-icon>${n} ${e}
+        </span>
+      `)}return i}_renderRack(e,t){let n=rt(e,t,!!this._config.show_battery),r=this._t(`rack_summary`).replace(`{available}`,String(n.bikes)).replace(`{capacity}`,String(t));return N`
+      <div class="rack-block">
+        <div class="rack" role="group" aria-label=${r}>
+          ${this._bikeSlots(n)}
+          ${this._dockSlots(n,e)}
+          ${n.overflow>0?N`<span class="rack-note"
+                ><span aria-hidden="true">+${n.overflow}</span
+                ><span class="visually-hidden"
+                  >${this._t(`overflow_more`).replace(`{n}`,String(n.overflow))}</span
+                ></span
+              >`:F}
+        </div>
+        ${this._config.show_legend?this._renderLegend({hasEbikes:n.hasEbikes,hasOverflow:n.overflow>0,hasEmptyVisible:n.empty>0,battery:n.showBattery&&typeof e.batteryPct==`number`?{pct:e.batteryPct,color:He(e.batteryPct)}:null,hasReservedVisible:n.reserved>0,hasDisabledVisible:n.disabled>0}):F}
+      </div>
+    `}_bikeSlots(e){let t=[];for(let n=0;n<e.ebikes;n++)t.push(this._ebikeSlot(e.perBike[n]||null,e));for(let n=0;n<e.bikes-e.ebikes;n++){let r=e.classicNames[n]||this._t(`legend_bike`);t.push(N`
+        <div
+          class="slot filled"
+          role="img"
+          aria-label=${r}
+          title=${r}
+        ></div>
+      `)}return t}_ebikeSlot(e,t){let n=e?.type||t.ebikeFallbackType||this._t(`legend_ebike`);if(e&&t.showBattery&&typeof e.pct==`number`){let t=e.pct,r=He(t),i=`${n} · ${Math.round(t)}%`;return N`
+        <div
+          class="slot filled ebike battery"
+          role="img"
+          aria-label=${i}
+          style=${`--bat-pct:${t}%;--bat-color:${r};`}
+          title=${i}
+        ></div>
+      `}let r=t.showBattery?`${n} · ${this._t(`battery_unknown`)}`:n;return N`
+      <div
+        class="slot filled ebike"
+        role="img"
+        aria-label=${r}
+        title=${r}
+      ></div>
+    `}_dockSlots(e,t){let n=[],r=(e,t)=>e?`${e} · ${t}`:t,i=this._t(`reserved`);for(let a=0;a<e.reserved;a++){let e=r(t.reservedTypes[a],i);n.push(N`
         <div
           class="slot reserved"
           role="img"
-          aria-label=${i}
-          title=${i}
+          aria-label=${e}
+          title=${e}
         >
           <ha-icon icon="mdi:lock" aria-hidden="true"></ha-icon>
         </div>
-      `)}const z=this._t("disabled");for(let e=0;e<_;e++){const t=b?.[e],i=t?`${t} · ${z}`:z;E.push(W`
+      `)}let a=this._t(`disabled`);for(let i=0;i<e.disabled;i++){let e=r(t.disabledTypes[i],a);n.push(N`
         <div
           class="slot disabled"
           role="img"
-          aria-label=${i}
-          title=${i}
+          aria-label=${e}
+          title=${e}
         >
           <ha-icon icon="mdi:wrench" aria-hidden="true"></ha-icon>
         </div>
-      `)}for(let e=f+m+_;e<g;e++){const e=this._t("legend_empty");E.push(W`
+      `)}let o=this._t(`legend_empty`);for(let t=0;t<e.empty;t++)n.push(N`
         <div
           class="slot empty"
           role="img"
-          aria-label=${e}
-          title=${e}
+          aria-label=${o}
+          title=${o}
         ></div>
-      `)}const T=t>s,P=f+m+_<g,M=m>0,R=_>0,H=this._t("rack_summary").replace("{available}",String(f)).replace("{capacity}",String(s));return W`
-      <div class="rack-block">
-        <div class="rack" role="group" aria-label=${H}>
-          ${E}
-          ${T?W`<span
-                class="rack-note"
-                aria-label=${"+"+(t-s)}
-                >+${t-s}</span
-              >`:V}
-        </div>
-        ${this._config.show_legend?this._renderLegend({accent:n,hasEbikes:v,hasOverflow:T,hasEmptyVisible:P,battery:x&&"number"==typeof r?{pct:r,color:Se(r)}:null,hasReservedVisible:M,hasDisabledVisible:R}):V}
-      </div>
-    `}_renderLegend(e){const{accent:t,hasEbikes:i,hasOverflow:s,hasEmptyVisible:n,battery:r,hasReservedVisible:a,hasDisabledVisible:o}=e,l=[W`
+      `);return n}_renderLegend(e){let{hasEbikes:t,hasOverflow:n,hasEmptyVisible:r,battery:i,hasReservedVisible:a,hasDisabledVisible:o}=e,s=[N`
         <div class="legend-item">
-          <dt class="legend-swatch" style=${`background:${t}`} aria-hidden="true"></dt>
-          <dd>${this._t("legend_bike")}</dd>
+          <dt class="legend-swatch filled" aria-hidden="true"></dt>
+          <dd>${this._t(`legend_bike`)}</dd>
         </div>
-      `];if(i){const e=r?"background:linear-gradient(to top, #2ecc71 70%, color-mix(in srgb, #2ecc71 15%, transparent) 70%);outline:1px solid color-mix(in srgb, #2ecc71 60%, transparent);outline-offset:-1px;":`background:linear-gradient(135deg, ${t} 0%, ${t} 55%, #ffd740 55%, #ffd740 100%);`;l.push(W`
+      `];return t&&s.push(N`
         <div class="legend-item">
-          <dt class="legend-swatch" style=${e} aria-hidden="true"></dt>
-          <dd>${this._t("legend_ebike")}</dd>
+          <dt class=${i?`legend-swatch ebike battery`:`legend-swatch ebike`} aria-hidden="true"></dt>
+          <dd>${this._t(`legend_ebike`)}</dd>
         </div>
-      `)}return a&&l.push(W`
+      `),a&&s.push(N`
         <div class="legend-item">
           <dt class="legend-swatch reserved" aria-hidden="true">
             <ha-icon icon="mdi:lock"></ha-icon>
           </dt>
-          <dd>${this._t("legend_reserved")}</dd>
+          <dd>${this._t(`legend_reserved`)}</dd>
         </div>
-      `),o&&l.push(W`
+      `),o&&s.push(N`
         <div class="legend-item">
           <dt class="legend-swatch disabled" aria-hidden="true">
             <ha-icon icon="mdi:wrench"></ha-icon>
           </dt>
-          <dd>${this._t("legend_disabled")}</dd>
+          <dd>${this._t(`legend_disabled`)}</dd>
         </div>
-      `),n&&l.push(W`
+      `),r&&s.push(N`
         <div class="legend-item">
           <dt class="legend-swatch empty" aria-hidden="true"></dt>
-          <dd>${this._t("legend_empty")}</dd>
+          <dd>${this._t(`legend_empty`)}</dd>
         </div>
-      `),s&&l.push(W`
+      `),n&&s.push(N`
         <div class="legend-item">
           <dt class="legend-overflow" aria-hidden="true">+N</dt>
-          <dd>${this._t("legend_overflow")}</dd>
+          <dd>${this._t(`legend_overflow`)}</dd>
         </div>
-      `),W`<dl class="legend">${l}</dl>`}_renderFlags(e){const t=[];return!1===e.is_installed&&t.push(W`
+      `),N`<dl class="legend">${s}</dl>`}_renderFlags(e){let t=[];return e.is_installed===!1&&t.push(N`
         <span class="flag err">
-          <ha-icon icon="mdi:alert-circle"></ha-icon>${this._t("offline")}
+          <ha-icon icon="mdi:alert-circle" aria-hidden="true"></ha-icon>${this._t(`offline`)}
         </span>
-      `),!1===e.is_renting&&t.push(W`
+      `),e.is_renting===!1&&t.push(N`
         <span class="flag warn">
-          <ha-icon icon="mdi:cancel"></ha-icon>${this._t("no_rental")}
+          <ha-icon icon="mdi:cancel" aria-hidden="true"></ha-icon>${this._t(`no_rental`)}
         </span>
-      `),!1===e.is_returning&&t.push(W`
+      `),e.is_returning===!1&&t.push(N`
         <span class="flag warn">
-          <ha-icon icon="mdi:cancel"></ha-icon>${this._t("no_return")}
+          <ha-icon icon="mdi:cancel" aria-hidden="true"></ha-icon>${this._t(`no_return`)}
         </span>
-      `),!0===e.is_virtual_station&&t.push(W`
+      `),e.is_virtual_station===!0&&t.push(N`
         <span class="flag">
-          <ha-icon icon="mdi:map-marker-radius"></ha-icon>${this._t("virtual_station")}
+          <ha-icon icon="mdi:map-marker-radius" aria-hidden="true"></ha-icon>${this._t(`virtual_station`)}
         </span>
-      `),t.length?W`<div class="flags">${t}</div>`:V}_renderFooter(e,t){const i=!!this._config.show_rent_button&&!!t,s=this._config.show_timestamp?function(e,t){let i=null;if("number"==typeof e&&Number.isFinite(e))i=e>1e11?e/1e3:e;else if("string"==typeof e&&e.length>0){const t=Date.parse(e);Number.isFinite(t)&&(i=t/1e3)}if(null===i)return null;const s=Math.max(0,Math.floor(Date.now()/1e3-i));return s<10?t("now"):s<60?t("seconds_ago").replace("{n}",String(s)):s<3600?t("minutes_ago").replace("{n}",String(Math.floor(s/60))):t("hours_ago").replace("{n}",String(Math.floor(s/3600)))}(e.last_reported,e=>this._t(e)):null;return i||s?W`
+      `),t.length?N`<div class="flags">${t}</div>`:F}_renderFooter(e,t){let n=!!this._config.show_rent_button&&!!t,r=this._config.show_timestamp?Ue(e.last_reported,e=>this._t(e)):null;return!n&&!r?F:N`
       <div class="actions">
-        ${i?W`
+        ${n?N`
               <a
                 class="btn-primary"
                 href=${t}
@@ -913,11 +1096,11 @@ function e(e,t,i,s){var n,r=arguments.length,a=r<3?t:null===s?s=Object.getOwnPro
                   icon="mdi:cellphone-arrow-down"
                   aria-hidden="true"
                 ></ha-icon>
-                ${this._t("rent_in_app")}
+                ${this._t(`rent_in_app`)}
               </a>
-            `:V}
-        ${s?W`<span class="timestamp"
-              >${this._t("last_updated")} ${s}</span
-            >`:V}
+            `:F}
+        ${r?N`<span class="timestamp"
+              >${this._t(`last_updated`)} ${r}</span
+            >`:F}
       </div>
-    `:V}};e([pe({attribute:!1})],Te.prototype,"hass",void 0),e([ue()],Te.prototype,"_config",void 0),e([ue()],Te.prototype,"_activeTab",void 0),e([ue()],Te.prototype,"_versionMismatch",void 0),e([ue()],Te.prototype,"_tickKey",void 0),Te=e([ce("nextbike-austria-card")],Te);const Pe=window;Pe.customCards??=[],Pe.customCards.push({type:"nextbike-austria-card",name:"Nextbike Austria Card",description:"Station dashboard for nextbike-operated bike-sharing in Austria — bikes, docks, e-bikes, rental deep-link.",preview:!0,documentationURL:"https://github.com/rolandzeiner/nextbike-austria",getEntitySuggestion:(e,t)=>t.startsWith("sensor.")?"nextbike_austria"!==e?.entities?.[t]?.platform?null:{config:{type:"custom:nextbike-austria-card",entities:[{entity:t}]}}:null});
+    `}};Z([W({attribute:!1})],$.prototype,`hass`,void 0),Z([G()],$.prototype,`_config`,void 0),Z([G()],$.prototype,`_activeTab`,void 0),Z([G()],$.prototype,`_versionMismatch`,void 0),Z([G()],$.prototype,`_tickKey`,void 0),$=Z([Se(`nextbike-austria-card`)],$);const ot=window;ot.customCards??=[],ot.customCards.push({type:`nextbike-austria-card`,name:`Nextbike Austria Card`,description:`Station dashboard for nextbike-operated bike-sharing in Austria — bikes, docks, e-bikes, rental deep-link.`,preview:!0,documentationURL:`https://github.com/rolandzeiner/nextbike-austria`,getEntitySuggestion:(e,t)=>!t.startsWith(`sensor.`)||e?.entities?.[t]?.platform!==`nextbike_austria`?null:{config:{type:`custom:nextbike-austria-card`,entities:[{entity:t}]}}});

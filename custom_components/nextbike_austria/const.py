@@ -2,9 +2,8 @@
 
 Every registered Austrian nextbike system publishes a GBFS 2.3 discovery
 document at `{GBFS_BASE}/{system_id}/gbfs.json`. The per-feed URLs under it
-can be derived without fetching the discovery doc every poll; we use the
-predictable pattern directly and keep the discovery URL only for
-validation / future-proofing.
+follow a fixed pattern, so `gbfs_feed_url` builds them directly and the
+discovery document is never fetched.
 """
 
 from __future__ import annotations
@@ -94,11 +93,12 @@ MAX_POLL_SECONDS: Final = (
 # the next success resets it.
 BACKOFF_CAP_SECONDS: Final = 3600
 
-# Battery-range fetch cadence. `free_bike_status.json` is ~1.2 MB raw
-# for Wien but ~75 KB on the wire under `Accept-Encoding: gzip`. The
-# GBFS feed advertises ttl=60s, so the API permits anything from 60 s
-# upward; 20 min keeps the bandwidth profile polite (~5.3 MB/day per
-# opted-in Austrian system) for an opt-in feed where battery state
+# Battery-range fetch cadence. `free_bike_status.json` is ~1.35 MB raw
+# for Wien, the largest system, but ~80 KB on the wire under
+# `Accept-Encoding: gzip` (measured September 2026). The GBFS feed
+# advertises ttl=60s, so the API permits anything from 60 s upward;
+# 20 min keeps the bandwidth profile polite (~6 MB/day for Wien, far less
+# for the smaller systems) for an opt-in feed where battery state
 # changes slowly. Only fetched when at least one tracked entry has
 # `track_e_bike_range` enabled in its options.
 BATTERY_FETCH_TTL_SECONDS: Final = 1200
@@ -110,10 +110,10 @@ BATTERY_FETCH_TTL_SECONDS: Final = 1200
 # on every 60 s tick alongside the status feed doubled the integration's
 # request count for data that is static for months at a time.
 #
-# The feed is already conditional-GET'd, so a redundant fetch costs a 304
-# rather than a body — but it still costs a round trip against nextbike's
-# CDN. 6 h drops the steady-state profile from 2 requests/min to
-# 1 request/min + 4 requests/day per system.
+# Every refetch is a full body (~11 KB gzipped for Wien): the feed
+# regenerates its Last-Modified each minute, so no 304 can soften it (see
+# the measurement block below). 6 h drops the steady-state profile from
+# 2 requests/min to 1 request/min + 4 requests/day per system.
 #
 # Staleness is bounded independently of this TTL: `async_fetch` forces an
 # out-of-band refresh whenever the status feed reports a station id the
@@ -126,6 +126,22 @@ STATION_INFO_TTL_SECONDS: Final = 21600
 # GBFS endpoint base. Each Austrian system (see AUSTRIAN_SYSTEMS below)
 # publishes at `{GBFS_BASE}/{system_id}/{lang}/{feed}.json`.
 GBFS_BASE: Final = "https://gbfs.nextbike.net/maps/gbfs/v2"
+
+# --- Upstream capabilities, measured 2026-09-29 against nextbike_wr --------
+#   station_status        67.8 KB -> 3.2 KB on the wire (gzip, 21.0x)
+#   station_information   84.6 KB -> 11.2 KB (gzip, 7.6x)
+#   vehicle_types          2.3 KB -> 0.7 KB (gzip, 3.2x)
+#   free_bike_status      1.35 MB -> 83 KB (gzip, 16.5x)
+#   Compression: gzip only. Offering zstd or br alone returns identity, so
+#   the client's default Accept-Encoding negotiates gzip on its own.
+#   Conditional GET: churning on all four feeds. No ETag; If-Modified-Since
+#   earns a 304 within seconds, but every feed regenerates Last-Modified
+#   each minute, so a validator replayed 60 s later comes back 200. At our
+#   intervals (60 s, 20 min, 6 h) a 304 never happens, so the client sends
+#   no validators. Replay one after the poll interval before adding them.
+#   Rate limits: none advertised; the feeds' GBFS `ttl` is 60 on all six
+#   systems, which sets the 60 s floor.
+# ---------------------------------------------------------------------------
 
 # Language segment in the per-feed GBFS URL path (see `gbfs_feed_url`).
 GBFS_LANG: Final = "en"
@@ -142,10 +158,11 @@ class SystemInfo(TypedDict):
 # Known Austrian nextbike systems, in the order they appear in the picker.
 # To add a new system:
 #   1. Confirm its GBFS feed exists at `{GBFS_BASE}/{system_id}/gbfs.json`.
-#   2. Append a SystemInfo entry here.
-#   3. Add translation entries for the system's display in strings.json.
-#   4. Add the system to `SYSTEM_ACCENT` in src/const.ts so the
-#      Lovelace card's per-system theming works.
+#   2. Append a SystemInfo entry here. `name` is the picker label as is
+#      (it isn't translated); `region` becomes the sensor's `system_label`.
+#   3. Add the system to `SYSTEM_ACCENT` in src/const.ts for the card's
+#      brand tint; without it the card falls back to the theme colour.
+#   4. Add a row to the README's Supported Systems table.
 AUSTRIAN_SYSTEMS: Final[tuple[SystemInfo, ...]] = (
     {"id": "nextbike_wr", "name": "Wien — WienMobil Rad", "region": "Wien"},
     {"id": "nextbike_la", "name": "Niederösterreich", "region": "Niederösterreich"},

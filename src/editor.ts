@@ -190,6 +190,14 @@ export class NextbikeAustriaCardEditor extends LitElement {
     // `!this.hass` would race the first-paint and flash an empty editor
     // for a frame on slow dashboards.
     if (!this._config) return nothing;
+    // ha-form only outlines a vanished sensor in red: silent for screen
+    // readers and easy to miss, while the card quietly shows another
+    // station instead. WCAG 3.3.1 (Error Identification): name each one.
+    const missing = this.hass
+      ? this._config.entities
+          .map((s) => s.entity)
+          .filter((eid) => !this.hass!.states[eid])
+      : [];
     return html`
       <div class="editor">
         <ha-form
@@ -200,6 +208,13 @@ export class NextbikeAustriaCardEditor extends LitElement {
           .computeHelper=${this._computeHelper}
           @value-changed=${this._onFormChanged}
         ></ha-form>
+        ${missing.map(
+          (eid) => html`
+            <ha-alert alert-type="warning">
+              ${this._t("entity_missing").replace("{entity}", eid)}
+            </ha-alert>
+          `,
+        )}
       </div>
     `;
   }

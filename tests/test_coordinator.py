@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import email.utils
+from datetime import timedelta
 from typing import Any, ClassVar
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
+import aiohttp
 import pytest
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import UpdateFailed
+from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.nextbike_austria.const import (
@@ -24,6 +28,7 @@ from custom_components.nextbike_austria.coordinator import (
     GBFSError,
     NextbikeStationCoordinator,
     SharedSystemClient,
+    _retry_after_seconds,
 )
 
 from ._fakes import CtxResp, FakeClient
@@ -138,6 +143,55 @@ async def test_repair_issue_clears_on_recovery(hass: HomeAssistant) -> None:
 
     registry = ir.async_get(hass)
     assert registry.async_get_issue(DOMAIN, f"station_gone_{entry.entry_id}") is None
+
+
+async def test_reloaded_coordinator_clears_its_predecessors_issue(
+    hass: HomeAssistant,
+) -> None:
+    """A reload builds a new coordinator; it must still clear the old issue."""
+    entry = _make_entry()
+    entry.add_to_hass(hass)
+
+    fake = FakeClient()
+    fake.set_stations({})
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=fake,
+    ):
+        with pytest.raises(UpdateFailed):
+            await NextbikeStationCoordinator(hass, entry)._async_update_data()
+        # Reload: a fresh coordinator, and the station is back.
+        fake.set_stations({"68577989": _station_snapshot()})
+        await NextbikeStationCoordinator(hass, entry)._async_update_data()
+
+    registry = ir.async_get(hass)
+    assert registry.async_get_issue(DOMAIN, f"station_gone_{entry.entry_id}") is None
+
+
+async def test_failure_log_does_not_name_the_station(
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+) -> None:
+    """HA logs the coordinator name and the error text on a failed poll.
+
+    Logs get pasted into public issues, and a station id resolves to the
+    station, so to roughly where the user lives or works.
+    """
+    entry = _make_entry()
+    entry.add_to_hass(hass)
+    station_id = entry.data[CONF_STATION_ID]
+
+    fake = FakeClient()
+    fake.set_stations({})
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=fake,
+    ):
+        coordinator = NextbikeStationCoordinator(hass, entry)
+        await coordinator.async_refresh()
+
+    assert not coordinator.last_update_success
+    assert "Error fetching" in caplog.text
+    assert station_id not in caplog.text
 
 
 async def test_transport_error_raises_update_failed(hass: HomeAssistant) -> None:
@@ -360,7 +414,7 @@ async def test_refresh_vehicle_types_populates_ebike_ids(hass: HomeAssistant) ->
         }
 
     with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
-        await client._refresh_vehicle_types()
+        await client._refresh_vehicle_types(1000.0)
     assert client.is_ebike_type("183")
     assert client.is_ebike_type("200")
     assert not client.is_ebike_type("192")
@@ -376,7 +430,7 @@ async def test_refresh_vehicle_types_swallows_gbfs_error(hass: HomeAssistant) ->
 
     with patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch):
         # Should NOT raise — vehicle_types is optional.
-        await client._refresh_vehicle_types()
+        await client._refresh_vehicle_types(1000.0)
     assert client.vehicle_type_names() == {}
 
 
@@ -637,54 +691,6 @@ async def test_battery_fetch_backoff_on_empty_result(hass: HomeAssistant) -> Non
     assert calls == 1
 
 
-async def test_fetch_json_uses_conditional_get(hass: HomeAssistant) -> None:
-    """Last-Modified is captured and sent back as If-Modified-Since; 304 reuses cache."""
-    client = SharedSystemClient(hass, "nextbike_wr")
-
-    seen_headers: list[dict[str, str]] = []
-    response_status = {"status": 200}
-
-    class _FirstResp:
-        status = 200
-        headers: ClassVar[dict[str, str]] = {
-            "Last-Modified": "Wed, 21 Apr 2026 12:00:00 GMT"
-        }
-
-        def raise_for_status(self) -> None:
-            return None
-
-        async def text(self) -> str:
-            return '{"data": {"stations": [{"station_id": "1"}]}}'
-
-    class _NotModifiedResp:
-        status = 304
-        headers: ClassVar[dict[str, str]] = {}
-
-        def raise_for_status(self) -> None:
-            return None
-
-        async def text(self) -> str:  # pragma: no cover — not reached on 304
-            return ""
-
-    class _FakeSession:
-        def get(self, *args: Any, **kwargs: Any) -> CtxResp:
-            seen_headers.append(dict(kwargs.get("headers") or {}))
-            if response_status["status"] == 304:
-                return CtxResp(_NotModifiedResp())
-            return CtxResp(_FirstResp())
-
-    _seed_session(client, _FakeSession())
-
-    first = await client._fetch_json("station_information")
-    assert first["data"]["stations"][0]["station_id"] == "1"
-    assert "If-Modified-Since" not in seen_headers[0]
-
-    response_status["status"] = 304
-    second = await client._fetch_json("station_information")
-    assert seen_headers[1]["If-Modified-Since"] == "Wed, 21 Apr 2026 12:00:00 GMT"
-    assert second is first
-
-
 # ---------------------------------------------------------------------
 # Coordinator + battery merge
 # ---------------------------------------------------------------------
@@ -828,6 +834,179 @@ async def test_shared_client_ttl_collapses_fetches(hass: HomeAssistant) -> None:
     assert len(calls) == 3
 
 
+_MONOTONIC = "custom_components.nextbike_austria.coordinator.time.monotonic"
+
+
+async def test_failure_window_keeps_the_system_off_the_network(
+    hass: HomeAssistant,
+) -> None:
+    """A failed attempt is replayed to callers for one TTL, force included.
+
+    Without the window every member's own timer sends its own request at
+    a down feed; with it, the system makes one attempt per window.
+    """
+    client = SharedSystemClient(hass, "nextbike_wr")
+    calls: list[str] = []
+
+    async def failing(feed: str) -> dict[str, Any]:
+        if feed != "vehicle_types":  # that one has its own retry clock
+            calls.append(feed)
+        raise GBFSError("api_timeout", seconds="15")
+
+    clock = {"now": 1000.0}
+    with (
+        patch.object(SharedSystemClient, "_fetch_json", side_effect=failing),
+        patch(_MONOTONIC, side_effect=lambda: clock["now"]),
+    ):
+        with pytest.raises(GBFSError) as first:
+            await client.async_fetch()
+        assert not first.value.replayed
+        attempts = len(calls)
+
+        clock["now"] += 30
+        with pytest.raises(GBFSError) as replay:
+            await client.async_fetch(force=True)
+        assert replay.value.replayed
+        assert replay.value.translation_key == "api_timeout"
+        assert replay.value.placeholders == {"seconds": "15"}
+        assert len(calls) == attempts
+
+        clock["now"] += 31
+        with pytest.raises(GBFSError) as retry:
+            await client.async_fetch()
+        assert not retry.value.replayed
+    assert len(calls) == 2 * attempts
+
+
+async def test_retry_after_holds_the_window_open(hass: HomeAssistant) -> None:
+    """A server's Retry-After outlasts the one-minute window."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+    calls: list[str] = []
+
+    async def rate_limited(feed: str) -> dict[str, Any]:
+        if feed != "vehicle_types":  # that one has its own retry clock
+            calls.append(feed)
+        raise GBFSError(
+            "api_http_error",
+            retry_after=600.0,
+            status="429",
+            reason="Too Many Requests",
+        )
+
+    clock = {"now": 1000.0}
+    with (
+        patch.object(SharedSystemClient, "_fetch_json", side_effect=rate_limited),
+        patch(_MONOTONIC, side_effect=lambda: clock["now"]),
+    ):
+        with pytest.raises(GBFSError):
+            await client.async_fetch()
+        attempts = len(calls)
+        clock["now"] += 300
+        with pytest.raises(GBFSError) as replay:
+            await client.async_fetch()
+        assert replay.value.replayed
+        assert len(calls) == attempts
+        clock["now"] += 301
+        with pytest.raises(GBFSError):
+            await client.async_fetch()
+    assert len(calls) == 2 * attempts
+
+
+async def test_replayed_failure_is_neither_fanned_out_nor_counted(
+    hass: HomeAssistant,
+) -> None:
+    """Siblings hear about a failure once, and a replay adds no backoff."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+    sibling = MagicMock(entry_id="sibling")
+    client.register(sibling)
+
+    async def failing(feed: str) -> dict[str, Any]:
+        raise GBFSError("api_timeout", seconds="15")
+
+    with patch.object(SharedSystemClient, "_fetch_json", side_effect=failing):
+        with pytest.raises(GBFSError):
+            await client.async_fetch(initiator="owner")
+        with pytest.raises(GBFSError):
+            await client.async_fetch(initiator="owner")
+    sibling.apply_shared_error.assert_called_once()
+
+    entry = _make_entry()
+    entry.add_to_hass(hass)
+    fake = FakeClient()
+    fake.set_error(GBFSError("api_timeout", replayed=True, seconds="15"))
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=fake,
+    ):
+        coordinator = NextbikeStationCoordinator(hass, entry)
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
+    assert coordinator._consecutive_failures == 0
+
+
+@pytest.mark.parametrize(
+    ("header", "seconds"),
+    [
+        ("120", 120.0),
+        ("0", 0.0),
+        ("999999999", 86400.0),
+        ("soon", None),
+        ("", None),
+    ],
+)
+def test_retry_after_delay_seconds(header: str, seconds: float | None) -> None:
+    """Delay-seconds are taken as is, capped at a day; junk is ignored."""
+    assert _retry_after_seconds({"Retry-After": header}) == seconds
+
+
+def test_retry_after_http_date() -> None:
+    """An HTTP-date counts from now; one in the past means no wait."""
+    soon = email.utils.format_datetime(
+        dt_util.utcnow() + timedelta(seconds=300), usegmt=True
+    )
+    waited = _retry_after_seconds({"Retry-After": soon})
+    assert waited is not None
+    assert 290 <= waited <= 300
+    past = email.utils.format_datetime(
+        dt_util.utcnow() - timedelta(hours=1), usegmt=True
+    )
+    assert _retry_after_seconds({"Retry-After": past}) == 0.0
+    assert _retry_after_seconds(None) is None
+
+
+@pytest.mark.parametrize(("status", "retry_after"), [(429, 120.0), (500, None)])
+async def test_fetch_json_reads_retry_after_on_429_and_503_only(
+    hass: HomeAssistant, status: int, retry_after: float | None
+) -> None:
+    """Retry-After reaches the error for 429/503, not for other statuses."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+
+    class _ErrorResp:
+        headers: ClassVar[dict[str, str]] = {"Retry-After": "120"}
+
+        def __init__(self) -> None:
+            self.status = status
+
+        def raise_for_status(self) -> None:
+            raise aiohttp.ClientResponseError(
+                MagicMock(),
+                (),
+                status=status,
+                message="nope",
+                headers=self.headers,
+            )
+
+    class _Session:
+        def get(self, *args: Any, **kwargs: Any) -> CtxResp:
+            return CtxResp(_ErrorResp())
+
+    _seed_session(client, _Session())
+    with pytest.raises(GBFSError) as err:
+        await client._fetch_json("station_status")
+    assert err.value.retry_after == retry_after
+    assert err.value.placeholders["status"] == str(status)
+
+
 async def test_async_fetch_skips_status_orphans(hass: HomeAssistant) -> None:
     """A status entry whose station_id is absent from station_information is dropped."""
     client = SharedSystemClient(hass, "nextbike_wr")
@@ -880,6 +1059,56 @@ def _feed_counter() -> tuple[Any, dict[str, int]]:
         return {"data": {}}
 
     return fake_fetch, calls
+
+
+async def test_vehicle_types_ride_the_station_data_clock(
+    hass: HomeAssistant,
+) -> None:
+    """Refetched after six hours, not once per HA start and not every tick."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+    fake_fetch, calls = _feed_counter()
+
+    clock = {"now": 1000.0}
+    with (
+        patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch),
+        patch(_MONOTONIC, side_effect=lambda: clock["now"]),
+    ):
+        await client.async_fetch()
+        clock["now"] += 61
+        await client.async_fetch()
+        assert calls["vehicle_types"] == 1
+        clock["now"] += STATION_INFO_TTL_SECONDS
+        await client.async_fetch()
+    assert calls["vehicle_types"] == 2
+
+
+async def test_failed_vehicle_types_retry_after_ten_minutes(
+    hass: HomeAssistant,
+) -> None:
+    """A failed catalogue fetch is retried on its own clock, not every tick."""
+    client = SharedSystemClient(hass, "nextbike_wr")
+    fake_fetch, calls = _feed_counter()
+
+    async def vehicle_types_down(feed: str) -> dict[str, Any]:
+        if feed == "vehicle_types":
+            calls["vehicle_types"] = calls.get("vehicle_types", 0) + 1
+            raise GBFSError("api_http_error", status="500", reason="Server Error")
+        return await fake_fetch(feed)
+
+    clock = {"now": 1000.0}
+    with (
+        patch.object(SharedSystemClient, "_fetch_json", side_effect=vehicle_types_down),
+        patch(_MONOTONIC, side_effect=lambda: clock["now"]),
+    ):
+        await client.async_fetch()
+        for _ in range(5):
+            clock["now"] += 61
+            await client.async_fetch()
+        assert calls["vehicle_types"] == 1
+        clock["now"] += 600
+        await client.async_fetch()
+    assert calls["vehicle_types"] == 2
+    assert calls["station_status"] == 7
 
 
 async def test_station_information_cached_across_ticks(hass: HomeAssistant) -> None:

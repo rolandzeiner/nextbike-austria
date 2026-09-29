@@ -292,6 +292,46 @@ async def test_search_again_returns_to_search_step(hass: HomeAssistant) -> None:
     assert result["step_id"] == "search_station"
 
 
+async def test_station_list_is_fetched_once_per_flow(hass: HomeAssistant) -> None:
+    """A second search filters the cached list instead of re-downloading it."""
+    with _patch_fetch() as fetch:
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_SYSTEM_ID: "nextbike_wr"}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_SEARCH_QUERY: "Hoher"}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_STATION_ID: "__search_again__", CONF_SCAN_INTERVAL: 60},
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_SEARCH_QUERY: "Julius"}
+        )
+    assert result["step_id"] == "select_station"
+    fetch.assert_awaited_once()
+
+
+async def test_failed_station_list_is_fetched_again(hass: HomeAssistant) -> None:
+    """A failed fetch isn't cached: the next search tries the network again."""
+    with _patch_fetch([]) as fetch:
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_SYSTEM_ID: "nextbike_wr"}
+        )
+        for _ in range(2):
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"], {CONF_SEARCH_QUERY: "Hoher"}
+            )
+            assert result["errors"] == {"base": "cannot_connect"}
+    assert fetch.await_count == 2
+
+
 async def test_fetch_stations_survives_client_error(
     hass: HomeAssistant,
 ) -> None:
@@ -377,97 +417,15 @@ def test_match_stations_skips_empty_and_missing_names() -> None:
     assert [s["station_id"] for s in matches] == ["3"]
 
 
-async def test_reconfigure_to_different_station_in_same_system(
-    hass: HomeAssistant,
-) -> None:
-    """Reconfigure picks a new station; unique_id updates to the new one."""
-    with _patch_fetch(), _patch_shared_client():
-        # Initial entry.
-        result = await hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": config_entries.SOURCE_USER}
-        )
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_SYSTEM_ID: "nextbike_wr"}
-        )
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_SEARCH_QUERY: "Hoher"}
-        )
-        await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            {CONF_STATION_ID: "68577989", CONF_SCAN_INTERVAL: 60},
-        )
-        entry = hass.config_entries.async_entries(DOMAIN)[0]
+def test_flow_offers_no_reconfigure() -> None:
+    """The station is the entry's identity, so there is no Reconfigure.
 
-        # Reconfigure: keep the same station (unique_id match path).
-        flow = await hass.config_entries.flow.async_init(
-            DOMAIN,
-            context={
-                "source": config_entries.SOURCE_RECONFIGURE,
-                "entry_id": entry.entry_id,
-            },
-        )
-        result = await hass.config_entries.flow.async_configure(
-            flow["flow_id"], {CONF_SEARCH_QUERY: "Hoher"}
-        )
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            {CONF_STATION_ID: "68577989", CONF_SCAN_INTERVAL: 120},
-        )
-    assert result["type"] == FlowResultType.ABORT
-    assert result["reason"] == "reconfigure_successful"
-    refreshed = hass.config_entries.async_get_entry(entry.entry_id)
-    assert refreshed is not None
-    assert refreshed.data[CONF_SCAN_INTERVAL] == 120
-
-
-async def test_reconfigure_to_different_station_aborts_on_mismatch(
-    hass: HomeAssistant,
-) -> None:
-    """Reconfigure that resolves to a *different* station id aborts."""
-    fake = FakeClient()
-    fake.set_stations(
-        {
-            "68577989": _station_snapshot("68577989"),
-            "68577704": _station_snapshot("68577704"),
-        }
+    HA shows the menu item exactly when the handler has this attribute
+    (``ConfigEntry.supports_reconfigure``); a different station is a new
+    entry, and the interval lives in the options flow.
+    """
+    from custom_components.nextbike_austria.config_flow import (
+        NextbikeAustriaConfigFlow,
     )
-    with (
-        _patch_fetch(),
-        patch(
-            "custom_components.nextbike_austria.coordinator._get_shared_client",
-            return_value=fake,
-        ),
-    ):
-        result = await hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": config_entries.SOURCE_USER}
-        )
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_SYSTEM_ID: "nextbike_wr"}
-        )
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_SEARCH_QUERY: "Hoher"}
-        )
-        await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            {CONF_STATION_ID: "68577989", CONF_SCAN_INTERVAL: 60},
-        )
-        entry = hass.config_entries.async_entries(DOMAIN)[0]
 
-        flow = await hass.config_entries.flow.async_init(
-            DOMAIN,
-            context={
-                "source": config_entries.SOURCE_RECONFIGURE,
-                "entry_id": entry.entry_id,
-            },
-        )
-        result = await hass.config_entries.flow.async_configure(
-            flow["flow_id"], {CONF_SEARCH_QUERY: "Julius"}
-        )
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            {CONF_STATION_ID: "68577704", CONF_SCAN_INTERVAL: 60},
-        )
-    # _abort_if_unique_id_mismatch fires — different station ids must not
-    # silently overwrite the original entry's identity.
-    assert result["type"] == FlowResultType.ABORT
-    assert result["reason"] != "reconfigure_successful"
+    assert not hasattr(NextbikeAustriaConfigFlow, "async_step_reconfigure")

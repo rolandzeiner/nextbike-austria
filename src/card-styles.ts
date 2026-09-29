@@ -15,11 +15,35 @@ export const cardStyles: CSSResultGroup = css`
        selection (WCAG 1.4.11). HA's active theme drives the resolution. */
     color-scheme: light dark;
     display: block;
+    /* Fill the grid cell the dashboard gave us.
+       A sections view puts a fixed pixel height on the cell WRAPPER whenever
+       the card's rows are numeric -- which a user also causes by dragging the
+       row handle, since a stored grid_options overrides what getGridOptions()
+       returns -- and styles nothing inside that wrapper.
+       This host is display: block, so IT is the containing block for the
+       ha-card below, and a percentage height against a containing block whose
+       own height is auto computes to auto. Without this line ha-card therefore
+       sizes to its content, overflows a cell too short for it, and is painted
+       over the card underneath. Taking the cell's height here is what gives
+       ha-card's 100% something to resolve against.
+       In an auto-height cell it resolves to auto -- the height it already had
+       -- so it costs nothing there. */
+    block-size: 100%;
     container-type: inline-size;
     container-name: nbcard;
 
     /* Brand accent — domain-specific, no HA equivalent. */
     --nb-accent: var(--primary-color);
+    /* E-bike amber: the rack's diagonal stripe, its legend swatch and the
+       e-bike chip. The green is the charge the legend's battery swatch
+       samples; each rack slot's own colour comes from batteryColor(). */
+    --nb-ebike-amber: #ffd740;
+    --nb-battery-sample: #2ecc71;
+    /* How much of a battery fill is its charge colour; the rest is the
+       theme's text colour. That darkens the fill on a light card and
+       lightens it on a dark one, which keeps it 3:1 from the pale empty
+       part in both (WCAG 1.4.11; worst case amber on white, 3.2:1). */
+    --nb-battery-depth: 70%;
 
     /* Semantic state tokens layered over HA's official semantic palette
        so theme authors can recolour the whole portfolio in one place;
@@ -68,6 +92,13 @@ export const cardStyles: CSSResultGroup = css`
     --nb-tile-size: 40px;
   }
   ha-card {
+    /* Resolves against the height :host just took from the cell, so
+       overflow: hidden clips inside the card rather than the card spilling
+       past its own cell. The two declarations only work as a pair: core cards
+       that set this one alone leave :host at its default inline display, where
+       the cell wrapper is ha-card's containing block instead. */
+    block-size: 100%;
+
     overflow: hidden;
   }
   .wrap {
@@ -84,7 +115,8 @@ export const cardStyles: CSSResultGroup = css`
     justify-content: space-between;
     gap: 8px;
     background: var(--nb-warning);
-    color: #fff;
+    /* Black, not white: white on warning orange is 2:1 (WCAG 1.4.3). */
+    color: #000;
     padding: 10px 14px;
     margin: calc(var(--nb-pad-y) * -1) calc(var(--nb-pad-x) * -1) 0;
     border-radius: 0;
@@ -93,7 +125,7 @@ export const cardStyles: CSSResultGroup = css`
   }
   .banner button {
     background: #fff;
-    color: var(--nb-warning);
+    color: #000;
     border: none;
     border-radius: 999px;
     padding: 6px 14px;
@@ -149,7 +181,7 @@ export const cardStyles: CSSResultGroup = css`
     /* Three independent active cues: colour, weight, underline.
        Survives any single-channel deficit (low vision, protanopia,
        grayscale). */
-    color: var(--primary-color);
+    color: var(--primary-text-color);
     font-weight: var(--ha-font-weight-bold, 700);
     box-shadow: inset 0 -2px 0 var(--primary-color);
   }
@@ -204,9 +236,9 @@ export const cardStyles: CSSResultGroup = css`
     font-weight: 600;
     line-height: 1.25;
     color: var(--primary-text-color);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    /* Wraps rather than truncating: a cut-off station name at 320 px or
+       under text-spacing overrides loses content (WCAG 1.4.10 / 1.4.12). */
+    overflow-wrap: anywhere;
   }
   .subtitle {
     /* <p> override. */
@@ -215,9 +247,7 @@ export const cardStyles: CSSResultGroup = css`
     color: var(--secondary-text-color);
     font-weight: 400;
     letter-spacing: 0.1px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
   .icon-action {
     /* Map link rendered as an HA-style icon button — circular, 40×40
@@ -310,7 +340,7 @@ export const cardStyles: CSSResultGroup = css`
   .chip.ebike {
     /* E-bike chip uses the same amber as the rack diagonal stripe so
        the visual vocabulary stays consistent. */
-    background: color-mix(in srgb, #ffd740 28%, transparent);
+    background: color-mix(in srgb, var(--nb-ebike-amber) 28%, transparent);
     color: var(--primary-text-color);
   }
   .chip.ebike ha-icon {
@@ -353,8 +383,10 @@ export const cardStyles: CSSResultGroup = css`
       135deg,
       var(--nb-accent) 0%,
       var(--nb-accent) 55%,
-      #ffd740 55%,
-      #ffd740 100%
+      var(--nb-stripe-edge, var(--nb-ebike-amber)) 55%,
+      var(--nb-stripe-edge, var(--nb-ebike-amber)) 62%,
+      var(--nb-ebike-amber) 62%,
+      var(--nb-ebike-amber) 100%
     );
   }
   /* Battery-fill variant: vertical gradient bottom (filled) → top (empty).
@@ -364,12 +396,17 @@ export const cardStyles: CSSResultGroup = css`
   .slot.filled.ebike.battery {
     background: linear-gradient(
       to top,
-      var(--bat-color, #2ecc71) var(--bat-pct, 0%),
-      color-mix(in srgb, var(--bat-color, #2ecc71) 15%, transparent)
+      color-mix(
+          in srgb,
+          var(--bat-color, var(--nb-battery-sample)) var(--nb-battery-depth),
+          var(--primary-text-color)
+        )
+        var(--bat-pct, 0%),
+      color-mix(in srgb, var(--bat-color, var(--nb-battery-sample)) 15%, transparent)
         var(--bat-pct, 0%)
     );
     box-shadow: inset 0 0 0 1px
-      color-mix(in srgb, var(--bat-color, #2ecc71) 60%, transparent);
+      color-mix(in srgb, var(--bat-color, var(--nb-battery-sample)) 60%, transparent);
   }
   .slot.empty {
     background: color-mix(in srgb, var(--secondary-text-color) 6%, transparent);
@@ -458,6 +495,32 @@ export const cardStyles: CSSResultGroup = css`
     margin: 0;
     vertical-align: middle;
   }
+  /* Bike, e-bike and battery swatches mirror the rack slots above, so the
+     stylesheet is the one place their colours come from. */
+  .legend-swatch.filled {
+    background: var(--nb-accent);
+  }
+  .legend-swatch.ebike {
+    background: linear-gradient(
+      135deg,
+      var(--nb-accent) 0%,
+      var(--nb-accent) 55%,
+      var(--nb-stripe-edge, var(--nb-ebike-amber)) 55%,
+      var(--nb-stripe-edge, var(--nb-ebike-amber)) 62%,
+      var(--nb-ebike-amber) 62%,
+      var(--nb-ebike-amber) 100%
+    );
+  }
+  .legend-swatch.ebike.battery {
+    background: linear-gradient(
+      to top,
+      color-mix(in srgb, var(--nb-battery-sample) var(--nb-battery-depth), var(--primary-text-color))
+        70%,
+      color-mix(in srgb, var(--nb-battery-sample) 15%, transparent) 70%
+    );
+    outline: 1px solid color-mix(in srgb, var(--nb-battery-sample) 60%, transparent);
+    outline-offset: -1px;
+  }
   .legend-swatch.empty {
     background: color-mix(in srgb, var(--secondary-text-color) 6%, transparent);
     box-shadow: inset 0 0 0 1px
@@ -517,12 +580,20 @@ export const cardStyles: CSSResultGroup = css`
   .flag ha-icon {
     --mdc-icon-size: 14px;
   }
+  /* State colour on the tint and icon; the words stay in the text
+     colour, since orange and red text on their tints miss 4.5:1. */
   .flag.warn {
     background: color-mix(in srgb, var(--nb-warning) 16%, transparent);
+    color: var(--primary-text-color);
+  }
+  .flag.warn ha-icon {
     color: var(--nb-warning);
   }
   .flag.err {
     background: color-mix(in srgb, var(--nb-error) 16%, transparent);
+    color: var(--primary-text-color);
+  }
+  .flag.err ha-icon {
     color: var(--nb-error);
   }
 
@@ -548,7 +619,8 @@ export const cardStyles: CSSResultGroup = css`
     height: 32px;
     border-radius: 999px;
     background: var(--nb-accent);
-    color: var(--text-primary-color, #fff);
+    /* Per-operator: white on the dark accents, dark on the light ones. */
+    color: var(--nb-accent-ink, var(--text-primary-color, #fff));
     font-size: 0.75rem;
     font-weight: 600;
     text-decoration: none;
@@ -576,7 +648,6 @@ export const cardStyles: CSSResultGroup = css`
     font-size: 0.65rem;
     color: var(--secondary-text-color);
     text-align: center;
-    opacity: 0.6;
   }
 
   /* ── Empty / unavailable state ──────────────────────────────────── */
@@ -638,6 +709,20 @@ export const cardStyles: CSSResultGroup = css`
     outline-offset: 3px;
   }
 
+  /* Read by screen readers, not drawn: the words behind a visual
+     shorthand such as the rack's "+N". */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
   /* Forced-colors fallback (Windows High Contrast). */
   @media (forced-colors: active) {
     .tab:focus-visible,
@@ -650,6 +735,54 @@ export const cardStyles: CSSResultGroup = css`
     .flag,
     .btn-primary {
       forced-color-adjust: none;
+    }
+    /* The rack draws with fills, gradients and inset shadows, and forced
+       colours drop all three: every background turns Canvas and shadows
+       vanish, leaving only the lock and wrench icons. Opt the slots and
+       their legend swatches out and redraw them in the user's palette,
+       keeping the cues that need no colour: solid for a bike, a stripe
+       for an e-bike, a fill height for its charge, an outline for a dock
+       without an available bike. */
+    .slot,
+    .legend-swatch {
+      forced-color-adjust: none;
+    }
+    .slot.filled,
+    .legend-swatch.filled {
+      background: CanvasText;
+      box-shadow: none;
+    }
+    .slot.filled.ebike,
+    .legend-swatch.ebike {
+      background: linear-gradient(
+        135deg,
+        CanvasText 0%,
+        CanvasText 55%,
+        Highlight 55%,
+        Highlight 100%
+      );
+    }
+    .slot.filled.ebike.battery {
+      background: linear-gradient(
+        to top,
+        CanvasText var(--bat-pct, 0%),
+        Canvas var(--bat-pct, 0%)
+      );
+      box-shadow: inset 0 0 0 1px CanvasText;
+    }
+    .legend-swatch.ebike.battery {
+      background: linear-gradient(to top, CanvasText 70%, Canvas 70%);
+      outline-color: CanvasText;
+    }
+    .slot.empty,
+    .legend-swatch.empty,
+    .slot.reserved,
+    .legend-swatch.reserved,
+    .slot.disabled,
+    .legend-swatch.disabled {
+      background: Canvas;
+      box-shadow: inset 0 0 0 1px CanvasText;
+      color: CanvasText;
     }
   }
 
