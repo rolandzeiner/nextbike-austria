@@ -4,8 +4,9 @@
  *
  * A sections view gives the card a fixed-height cell whenever rows is numeric
  * -- which the user causes by dragging the height or width handle, since a
- * stored grid_options overrides getGridOptions(). rows: "auto" exempts
- * nobody. Only the pair below makes the card take that height; the comments
+ * stored grid_options overrides getGridOptions(). So returning rows: "auto"
+ * from getGridOptions() protects no card: the stored value wins. Only the
+ * pair below makes the card take that height; the comments
  * on the two rules in card-styles.ts explain why.
  *
  * Node does no layout, so the guard is on the CSS text.

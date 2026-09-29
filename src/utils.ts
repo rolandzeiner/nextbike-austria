@@ -248,8 +248,9 @@ export function arrayOr<T, F extends T[] | null>(value: T[] | undefined, fallbac
 }
 
 /** Bikes available, from the sensor state. Clamped at the boundary: a
- *  malformed or negative state reads as 0, so the rack can't run its
- *  empty-slot loop past the dock count. */
+ *  non-numeric state (unavailable, unknown) or a negative one reads as 0,
+ *  so the rack can't run its empty-slot loop past the dock count. A
+ *  leading integer is kept ("2.5" reads as 2). */
 export function parseBikeCount(state: string): number {
   const parsed = parseInt(state, 10);
   return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
@@ -285,7 +286,7 @@ export function stationMapUrl(attrs: HassEntityAttributes): string | null {
   );
 }
 
-/** Everything the station view draws, read off the sensor attributes. */
+/** What the hero and the rack draw, read off the sensor attributes. */
 export function rackInputs(
   bikes: number,
   attrs: HassEntityAttributes,
@@ -306,7 +307,7 @@ export function rackInputs(
     vehicleTypesAvailable: arrayOr(attrs.vehicle_types_available, []),
     vehicleTypeNames: names && typeof names === "object" ? names : {},
     // Live e-bike id set surfaced by the Python coordinator (with a small
-    // fallback for old coordinators), resolved once per station.
+    // fallback for old coordinators).
     ebikeIds: getEbikeIds(attrs),
     // Reserved and out-of-service bikes are excluded from
     // `num_bikes_available`, so they fill docks of their own. Like the

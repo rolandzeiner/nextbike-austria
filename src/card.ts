@@ -511,7 +511,7 @@ export class NextbikeAustriaCard extends LitElement {
     `;
   }
 
-  /** The docks holding a bike: e-bikes first, then classic bikes. */
+  /** The docks holding an available bike: e-bikes first, then classic bikes. */
   private _bikeSlots(layout: RackLayout, accent: string): TemplateResult[] {
     const slots: TemplateResult[] = [];
     for (let i = 0; i < layout.ebikes; i++) {
@@ -533,7 +533,8 @@ export class NextbikeAustriaCard extends LitElement {
   }
 
   /** An e-bike slot: filled to its charge when that is known, otherwise
-   *  the accent with the amber e-bike stripe. */
+   *  the accent with the amber e-bike stripe. With the charge display on,
+   *  a bike without a reading is labelled "battery unknown". */
   private _ebikeSlot(
     entry: BatteryEntry | null,
     layout: RackLayout,

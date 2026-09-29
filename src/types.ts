@@ -104,7 +104,7 @@ export interface BatteryEntry {
   pct?: number;
 }
 
-/** What the station view draws, read defensively off the sensor. */
+/** What the hero and the rack draw, read defensively off the sensor. */
 export interface RackInputs {
   bikes: number;
   ebikes: number | null;

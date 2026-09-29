@@ -69,7 +69,7 @@ npm test
 npm run build
 ```
 
-The card tests live next to the code as `src/**/*.test.ts` (vitest, no config file). Suites that mount the card opt into a DOM with an `@vitest-environment happy-dom` docblock; the rest run in plain node. `src/card.test.ts` pins the rendered markup in `src/__snapshots__/`: update a snapshot (`npx vitest run -u`) only for an intended visual change, and review the diff when you do. `npm run test:coverage` prints per-file coverage.
+The card tests live next to the code as `src/**/*.test.ts` (vitest, no config file). Suites that need a DOM opt into one with an `@vitest-environment happy-dom` docblock; the rest run in plain node. `src/card.test.ts` pins the rendered markup in `src/__snapshots__/`: update a snapshot (`npx vitest run -u`) only for an intended visual change, and review the diff when you do. `npm run test:coverage` prints per-file coverage and writes `coverage/coverage-final.json` (gitignored).
 
 CI runs the same checks plus hassfest + HACS validation. Failing locally wastes a push.
 
