@@ -273,6 +273,25 @@ async def test_consecutive_failures_apply_exponential_backoff(
         assert coordinator.update_interval.total_seconds() == BACKOFF_CAP_SECONDS
 
 
+async def test_backoff_holds_the_cap_through_a_very_long_outage(
+    hass: HomeAssistant,
+) -> None:
+    """The 1025th failure in a row used to raise: `2 ** 1024` fits no float."""
+    from custom_components.nextbike_austria.const import BACKOFF_CAP_SECONDS
+
+    entry = _make_entry({CONF_SCAN_INTERVAL: 60})
+    entry.add_to_hass(hass)
+    with patch(
+        "custom_components.nextbike_austria.coordinator._get_shared_client",
+        return_value=FakeClient(),
+    ):
+        coordinator = NextbikeStationCoordinator(hass, entry)
+
+    for _ in range(3000):
+        coordinator._note_failure()
+    assert coordinator.update_interval == timedelta(seconds=BACKOFF_CAP_SECONDS)
+
+
 async def test_setup_retry_on_first_refresh_failure(hass: HomeAssistant) -> None:
     """First-refresh failure leaves the entry in SETUP_RETRY."""
     entry = _make_entry()
