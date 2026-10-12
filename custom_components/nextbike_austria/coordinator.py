@@ -84,7 +84,18 @@ type NextbikeAustriaConfigEntry = ConfigEntry["NextbikeStationCoordinator"]
 # so polling faster wastes bandwidth for zero freshness gain. We still
 # honor the coordinator's own scan interval as the upper bound — this is
 # just the inner collapse window.
-_GBFS_TTL_SECONDS = 60.0
+#
+# One second short of the feed's 60 s TTL, on purpose. HA re-arms a
+# coordinator at `int(loop.time()) + microsecond + interval`, so at the
+# default interval consecutive ticks are exactly 60.000 s apart, and a tick
+# that starts a hair earlier than the last fetching tick did would still be
+# inside a 60.0 s window. Measured October 2026 with the window equal to the
+# interval: about a third of ticks were served from the cache, so station
+# data alternated between 60 and 120 s old, and a fast failure was replayed
+# for one extra tick the same way (`_blocked_until` uses this constant too).
+# The second covers the timer jitter and the 0.45 s spread between two
+# entries' phases, and still keeps consecutive fetches at least 59 s apart.
+_GBFS_TTL_SECONDS = 59.0
 _HTTP_TIMEOUT = aiohttp.ClientTimeout(total=15)
 
 # A vehicle-type fetch that failed is retried this often instead of on every

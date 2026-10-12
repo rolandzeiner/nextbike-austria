@@ -837,6 +837,32 @@ async def test_shared_client_ttl_collapses_fetches(hass: HomeAssistant) -> None:
 _MONOTONIC = "custom_components.nextbike_austria.coordinator.time.monotonic"
 
 
+async def test_fetches_a_hair_under_one_interval_apart_both_reach_the_network(
+    hass: HomeAssistant,
+) -> None:
+    """A tick 59.999 s after the last fetch is not served from the cache.
+
+    HA spaces a coordinator's ticks exactly one interval apart, so at the
+    default 60 s a tick can start a hair earlier than the one that last
+    fetched. The window ends a second short of the interval to let that
+    tick through; anything closer still collapses.
+    """
+    client = SharedSystemClient(hass, "nextbike_wr")
+    fake_fetch, calls = _feed_counter()
+    clock = {"now": 1000.0}
+    with (
+        patch.object(SharedSystemClient, "_fetch_json", side_effect=fake_fetch),
+        patch(_MONOTONIC, side_effect=lambda: clock["now"]),
+    ):
+        await client.async_fetch()
+        clock["now"] = 1000.0 + 58.999
+        await client.async_fetch()
+        assert calls["station_status"] == 1
+        clock["now"] = 1000.0 + 59.999
+        await client.async_fetch()
+    assert calls["station_status"] == 2
+
+
 async def test_failure_window_keeps_the_system_off_the_network(
     hass: HomeAssistant,
 ) -> None:
@@ -871,7 +897,9 @@ async def test_failure_window_keeps_the_system_off_the_network(
         assert replay.value.placeholders == {"seconds": "15"}
         assert len(calls) == attempts
 
-        clock["now"] += 31
+        # 59.999 s after the failure: the owner's next tick at the default
+        # interval, a hair early. It has to be a real attempt, not a replay.
+        clock["now"] += 29.999
         with pytest.raises(GBFSError) as retry:
             await client.async_fetch()
         assert not retry.value.replayed
