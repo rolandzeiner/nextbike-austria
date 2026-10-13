@@ -43,9 +43,9 @@ import {
   systemLabel,
 } from "./utils";
 
-// Eagerly register the editor. With inlineDynamicImports=true the editor
-// code is in this bundle anyway — registering here guarantees the custom
-// element exists before HA calls getConfigElement().
+// Eagerly register the editor. The bundle is one file (codeSplitting:
+// false), so the editor code is in it anyway — registering here guarantees
+// the custom element exists before HA calls getConfigElement().
 import "./editor";
 
 @customElement("nextbike-austria-card")
@@ -97,9 +97,10 @@ export class NextbikeAustriaCard extends LitElement {
 
   protected override willUpdate(changed: PropertyValues): void {
     // Drop the per-render memo BEFORE Lit calls render() so each cycle
-    // recomputes `_resolveEntities()` exactly once and threads the
-    // cached result through render + shouldUpdate. Without this,
-    // `findNextbikeEntities` walks `hass.states` 3× per render.
+    // recomputes `_resolveEntities()` exactly once and shares the result
+    // between this hook and render; shouldUpdate bypasses the memo.
+    // Without this, `findNextbikeEntities` walks `hass.states` 3× per
+    // render.
     this._resolvedEntitiesMemo = null;
     if (changed.has("hass") && this.hass && !this._versionChecked) {
       this._versionChecked = true;
@@ -654,9 +655,9 @@ export class NextbikeAustriaCard extends LitElement {
       hasDisabledVisible,
     } = args;
     const items: TemplateResult[] = [];
-    // Only the marks the rack draws get a key. On an all-e-bike rack a
-    // "Bike" swatch in the operator's red would explain the low-charge
-    // e-bikes instead, which are the only red slots there.
+    // Only the marks the rack draws get a key. Where the operator's
+    // accent is red, an unused "Bike" swatch would pass for the key to
+    // the red low-charge e-bikes.
     if (hasClassicVisible) {
       items.push(html`
         <div class="legend-item">

@@ -62,9 +62,9 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
        The rack's slot size and gap flow from custom properties, so a
        density tier retunes it in one place.
 
-       Font sizes are in rem (root-relative, 16px baseline) so the user's
-       browser/OS text-size preference reaches the card; padding/margin/gap
-       stay in px aligned to HA's 4-px spacing scale.
+       Font sizes are in rem against Home Assistant's 14px root (see the
+       token notes below), so 0.75rem is 10.5px, not 12px. Padding, margin
+       and gap are in px.
 
        color-scheme enables light-dark() and steers forced-colors palette
        selection (WCAG 1.4.11). HA's active theme drives the resolution. */
@@ -111,29 +111,24 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
     /* Spacing / radius / sizing — layered over the HA Design System
        so the card moves with HA when tokens evolve. Hard-coded values
        are the fallback for older HA versions. */
-    /* These names were wrong until v1.3.1 and nothing complained: var()
-       on a token HA does not define is not an error, it just resolves to
-       the fallback. So the card ran entirely on its own literals while
-       looking theme-aware — which is how --ha-spacing-3 came to mean
-       14px on one line and 12px on the next.
+    /* var() on a token HA does not define is not an error, it just
+       resolves to the fallback, so a wrong name leaves the card running
+       on its own literals while looking theme-aware.
 
        Verified against the frontend's src/resources/theme/core.globals.ts:
-         --ha-space-N          4px grid, 1…20   (was --ha-spacing-N)
+         --ha-space-N          4px grid, 1…20
          --ha-font-size-*      xs 10 / s 12 / m 14 / l 16 / xl 20px.
                                typography.globals.ts sets the root to
                                font-size:14px, so -m is 1rem, NOT 0.875 —
                                do the rem maths at 14px or just write px.
          --ha-border-radius-*  sm 4 / md 8 / lg 12 / xl 16 / pill / circle
-                                                (was --ha-radius-*)
          --ha-animation-duration-*  none 1 / instant 75 / fast 150 /
                                     normal 250 / slow 350ms
-                                                (was --ha-transition-duration-*)
-       There is no easing token — --ha-transition-easing-standard never
-       existed either, so easings are now named directly.
+       There is no easing token, so easings are named directly.
 
-       Fallbacks are kept and now match the token they stand in for.
-       Adopting a new --ha-* token means checking core.globals.ts first;
-       a typo here is invisible. */
+       Each fallback matches the token it stands in for. Adopting a new
+       --ha-* token means checking core.globals.ts first; a typo here is
+       invisible. */
     --nb-radius-sm: var(--ha-border-radius-sm, 4px);
     --nb-radius-md: var(--ha-border-radius-md, 8px);
     --nb-radius-lg: var(--ha-card-border-radius, var(--ha-border-radius-lg, 12px));
@@ -204,7 +199,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
     display: none;
   }
   .tab {
-    /* Fixed 44px height — meets WCAG 2.5.8 AAA touch target. Active
+    /* Fixed 44px height — meets the WCAG 2.5.5 (AAA) target size. Active
        indicator is a 2px box-shadow so the text stays vertically
        centred whether or not the tab is active. */
     flex: 1;
@@ -259,10 +254,9 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
     gap: 12px;
   }
   .icon-tile {
-    /* Modern HA "tile-card" vocabulary: rounded square, accent-tinted
-       background, accent-coloured icon. Replaces the old 4px accent bar
-       and gives the card immediate visual identity from across the
-       dashboard. */
+    /* HA "tile-card" vocabulary: rounded square, accent-tinted
+       background, accent-coloured icon. It gives the card its identity
+       from across the dashboard. */
     width: var(--nb-tile-size);
     height: var(--nb-tile-size);
     border-radius: var(--nb-radius-md);
@@ -283,9 +277,9 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
   }
   .title {
     /* <h2> override: nuke UA heading margins + set a strong but
-       restrained card-header type size. Semantics only. Body tier
-       (--ha-font-size-m ≈ 0.9375rem) keeps the heading aligned with
-       the linz + wiener cards on a stacked dashboard. */
+       restrained card-header type size. Semantics only. Body size
+       (--ha-font-size-m, 14px) keeps the heading aligned with the
+       linz + wiener cards on a stacked dashboard. */
     margin: 0;
     font-size: var(--ha-font-size-m, 14px);
     font-weight: 600;
@@ -712,14 +706,12 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
   /* ── Responsive density tiers (container queries, not viewport) ──── */
   /* Tokens are retuned on ha-card, never on :host. :host is the nbcard
      container, and a container never matches its own query, so a :host
-     rule in here is dead: through v1.4.0 that left the rack at one size
-     at every width. Everything that reads the tokens sits inside ha-card.
+     rule in here is silently dead. Everything that reads the tokens sits
+     inside ha-card.
 
-     Only the rack is retuned. The same dead rules also claimed to change
-     the card padding and the tile size, but every card in the portfolio
-     ships one padding and one tile at every width; changing them here
-     alone would put this card's header out of line with its siblings in
-     a stacked column. */
+     Of the --nb-* tokens only the rack's change per tier. Padding and
+     tile size stay fixed so the header lines up with the sibling cards
+     in a stacked column. */
   /* Compact: narrow phone columns, side-by-side dashboard panels. */
   @container nbcard (inline-size < 360px) {
     ha-card {
@@ -745,7 +737,8 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
   }
   /* Roomy: panel mode, a section spanning columns. The larger slots wait
      for 600px because that is where 20 of them, a common station size,
-     still fit one row; at 480px they would wrap a rack that fits today. */
+     still fit one row; at 480px they would wrap a 20-slot rack that the
+     default slots keep on one row. */
   @container nbcard (inline-size > 600px) {
     ha-card {
       --nb-slot-size: 22px;
