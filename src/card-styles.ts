@@ -358,10 +358,6 @@ export const cardStyles: CSSResultGroup = css`
     flex-wrap: wrap;
     align-items: center;
     gap: var(--nb-slot-gap);
-    padding: 10px 12px;
-    border-radius: var(--nb-radius-md);
-    background: color-mix(in srgb, var(--nb-accent) 5%, transparent);
-    border: 1px solid color-mix(in srgb, var(--nb-accent) 10%, transparent);
   }
   .slot {
     display: block;
@@ -467,7 +463,7 @@ export const cardStyles: CSSResultGroup = css`
     flex-wrap: wrap;
     gap: 8px 14px;
     margin: 0;
-    padding: 0 2px;
+    padding: 0;
     font-size: 0.7rem;
     color: var(--secondary-text-color);
     /* Translated legend labels can be long ("Außer Betrieb") — allow
