@@ -40,7 +40,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
 * @license
 * Copyright 2017 Google LLC
 * SPDX-License-Identifier: BSD-3-Clause
-*/function G(e){return W({...e,state:!0,attribute:!1})}const Te={nextbike_wr:`#DC2026`,nextbike_la:`#004E9E`,nextbike_si:`#C8102E`,nextbike_vt:`#009D58`,nextbike_al:`#E30613`,nextbike_ka:`#FFC20E`},K={en:{no_entities_available:`No nextbike sensors found`,no_entities_unavailable:`Selected station is currently unavailable`,rack_summary:`Bike rack: {available} of {capacity} bikes available`,offline:`offline`,no_rental:`no rental`,no_return:`no return`,virtual_station:`virtual station`,bikes:`bikes`,bike:`bike`,docks:`docks`,dock:`dock`,ebikes:`e-bikes`,capacity:`capacity`,last_updated:`updated`,now:`just now`,seconds_ago:`{n}s ago`,minutes_ago:`{n}min ago`,hours_ago:`{n}h ago`,rent_in_app:`Rent in app`,open_map:`Map`,legend_bike:`Bike`,legend_ebike:`E-bike`,legend_empty:`Empty dock`,legend_overflow:`Overflow`,legend_reserved:`Reserved`,reserved:`Reserved`,legend_disabled:`Out of service`,disabled:`Out of service`,battery_unknown:`battery unknown`,battery_avg:`avg. charge`,overflow_more:`{n} more bikes than docks`,stations:`Stations`,version_update:`Nextbike Austria updated to v{v} — please reload`,version_reload:`Reload`,version_reload_stuck:`Reload didn't pick up the new version. Close this browser tab and reopen the dashboard, or clear your browser's site data for Home Assistant.`,editor:{entities_helper:`Pick one or more nextbike-austria sensors. Use Settings → Devices & Services to add more stations.`,entity_missing:`Sensor {entity} no longer exists. Pick a different sensor or remove it from this card's entities list.`,section_display:`Display`,layout:`Multi-station layout`,layout_helper:`Stacked shows every station in one column; Tabs adds a tab strip when two or more stations are picked.`,layout_stacked:`Stacked`,layout_tabs:`Tabs`,show_rack:`Show bike rack`,show_legend:`Show legend`,show_battery:`Show battery in e-bike slot`,show_ebikes:`Show e-bikes`,show_docks:`Show docks`,show_flags:`Show status flags`,show_timestamp:`Show timestamp`,show_rent_button:`Show app-rent link`,hide_header:`Hide header`,hide_attribution:`Hide attribution`}},de:{no_entities_available:`Keine Nextbike-Sensoren gefunden`,no_entities_unavailable:`Ausgewählte Station ist gerade nicht verfügbar`,rack_summary:`Radständer: {available} von {capacity} Rädern verfügbar`,offline:`offline`,no_rental:`keine Ausleihe`,no_return:`keine Rückgabe`,virtual_station:`virtuelle Station`,bikes:`Räder`,bike:`Rad`,docks:`Plätze`,dock:`Platz`,ebikes:`E-Bikes`,capacity:`Kapazität`,last_updated:`aktualisiert`,now:`gerade eben`,seconds_ago:`vor {n}s`,minutes_ago:`vor {n}min`,hours_ago:`vor {n}h`,rent_in_app:`In App mieten`,open_map:`Karte`,legend_bike:`Rad`,legend_ebike:`E-Bike`,legend_empty:`Freier Platz`,legend_overflow:`Überzählig`,legend_reserved:`Reserviert`,reserved:`Reserviert`,legend_disabled:`Außer Betrieb`,disabled:`Außer Betrieb`,battery_unknown:`Batterie unbekannt`,battery_avg:`Ø Akkustand`,overflow_more:`{n} Räder mehr als Plätze`,stations:`Stationen`,version_update:`Nextbike Austria wurde auf v{v} aktualisiert — bitte neu laden`,version_reload:`Neu laden`,version_reload_stuck:`Neu laden hat die neue Version nicht übernommen. Schließe diesen Browser-Tab und öffne das Dashboard erneut, oder lösche die Website-Daten für Home Assistant in den Browser-Einstellungen.`,editor:{entities_helper:`Eine oder mehrere Nextbike-Austria-Sensoren auswählen. Über Einstellungen → Geräte & Dienste lassen sich weitere Stationen hinzufügen.`,entity_missing:`Sensor {entity} existiert nicht mehr. Wähle einen anderen Sensor oder entferne ihn aus den Entitäten dieser Karte.`,section_display:`Anzeige`,layout:`Layout für mehrere Stationen`,layout_helper:`„Gestapelt“ zeigt alle Stationen untereinander, „Reiter“ blendet ab zwei Stationen einen Reiter-Streifen ein.`,layout_stacked:`Gestapelt`,layout_tabs:`Reiter`,show_rack:`Bike-Rack anzeigen`,show_legend:`Legende anzeigen`,show_battery:`Batterie im E-Bike-Slot anzeigen`,show_ebikes:`E-Bike-Anzeige`,show_docks:`Plätze anzeigen`,show_flags:`Statussymbole anzeigen`,show_timestamp:`Zeitstempel anzeigen`,show_rent_button:`App-Mietlink anzeigen`,hide_header:`Kopfzeile ausblenden`,hide_attribution:`Datenquelle ausblenden`}}};function Ee(e){return(e?.language||`en`).startsWith(`de`)?`de`:`en`}function q(e,t){let n=e;for(let e of t){if(typeof n!=`object`||!n)return;let t=n[e];if(t===void 0)return;n=t}return typeof n==`string`?n:void 0}function De(e,t){let n=Ee(e);return q(K[n]??K.en,[t])??q(K.en,[t])??t}function Oe(e,t){let n=Ee(e);return q(K[n]??K.en,[`editor`,t])??q(K.en,[`editor`,t])??t}async function ke(e,t,n){if(!e?.callWS)return null;try{let r=await e.callWS({type:t});if(r?.version&&r.version!==n)return r.version}catch{}return null}function Ae(e){try{window.caches?.keys?.().then(e=>{e.forEach(e=>window.caches?.delete?.(e))})}catch{}if(e)try{window.sessionStorage?.setItem(`nb-reload-attempted-${e}`,`1`)}catch{}window.location.reload()}function je(e){if(!e)return!1;try{return window.sessionStorage?.getItem(`nb-reload-attempted-${e}`)===`1`}catch{return!1}}function Me(e,t){if(!e)return F;if(je(e)){let e=t(`version_reload_stuck`);return N`
+*/function G(e){return W({...e,state:!0,attribute:!1})}const Te={nextbike_wr:`#DC2026`,nextbike_la:`#004E9E`,nextbike_si:`#C8102E`,nextbike_vt:`#009D58`,nextbike_al:`#E30613`,nextbike_ka:`#FFC20E`},K={en:{no_entities_available:`No nextbike sensors found`,no_entities_unavailable:`Selected station is currently unavailable`,rack_summary:`Bike rack: {available} of {capacity} bikes available`,offline:`offline`,no_rental:`no rental`,no_return:`no return`,virtual_station:`virtual station`,bikes:`bikes`,bike:`bike`,docks:`docks`,dock:`dock`,ebikes:`e-bikes`,capacity:`capacity`,last_updated:`updated`,now:`just now`,seconds_ago:`{n}\xA0s ago`,minutes_ago:`{n}\xA0min ago`,hours_ago:`{n}\xA0h ago`,rent_in_app:`Rent in app`,open_map:`Map`,legend_bike:`Bike`,legend_ebike:`E-bike`,legend_empty:`Empty dock`,legend_overflow:`Overflow`,legend_reserved:`Reserved`,reserved:`Reserved`,legend_disabled:`Out of service`,disabled:`Out of service`,battery_unknown:`battery unknown`,battery_avg:`avg. charge`,overflow_more:`{n} more bikes than docks`,stations:`Stations`,version_update:`Nextbike Austria updated to v{v} — please reload`,version_reload:`Reload`,version_reload_stuck:`Reload didn't pick up the new version. Close this browser tab and reopen the dashboard, or clear your browser's site data for Home Assistant.`,editor:{entities_helper:`Pick one or more nextbike-austria sensors. Use Settings → Devices & Services to add more stations.`,entity_missing:`Sensor {entity} no longer exists. Pick a different sensor or remove it from this card's entities list.`,section_display:`Display`,layout:`Multi-station layout`,layout_helper:`Stacked shows every station in one column; Tabs adds a tab strip when two or more stations are picked.`,layout_stacked:`Stacked`,layout_tabs:`Tabs`,show_rack:`Show bike rack`,show_legend:`Show legend`,show_battery:`Show battery in e-bike slot`,show_ebikes:`Show e-bikes`,show_docks:`Show docks`,show_flags:`Show status flags`,show_timestamp:`Show timestamp`,show_rent_button:`Show app-rent link`,hide_header:`Hide header`,hide_attribution:`Hide attribution`}},de:{no_entities_available:`Keine Nextbike-Sensoren gefunden`,no_entities_unavailable:`Ausgewählte Station ist gerade nicht verfügbar`,rack_summary:`Radständer: {available} von {capacity} Rädern verfügbar`,offline:`offline`,no_rental:`keine Ausleihe`,no_return:`keine Rückgabe`,virtual_station:`virtuelle Station`,bikes:`Räder`,bike:`Rad`,docks:`Plätze`,dock:`Platz`,ebikes:`E-Bikes`,capacity:`Kapazität`,last_updated:`aktualisiert`,now:`gerade eben`,seconds_ago:`vor {n}\xA0s`,minutes_ago:`vor {n}\xA0min`,hours_ago:`vor {n}\xA0h`,rent_in_app:`In App mieten`,open_map:`Karte`,legend_bike:`Rad`,legend_ebike:`E-Bike`,legend_empty:`Freier Platz`,legend_overflow:`Überzählig`,legend_reserved:`Reserviert`,reserved:`Reserviert`,legend_disabled:`Außer Betrieb`,disabled:`Außer Betrieb`,battery_unknown:`Batterie unbekannt`,battery_avg:`Ø Akkustand`,overflow_more:`{n} Räder mehr als Plätze`,stations:`Stationen`,version_update:`Nextbike Austria wurde auf v{v} aktualisiert — bitte neu laden`,version_reload:`Neu laden`,version_reload_stuck:`Neu laden hat die neue Version nicht übernommen. Schließe diesen Browser-Tab und öffne das Dashboard erneut, oder lösche die Website-Daten für Home Assistant in den Browser-Einstellungen.`,editor:{entities_helper:`Eine oder mehrere Nextbike-Austria-Sensoren auswählen. Über Einstellungen → Geräte & Dienste lassen sich weitere Stationen hinzufügen.`,entity_missing:`Sensor {entity} existiert nicht mehr. Wähle einen anderen Sensor oder entferne ihn aus den Entitäten dieser Karte.`,section_display:`Anzeige`,layout:`Layout für mehrere Stationen`,layout_helper:`„Gestapelt“ zeigt alle Stationen untereinander, „Reiter“ blendet ab zwei Stationen einen Reiter-Streifen ein.`,layout_stacked:`Gestapelt`,layout_tabs:`Reiter`,show_rack:`Bike-Rack anzeigen`,show_legend:`Legende anzeigen`,show_battery:`Batterie im E-Bike-Slot anzeigen`,show_ebikes:`E-Bike-Anzeige`,show_docks:`Plätze anzeigen`,show_flags:`Statussymbole anzeigen`,show_timestamp:`Zeitstempel anzeigen`,show_rent_button:`App-Mietlink anzeigen`,hide_header:`Kopfzeile ausblenden`,hide_attribution:`Datenquelle ausblenden`}}};function Ee(e){return(e?.language||`en`).startsWith(`de`)?`de`:`en`}function q(e,t){let n=e;for(let e of t){if(typeof n!=`object`||!n)return;let t=n[e];if(t===void 0)return;n=t}return typeof n==`string`?n:void 0}function De(e,t){let n=Ee(e);return q(K[n]??K.en,[t])??q(K.en,[t])??t}function Oe(e,t){let n=Ee(e);return q(K[n]??K.en,[`editor`,t])??q(K.en,[`editor`,t])??t}async function ke(e,t,n){if(!e?.callWS)return null;try{let r=await e.callWS({type:t});if(r?.version&&r.version!==n)return r.version}catch{}return null}function Ae(e){try{window.caches?.keys?.().then(e=>{e.forEach(e=>window.caches?.delete?.(e))})}catch{}if(e)try{window.sessionStorage?.setItem(`nb-reload-attempted-${e}`,`1`)}catch{}window.location.reload()}function je(e){if(!e)return!1;try{return window.sessionStorage?.getItem(`nb-reload-attempted-${e}`)===`1`}catch{return!1}}function Me(e,t){if(!e)return F;if(je(e)){let e=t(`version_reload_stuck`);return N`
       <div class="banner" role="alert" aria-live="assertive">
         <span>${e}</span>
       </div>
@@ -59,8 +59,8 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
   :host {
     /* Card responds to its own column width, not the viewport — narrow
        dashboard columns trigger the compact layout even on wide screens.
-       Slot size + spacing rhythm both flow from custom properties so a
-       single density tier flips the whole card.
+       The rack's slot size and gap flow from custom properties, so a
+       density tier retunes it in one place.
 
        Font sizes are in rem (root-relative, 16px baseline) so the user's
        browser/OS text-size preference reaches the card; padding/margin/gap
@@ -696,7 +696,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
   /* ── Attribution ────────────────────────────────────────────────── */
   .attr {
     margin-top: 2px;
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     color: var(--secondary-text-color);
     text-align: center;
   }
@@ -710,15 +710,22 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
   }
 
   /* ── Responsive density tiers (container queries, not viewport) ──── */
+  /* Tokens are retuned on ha-card, never on :host. :host is the nbcard
+     container, and a container never matches its own query, so a :host
+     rule in here is dead: through v1.4.0 that left the rack at one size
+     at every width. Everything that reads the tokens sits inside ha-card.
+
+     Only the rack is retuned. The same dead rules also claimed to change
+     the card padding and the tile size, but every card in the portfolio
+     ships one padding and one tile at every width; changing them here
+     alone would put this card's header out of line with its siblings in
+     a stacked column. */
   /* Compact: narrow phone columns, side-by-side dashboard panels. */
   @container nbcard (inline-size < 360px) {
-    :host {
-      --nb-pad-x: 14px;
-      --nb-pad-y: 12px;
+    ha-card {
       --nb-slot-size: 14px;
       --nb-slot-height: 18px;
       --nb-slot-gap: 3px;
-      --nb-tile-size: 36px;
     }
     .metric-num {
       font-size: 2rem;
@@ -727,21 +734,23 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
       --mdc-icon-size: 20px;
     }
   }
-  /* Wide: sidebar / panel mode / 2-column section view. */
+  /* Wide: a full sections column, sidebar. */
   @container nbcard (inline-size > 480px) {
-    :host {
-      --nb-pad-x: 20px;
-      --nb-pad-y: 16px;
-      --nb-slot-size: 22px;
-      --nb-slot-height: 26px;
-      --nb-slot-gap: 5px;
-      --nb-tile-size: 44px;
-    }
     .metric-num {
       font-size: 2.5rem;
     }
     .icon-tile {
       --mdc-icon-size: 24px;
+    }
+  }
+  /* Roomy: panel mode, a section spanning columns. The larger slots wait
+     for 600px because that is where 20 of them, a common station size,
+     still fit one row; at 480px they would wrap a rack that fits today. */
+  @container nbcard (inline-size > 600px) {
+    ha-card {
+      --nb-slot-size: 22px;
+      --nb-slot-height: 26px;
+      --nb-slot-gap: 5px;
     }
   }
 
@@ -980,7 +989,7 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
                 ></span
               >`:F}
         </div>
-        ${this._config.show_legend?this._renderLegend({hasEbikes:n.hasEbikes,hasOverflow:n.overflow>0,hasEmptyVisible:n.empty>0,battery:n.showBattery&&typeof e.batteryPct==`number`?{pct:e.batteryPct,color:He(e.batteryPct)}:null,hasReservedVisible:n.reserved>0,hasDisabledVisible:n.disabled>0}):F}
+        ${this._config.show_legend?this._renderLegend({hasClassicVisible:n.bikes>n.ebikes,hasEbikes:n.hasEbikes,hasOverflow:n.overflow>0,hasEmptyVisible:n.empty>0,battery:n.showBattery&&typeof e.batteryPct==`number`?{pct:e.batteryPct,color:He(e.batteryPct)}:null,hasReservedVisible:n.reserved>0,hasDisabledVisible:n.disabled>0}):F}
       </div>
     `}_bikeSlots(e){let t=[];for(let n=0;n<e.ebikes;n++)t.push(this._ebikeSlot(e.perBike[n]||null,e));for(let n=0;n<e.bikes-e.ebikes;n++){let r=e.classicNames[n]||this._t(`legend_bike`);t.push(N`
         <div
@@ -1029,41 +1038,41 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
           aria-label=${o}
           title=${o}
         ></div>
-      `);return n}_renderLegend(e){let{hasEbikes:t,hasOverflow:n,hasEmptyVisible:r,battery:i,hasReservedVisible:a,hasDisabledVisible:o}=e,s=[N`
+      `);return n}_renderLegend(e){let{hasClassicVisible:t,hasEbikes:n,hasOverflow:r,hasEmptyVisible:i,battery:a,hasReservedVisible:o,hasDisabledVisible:s}=e,c=[];return t&&c.push(N`
         <div class="legend-item">
           <dt class="legend-swatch filled" aria-hidden="true"></dt>
           <dd>${this._t(`legend_bike`)}</dd>
         </div>
-      `];return t&&s.push(N`
+      `),n&&c.push(N`
         <div class="legend-item">
-          <dt class=${i?`legend-swatch ebike battery`:`legend-swatch ebike`} aria-hidden="true"></dt>
+          <dt class=${a?`legend-swatch ebike battery`:`legend-swatch ebike`} aria-hidden="true"></dt>
           <dd>${this._t(`legend_ebike`)}</dd>
         </div>
-      `),a&&s.push(N`
+      `),o&&c.push(N`
         <div class="legend-item">
           <dt class="legend-swatch reserved" aria-hidden="true">
             <ha-icon icon="mdi:lock"></ha-icon>
           </dt>
           <dd>${this._t(`legend_reserved`)}</dd>
         </div>
-      `),o&&s.push(N`
+      `),s&&c.push(N`
         <div class="legend-item">
           <dt class="legend-swatch disabled" aria-hidden="true">
             <ha-icon icon="mdi:wrench"></ha-icon>
           </dt>
           <dd>${this._t(`legend_disabled`)}</dd>
         </div>
-      `),r&&s.push(N`
+      `),i&&c.push(N`
         <div class="legend-item">
           <dt class="legend-swatch empty" aria-hidden="true"></dt>
           <dd>${this._t(`legend_empty`)}</dd>
         </div>
-      `),n&&s.push(N`
+      `),r&&c.push(N`
         <div class="legend-item">
           <dt class="legend-overflow" aria-hidden="true">+N</dt>
           <dd>${this._t(`legend_overflow`)}</dd>
         </div>
-      `),N`<dl class="legend">${s}</dl>`}_renderFlags(e){let t=[];return e.is_installed===!1&&t.push(N`
+      `),N`<dl class="legend">${c}</dl>`}_renderFlags(e){let t=[];return e.is_installed===!1&&t.push(N`
         <span class="flag err">
           <ha-icon icon="mdi:alert-circle" aria-hidden="true"></ha-icon>${this._t(`offline`)}
         </span>
