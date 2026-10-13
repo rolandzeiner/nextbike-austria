@@ -516,6 +516,33 @@ describe("rack colours", () => {
   });
 });
 
+describe("legend", () => {
+  const keys = (el: Card): string[] =>
+    [...root(el).querySelectorAll(".legend dd")].map((dd) => dd.textContent!.trim());
+
+  it("has no bike key when every bike in the rack is an e-bike", async () => {
+    // The operator's red swatch would otherwise explain the low-charge
+    // e-bikes, the only red slots on such a rack.
+    const el = await mount(
+      { entities: ["sensor.nb_a"] },
+      hass({
+        "sensor.nb_a": [
+          "2",
+          { ...FULL, vehicle_types_available: [{ vehicle_type_id: "143", count: 2 }] },
+        ],
+      }),
+    );
+    expect(root(el).querySelectorAll(".slot.filled:not(.ebike)")).toHaveLength(0);
+    expect(keys(el)).not.toContain("Bike");
+    expect(keys(el)).toContain("E-bike");
+  });
+
+  it("keeps the bike key while a classic bike is in the rack", async () => {
+    const el = await mount({ entities: ["sensor.nb_a"] }, hass({ "sensor.nb_a": ["6", FULL] }));
+    expect(keys(el)).toContain("Bike");
+  });
+});
+
 describe("rendered markup", () => {
   it("a full station stacked above an overflowing one", async () => {
     const el = await mount(

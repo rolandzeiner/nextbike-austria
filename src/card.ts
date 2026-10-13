@@ -520,6 +520,7 @@ export class NextbikeAustriaCard extends LitElement {
         </div>
         ${this._config.show_legend
           ? this._renderLegend({
+              hasClassicVisible: layout.bikes > layout.ebikes,
               hasEbikes: layout.hasEbikes,
               hasOverflow: layout.overflow > 0,
               hasEmptyVisible: layout.empty > 0,
@@ -635,6 +636,7 @@ export class NextbikeAustriaCard extends LitElement {
   }
 
   private _renderLegend(args: {
+    hasClassicVisible: boolean;
     hasEbikes: boolean;
     hasOverflow: boolean;
     hasEmptyVisible: boolean;
@@ -643,6 +645,7 @@ export class NextbikeAustriaCard extends LitElement {
     hasDisabledVisible: boolean;
   }): TemplateResult {
     const {
+      hasClassicVisible,
       hasEbikes,
       hasOverflow,
       hasEmptyVisible,
@@ -650,14 +653,18 @@ export class NextbikeAustriaCard extends LitElement {
       hasReservedVisible,
       hasDisabledVisible,
     } = args;
-    const items: TemplateResult[] = [
-      html`
+    const items: TemplateResult[] = [];
+    // Only the marks the rack draws get a key. On an all-e-bike rack a
+    // "Bike" swatch in the operator's red would explain the low-charge
+    // e-bikes instead, which are the only red slots there.
+    if (hasClassicVisible) {
+      items.push(html`
         <div class="legend-item">
           <dt class="legend-swatch filled" aria-hidden="true"></dt>
           <dd>${this._t("legend_bike")}</dd>
         </div>
-      `,
-    ];
+      `);
+    }
     if (hasEbikes) {
       // Legend swatch follows what's actually rendered in the rack —
       // vertical-fill battery pattern when per-slot charge is showing,

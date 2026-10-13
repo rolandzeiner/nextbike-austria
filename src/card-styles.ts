@@ -4,8 +4,8 @@ export const cardStyles: CSSResultGroup = css`
   :host {
     /* Card responds to its own column width, not the viewport — narrow
        dashboard columns trigger the compact layout even on wide screens.
-       Slot size + spacing rhythm both flow from custom properties so a
-       single density tier flips the whole card.
+       The rack's slot size and gap flow from custom properties, so a
+       density tier retunes it in one place.
 
        Font sizes are in rem (root-relative, 16px baseline) so the user's
        browser/OS text-size preference reaches the card; padding/margin/gap
@@ -641,7 +641,7 @@ export const cardStyles: CSSResultGroup = css`
   /* ── Attribution ────────────────────────────────────────────────── */
   .attr {
     margin-top: 2px;
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     color: var(--secondary-text-color);
     text-align: center;
   }
@@ -655,15 +655,22 @@ export const cardStyles: CSSResultGroup = css`
   }
 
   /* ── Responsive density tiers (container queries, not viewport) ──── */
+  /* Tokens are retuned on ha-card, never on :host. :host is the nbcard
+     container, and a container never matches its own query, so a :host
+     rule in here is dead: through v1.4.0 that left the rack at one size
+     at every width. Everything that reads the tokens sits inside ha-card.
+
+     Only the rack is retuned. The same dead rules also claimed to change
+     the card padding and the tile size, but every card in the portfolio
+     ships one padding and one tile at every width; changing them here
+     alone would put this card's header out of line with its siblings in
+     a stacked column. */
   /* Compact: narrow phone columns, side-by-side dashboard panels. */
   @container nbcard (inline-size < 360px) {
-    :host {
-      --nb-pad-x: 14px;
-      --nb-pad-y: 12px;
+    ha-card {
       --nb-slot-size: 14px;
       --nb-slot-height: 18px;
       --nb-slot-gap: 3px;
-      --nb-tile-size: 36px;
     }
     .metric-num {
       font-size: 2rem;
@@ -672,21 +679,23 @@ export const cardStyles: CSSResultGroup = css`
       --mdc-icon-size: 20px;
     }
   }
-  /* Wide: sidebar / panel mode / 2-column section view. */
+  /* Wide: a full sections column, sidebar. */
   @container nbcard (inline-size > 480px) {
-    :host {
-      --nb-pad-x: 20px;
-      --nb-pad-y: 16px;
-      --nb-slot-size: 22px;
-      --nb-slot-height: 26px;
-      --nb-slot-gap: 5px;
-      --nb-tile-size: 44px;
-    }
     .metric-num {
       font-size: 2.5rem;
     }
     .icon-tile {
       --mdc-icon-size: 24px;
+    }
+  }
+  /* Roomy: panel mode, a section spanning columns. The larger slots wait
+     for 600px because that is where 20 of them, a common station size,
+     still fit one row; at 480px they would wrap a rack that fits today. */
+  @container nbcard (inline-size > 600px) {
+    ha-card {
+      --nb-slot-size: 22px;
+      --nb-slot-height: 26px;
+      --nb-slot-gap: 5px;
     }
   }
 
