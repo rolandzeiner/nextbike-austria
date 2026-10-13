@@ -11,9 +11,10 @@ export const cardStyles: CSSResultGroup = css`
        token notes below), so 0.75rem is 10.5px, not 12px. Padding, margin
        and gap are in px.
 
-       color-scheme enables light-dark() and steers forced-colors palette
-       selection (WCAG 1.4.11). HA's active theme drives the resolution. */
-    color-scheme: light dark;
+       No color-scheme here. Home Assistant sets it on the document from
+       the active theme and the card inherits it; declaring "light dark"
+       would hand the choice to the OS setting instead, which is wrong
+       whenever the two differ. */
     display: block;
     /* Fill the grid cell the dashboard gave us.
        A sections view puts a fixed pixel height on the cell WRAPPER whenever
