@@ -32,7 +32,7 @@ function resolvePath(dict: Dict, path: string[]): string | undefined {
   let cur: Dict | string = dict;
   for (const seg of path) {
     if (typeof cur !== "object" || cur === null) return undefined;
-    const next: Dict | string | undefined = (cur as Dict)[seg];
+    const next: Dict | string | undefined = cur[seg];
     if (next === undefined) return undefined;
     cur = next;
   }
