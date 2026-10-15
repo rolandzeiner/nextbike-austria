@@ -10,10 +10,7 @@ import { customElement, property, state } from "lit/decorators.js";
 
 import { CARD_VERSION } from "./const";
 import { t } from "./localize/localize";
-import {
-  checkCardVersionWS,
-  renderVersionBanner,
-} from "./shared-render";
+import { checkCardVersionWS, renderVersionBanner } from "./shared-render";
 import { cardStyles } from "./card-styles";
 import type {
   BatteryEntry,
@@ -143,9 +140,7 @@ export class NextbikeAustriaCard extends LitElement {
     // render-scoped memo. shouldUpdate can return false (no willUpdate,
     // no memo-clear), so a value seeded here would outlive its cycle.
     const stations = this._resolveEntities(this.hass, false);
-    return stations.some(
-      (s) => oldHass.states[s.entity] !== this.hass!.states[s.entity],
-    );
+    return stations.some((s) => oldHass.states[s.entity] !== this.hass!.states[s.entity]);
   }
 
   public getCardSize(): number {
@@ -153,9 +148,7 @@ export class NextbikeAustriaCard extends LitElement {
     // that actually exist, plus the single-station auto-detect fallback
     // — so the masonry height contract matches what render() paints.
     // Before the first hass arrives, fall back to the configured count.
-    const n = this.hass
-      ? this._resolveEntities().length || 1
-      : this._config.entities.length || 1;
+    const n = this.hass ? this._resolveEntities().length || 1 : this._config.entities.length || 1;
     return Math.min(12, 3 + n * 3);
   }
 
@@ -180,9 +173,7 @@ export class NextbikeAustriaCard extends LitElement {
     return document.createElement("nextbike-austria-card-editor");
   }
 
-  public static getStubConfig(
-    hass: HomeAssistant,
-  ): Record<string, unknown> {
+  public static getStubConfig(hass: HomeAssistant): Record<string, unknown> {
     const entities = findNextbikeEntities(hass);
     const first = entities[0];
     return { entities: first ? [{ entity: first }] : [] };
@@ -264,9 +255,7 @@ export class NextbikeAustriaCard extends LitElement {
         <div class="wrap">
           ${renderVersionBanner(this._versionMismatch, (k) => this._t(k))}
           ${content}
-          ${this._config.hide_attribution
-            ? nothing
-            : html`<div class="attr">${attribution}</div>`}
+          ${this._config.hide_attribution ? nothing : html`<div class="attr">${attribution}</div>`}
         </div>
       </ha-card>
     `;
@@ -302,8 +291,7 @@ export class NextbikeAustriaCard extends LitElement {
               aria-selected=${selected ? "true" : "false"}
               tabindex=${selected ? "0" : "-1"}
               @click=${() => this._setActiveTab(i)}
-              @keydown=${(ev: KeyboardEvent) =>
-                this._onTabKeydown(ev, i, stations.length)}
+              @keydown=${(ev: KeyboardEvent) => this._onTabKeydown(ev, i, stations.length)}
             >
               ${hasFriendlyName ? html`<span lang="de">${label}</span>` : label}
             </button>
@@ -340,17 +328,12 @@ export class NextbikeAustriaCard extends LitElement {
     ev.preventDefault();
     this._setActiveTab(next);
     this.updateComplete.then(() => {
-      const tabs = this.shadowRoot?.querySelectorAll<HTMLButtonElement>(
-        '.tabs [role="tab"]',
-      );
+      const tabs = this.shadowRoot?.querySelectorAll<HTMLButtonElement>('.tabs [role="tab"]');
       tabs?.[next]?.focus();
     });
   }
 
-  private _renderStation(
-    stopCfg: NextbikeStationEntry,
-    tabIndex?: number,
-  ): TemplateResult {
+  private _renderStation(stopCfg: NextbikeStationEntry, tabIndex?: number): TemplateResult {
     const state = this.hass?.states[stopCfg.entity];
     if (!state) {
       // Safety net: _resolveEntities only returns stations whose sensor
@@ -381,9 +364,11 @@ export class NextbikeAustriaCard extends LitElement {
       >
         ${this._config.hide_header ? nothing : this._renderHeader(a, title)}
         ${this._renderHero(rack, numberOr(a.num_docks_available, null))}
-        ${this._config.show_rack && rack.capacity !== null && rack.capacity > 0
-          ? this._renderRack(rack, rack.capacity)
-          : nothing}
+        ${
+          this._config.show_rack && rack.capacity !== null && rack.capacity > 0
+            ? this._renderRack(rack, rack.capacity)
+            : nothing
+        }
         ${this._config.show_flags ? this._renderFlags(a) : nothing}
         ${this._renderFooter(a, safeHttpsUri(a.rental_uri))}
       </section>
@@ -399,14 +384,13 @@ export class NextbikeAustriaCard extends LitElement {
       </div>
       <div class="header-text">
         <h2 class="title">
-          ${hasFriendlyName
-            ? html`<span lang="de">${title}</span>`
-            : title}
+          ${hasFriendlyName ? html`<span lang="de">${title}</span>` : title}
         </h2>
         <p class="subtitle">${systemLabel(a)}</p>
       </div>
-      ${mapUrl
-        ? html`
+      ${
+        mapUrl
+          ? html`
             <a
               class="icon-action"
               href=${mapUrl}
@@ -418,7 +402,8 @@ export class NextbikeAustriaCard extends LitElement {
               <ha-icon icon="mdi:map-marker" aria-hidden="true"></ha-icon>
             </a>
           `
-        : nothing}
+          : nothing
+      }
     </header>`;
   }
 
@@ -438,15 +423,15 @@ export class NextbikeAustriaCard extends LitElement {
         <div class="metric">
           <div class="metric-value">
             <span class="metric-num">${rack.bikes}</span>
-            ${rack.capacity !== null
-              ? html`<span class="metric-of">/ ${rack.capacity}</span>`
-              : nothing}
+            ${
+              rack.capacity !== null
+                ? html`<span class="metric-of">/ ${rack.capacity}</span>`
+                : nothing
+            }
           </div>
           <div class="metric-label">${bikeWord}</div>
         </div>
-        ${chips.length
-          ? html`<div class="chip-row">${chips}</div>`
-          : nothing}
+        ${chips.length ? html`<div class="chip-row">${chips}</div>` : nothing}
       </div>
     `;
   }
@@ -510,29 +495,33 @@ export class NextbikeAustriaCard extends LitElement {
         <div class="rack" role="group" aria-label=${rackAriaLabel}>
           ${this._bikeSlots(layout)}
           ${this._dockSlots(layout, rack)}
-          ${layout.overflow > 0
-            ? html`<span class="rack-note"
+          ${
+            layout.overflow > 0
+              ? html`<span class="rack-note"
                 ><span aria-hidden="true">+${layout.overflow}</span
                 ><span class="visually-hidden"
                   >${this._t("overflow_more").replace("{n}", String(layout.overflow))}</span
                 ></span
               >`
-            : nothing}
+              : nothing
+          }
         </div>
-        ${this._config.show_legend
-          ? this._renderLegend({
-              hasClassicVisible: layout.bikes > layout.ebikes,
-              hasEbikes: layout.hasEbikes,
-              hasOverflow: layout.overflow > 0,
-              hasEmptyVisible: layout.empty > 0,
-              battery:
-                layout.showBattery && typeof rack.batteryPct === "number"
-                  ? { pct: rack.batteryPct, color: batteryColor(rack.batteryPct) }
-                  : null,
-              hasReservedVisible: layout.reserved > 0,
-              hasDisabledVisible: layout.disabled > 0,
-            })
-          : nothing}
+        ${
+          this._config.show_legend
+            ? this._renderLegend({
+                hasClassicVisible: layout.bikes > layout.ebikes,
+                hasEbikes: layout.hasEbikes,
+                hasOverflow: layout.overflow > 0,
+                hasEmptyVisible: layout.empty > 0,
+                battery:
+                  layout.showBattery && typeof rack.batteryPct === "number"
+                    ? { pct: rack.batteryPct, color: batteryColor(rack.batteryPct) }
+                    : null,
+                hasReservedVisible: layout.reserved > 0,
+                hasDisabledVisible: layout.disabled > 0,
+              })
+            : nothing
+        }
       </div>
     `;
   }
@@ -576,9 +565,7 @@ export class NextbikeAustriaCard extends LitElement {
         ></div>
       `;
     }
-    const tooltip = layout.showBattery
-      ? `${typeName} · ${this._t("battery_unknown")}`
-      : typeName;
+    const tooltip = layout.showBattery ? `${typeName} · ${this._t("battery_unknown")}` : typeName;
     return html`
       <div
         class="slot filled ebike"
@@ -750,10 +737,7 @@ export class NextbikeAustriaCard extends LitElement {
     return flags.length ? html`<div class="flags">${flags}</div>` : nothing;
   }
 
-  private _renderFooter(
-    a: HassEntityAttributes,
-    rentUri: string,
-  ): TemplateResult | typeof nothing {
+  private _renderFooter(a: HassEntityAttributes, rentUri: string): TemplateResult | typeof nothing {
     const showRent = !!this._config.show_rent_button && !!rentUri;
     const tsLabel = this._config.show_timestamp
       ? relativeTime(a.last_reported, (k) => this._t(k))
@@ -761,8 +745,9 @@ export class NextbikeAustriaCard extends LitElement {
     if (!showRent && !tsLabel) return nothing;
     return html`
       <div class="actions">
-        ${showRent
-          ? html`
+        ${
+          showRent
+            ? html`
               <a
                 class="btn-primary"
                 href=${rentUri}
@@ -776,14 +761,16 @@ export class NextbikeAustriaCard extends LitElement {
                 ${this._t("rent_in_app")}
               </a>
             `
-          : nothing}
-        ${tsLabel
-          ? html`<span class="timestamp"
+            : nothing
+        }
+        ${
+          tsLabel
+            ? html`<span class="timestamp"
               >${this._t("last_updated")} ${tsLabel}</span
             >`
-          : nothing}
+            : nothing
+        }
       </div>
     `;
   }
 }
-
