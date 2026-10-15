@@ -118,7 +118,8 @@ export function countEbikesAvailable(attrs: HassEntityAttributes | undefined): n
   for (const row of breakdown) {
     if (!row || typeof row !== "object") continue;
     const r = row as { vehicle_type_id?: unknown; count?: unknown };
-    const tid = String(r.vehicle_type_id ?? "");
+    const id = r.vehicle_type_id;
+    const tid = typeof id === "string" || typeof id === "number" ? String(id) : "";
     const count = r.count;
     if (ebikeIds.has(tid) && typeof count === "number" && Number.isFinite(count)) {
       total += count;

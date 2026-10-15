@@ -144,12 +144,16 @@ jobs:
               "comments and class-name references."
             exit 1
           fi
-      - uses: actions/setup-node@v7
+      - uses: voidzero-dev/setup-vp@v1.21.2
+        # Installs the global vp CLI, Node and npm (from devEngines), and
+        # caches npm's store. Install runs as its own step below so the
+        # lockfile is enforced explicitly.
         with:
           node-version: "24"
-          cache: "npm"
+          cache: true
+          run-install: false
       - name: Install card deps
-        run: npm ci
+        run: vp install --frozen-lockfile
       - name: Audit production deps
         # --omit=dev keeps the gate enforceable; without it build-tooling
         # advisories (which never ship to users) flood the report and the
@@ -160,15 +164,15 @@ jobs:
         # vite.config.ts). The ONLY type-check in the pipeline: the build
         # transpiles without type-checking, so nothing else in this workflow
         # would notice a type error. Never make this step conditional.
-        run: npx vp check
+        run: vp check
       - name: Card unit tests
-        # The build strips types without checking them and `vp check` checks types
-        # without running anything, so this is the only step that proves the
-        # card's logic still behaves. Ahead of the build so a logic
-        # regression fails before we spend time bundling.
-        run: npm test
+        # The build strips types without checking them and `vp check` checks
+        # types without running anything, so this is the only step that
+        # proves the card's logic still behaves. Ahead of the build so a
+        # logic regression fails before we spend time bundling.
+        run: vp test run
       - name: Build card bundle
-        run: npm run build
+        run: vp build
       - name: Assert the committed bundle matches a fresh build
         # The build above regenerates www/ from src/. Any diff means the
         # committed bundle is stale — someone changed src/ and didn't
@@ -183,7 +187,7 @@ jobs:
         run: |
           if ! git diff --exit-code -- custom_components/nextbike_austria/www/; then
             echo "::error::Committed card bundle differs from a fresh build."
-            echo "::error::Run 'npm run build' and commit custom_components/nextbike_austria/www/."
+            echo "::error::Run 'vp build' (or 'npm run build') and commit custom_components/nextbike_austria/www/."
             exit 1
           fi
       - name: Syntax-check bundle

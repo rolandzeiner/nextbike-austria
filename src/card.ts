@@ -327,7 +327,7 @@ export class NextbikeAustriaCard extends LitElement {
     }
     ev.preventDefault();
     this._setActiveTab(next);
-    this.updateComplete.then(() => {
+    void this.updateComplete.then(() => {
       const tabs = this.shadowRoot?.querySelectorAll<HTMLButtonElement>('.tabs [role="tab"]');
       tabs?.[next]?.focus();
     });
