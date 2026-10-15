@@ -44,7 +44,7 @@ export interface HassEntityAttributes {
   [key: string]: unknown;
 }
 
-export interface HassEntity {
+interface HassEntity {
   state: string;
   attributes: HassEntityAttributes;
 }
@@ -153,7 +153,7 @@ export interface RackLayout {
 // interface declares `flatten?: boolean` explicitly so a future
 // maintainer can't add an expandable that quietly nests its values.
 
-export interface DeviceSelectorFilter {
+interface DeviceSelectorFilter {
   integration?: string;
   manufacturer?: string;
   model?: string;
@@ -164,7 +164,7 @@ export interface DeviceSelectorFilter {
 // is ORed. Matching is exact, case-sensitive string equality. `device` needs
 // HA 2026.8+ — older frontends ignore the key, so the picker simply narrows
 // less rather than erroring, which is safe under this repo's HA floor.
-export interface EntitySelectorFilter {
+interface EntitySelectorFilter {
   integration?: string;
   domain?: string | string[];
   device_class?: string | string[];
@@ -176,7 +176,7 @@ export interface EntitySelectorFilter {
 // Filters belong under `filter`. The flat `domain` / `integration` /
 // `device_class` keys are deprecated upstream (LegacyEntitySelector) and are
 // dropped without warning when a `filter` key is present, so never mix them.
-export interface EntitySelectorConfig {
+interface EntitySelectorConfig {
   filter?: EntitySelectorFilter | ReadonlyArray<EntitySelectorFilter>;
   multiple?: boolean;
   reorder?: boolean;
@@ -184,7 +184,7 @@ export interface EntitySelectorConfig {
   exclude_entities?: string[];
 }
 
-export type HASelector =
+type HASelector =
   | { entity: EntitySelectorConfig }
   | { boolean: Record<string, never> }
   | { text: { type?: "text" | "password" | "url" | "email"; multiline?: boolean } }
@@ -206,22 +206,22 @@ export type HASelector =
       };
     };
 
-export interface HaFormBaseSchema {
+interface HaFormBaseSchema {
   name: string;
   required?: boolean;
 }
 
-export interface HaFormSelectorSchema extends HaFormBaseSchema {
+interface HaFormSelectorSchema extends HaFormBaseSchema {
   selector: HASelector;
 }
 
-export interface HaFormGridSchema {
+interface HaFormGridSchema {
   type: "grid";
   name: "";
   schema: ReadonlyArray<HaFormSchema>;
 }
 
-export interface HaFormExpandableSchema {
+interface HaFormExpandableSchema {
   type: "expandable";
   name: string;
   title?: string;
