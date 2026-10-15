@@ -30,7 +30,7 @@ Python's `CARD_VERSION` is aliased to `INTEGRATION_VERSION` (read from `manifest
 
 `tests/test_card_version.py` enforces byte-identical match. Drift triggers an infinite reload-banner loop on the user side.
 
-Both always carry the clean version (`1.4.0`), never a `-beta-N` suffix. A pre-release uses the same number as the final release; GitHub's pre-release flag tells them apart. The version changes once per release cycle.
+Both always carry the clean version (`1.4.1`), never a `-beta-N` suffix. A pre-release uses the same number as the final release; GitHub's pre-release flag tells them apart. The version changes once per release cycle.
 
 ## Tooling & config
 
