@@ -76,7 +76,9 @@ export default defineConfig(({ mode }) => {
       },
       // typeCheck makes `vp check` report tsc's errors (strict tsconfig
       // included), so it can stand in for `tsc --noEmit`.
-      options: { typeAware: true, typeCheck: true },
+      // denyWarnings: a warning fails `vp check` (and CI) instead of
+      // scrolling past with exit 0.
+      options: { typeAware: true, typeCheck: true, denyWarnings: true },
     },
   };
 });
