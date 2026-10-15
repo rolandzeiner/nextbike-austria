@@ -66,7 +66,14 @@ export default defineConfig(({ mode }) => {
     lint: {
       ignorePatterns: ["custom_components/**/www/**"],
       jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
-      rules: { "vite-plus/prefer-vite-plus-imports": "error" },
+      rules: {
+        "vite-plus/prefer-vite-plus-imports": "error",
+        // Opt-in rules from the `suspicious` category; the rest of that
+        // category is mostly noise for Lit code (e.g. `_private` names).
+        "typescript/no-unnecessary-type-assertion": "error",
+        "eslint/no-shadow": "error",
+        "unicorn/no-array-sort": "error",
+      },
       // typeCheck makes `vp check` report tsc's errors (strict tsconfig
       // included), so it can stand in for `tsc --noEmit`.
       options: { typeAware: true, typeCheck: true },
