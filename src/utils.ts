@@ -20,14 +20,10 @@ const DEFAULT_EBIKE_IDS: ReadonlySet<string> = new Set(["143", "183", "200"]);
  *  new pedelec id upstream is counted correctly without a card bundle
  *  bump). Falls back to the hardcoded default for the brief
  *  Python-old/JS-new window after an upgrade. */
-export function getEbikeIds(
-  attrs: HassEntityAttributes | undefined,
-): ReadonlySet<string> {
+export function getEbikeIds(attrs: HassEntityAttributes | undefined): ReadonlySet<string> {
   const live = attrs?.e_bike_vehicle_type_ids;
   if (Array.isArray(live) && live.length > 0) {
-    const ids = live.filter(
-      (s): s is string => typeof s === "string" && s.length > 0,
-    );
+    const ids = live.filter((s): s is string => typeof s === "string" && s.length > 0);
     if (ids.length > 0) return new Set(ids);
   }
   return DEFAULT_EBIKE_IDS;
@@ -68,11 +64,7 @@ function normaliseStationEntry(raw: unknown): NextbikeStationEntry | null {
   if (typeof raw === "string") {
     return raw.includes(".") ? { entity: raw } : null;
   }
-  if (
-    !raw ||
-    typeof raw !== "object" ||
-    typeof (raw as { entity?: unknown }).entity !== "string"
-  ) {
+  if (!raw || typeof raw !== "object" || typeof (raw as { entity?: unknown }).entity !== "string") {
     return null;
   }
   return { entity: (raw as { entity: string }).entity };
@@ -82,7 +74,7 @@ export function normaliseConfig(
   config: Partial<NextbikeAustriaCardConfig> | null | undefined,
 ): NextbikeAustriaCardConfig {
   const out: Partial<NextbikeAustriaCardConfig> & Record<string, unknown> = {
-    ...(config || {}),
+    ...config,
   };
 
   // Legacy scalar `entity` is promoted onto `entities`.
@@ -113,9 +105,7 @@ export function normaliseConfig(
   return out as NextbikeAustriaCardConfig;
 }
 
-export function countEbikesAvailable(
-  attrs: HassEntityAttributes | undefined,
-): number | null {
+export function countEbikesAvailable(attrs: HassEntityAttributes | undefined): number | null {
   // Best-effort count from `vehicle_types_available`. The id set comes
   // from the Python coordinator's live propulsion-type resolution
   // (surfaced as `e_bike_vehicle_type_ids` on the sensor); users who
@@ -362,11 +352,7 @@ export function rackInputs(bikes: number, attrs: HassEntityAttributes): RackInpu
  *  leading), then reserved, then out of service, then empty. Available
  *  bikes beyond the capacity become the "+N" note, not extra slots;
  *  reserved and out-of-service bikes that don't fit are dropped. */
-export function rackLayout(
-  rack: RackInputs,
-  capacity: number,
-  batteryOption: boolean,
-): RackLayout {
+export function rackLayout(rack: RackInputs, capacity: number, batteryOption: boolean): RackLayout {
   const bikes = Math.min(rack.bikes, capacity);
   const reserved = Math.min(rack.reservedCount, Math.max(0, capacity - bikes));
   const disabled = Math.min(rack.disabledCount, Math.max(0, capacity - bikes - reserved));

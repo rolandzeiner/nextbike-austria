@@ -159,9 +159,7 @@ export class NextbikeAustriaCardEditor extends LitElement {
     };
   }
 
-  private _onFormChanged = (
-    ev: CustomEvent<{ value: Record<string, unknown> }>,
-  ): void => {
+  private _onFormChanged = (ev: CustomEvent<{ value: Record<string, unknown> }>): void => {
     const value = ev.detail.value;
     const rawEntities = value["entities"];
     const entityList: NextbikeStationEntry[] = Array.isArray(rawEntities)
@@ -194,9 +192,7 @@ export class NextbikeAustriaCardEditor extends LitElement {
     // readers and easy to miss, while the card quietly shows another
     // station instead. WCAG 3.3.1 (Error Identification): name each one.
     const missing = this.hass
-      ? this._config.entities
-          .map((s) => s.entity)
-          .filter((eid) => !this.hass!.states[eid])
+      ? this._config.entities.map((s) => s.entity).filter((eid) => !this.hass!.states[eid])
       : [];
     return html`
       <div class="editor">
