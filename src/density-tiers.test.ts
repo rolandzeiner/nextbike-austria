@@ -10,7 +10,7 @@
  * Node does no layout, so the guard is on the CSS text.
  */
 import type { CSSResult } from "lit";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { cardStyles } from "./card-styles";
 
@@ -18,7 +18,11 @@ import { cardStyles } from "./card-styles";
 const tiers = (): string[] => {
   const css = (cardStyles as CSSResult).cssText.replace(/\/\*[\s\S]*?\*\//g, "");
   const blocks: string[] = [];
-  for (let at = css.indexOf("@container nbcard"); at >= 0; at = css.indexOf("@container nbcard", at + 1)) {
+  for (
+    let at = css.indexOf("@container nbcard");
+    at >= 0;
+    at = css.indexOf("@container nbcard", at + 1)
+  ) {
     let depth = 0;
     for (let i = css.indexOf("{", at); i < css.length; i++) {
       if (css[i] === "{") depth++;

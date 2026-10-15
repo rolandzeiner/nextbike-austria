@@ -24,7 +24,7 @@
  * `ha-card` and `ha-icon` are HA elements that do not exist here; happy-dom
  * renders them as inert containers, which is all these tests need.
  */
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import type { NextbikeAustriaCard } from "./card";
 import type { HassEntityAttributes, HomeAssistant, WindowWithCustomCards } from "./types";
@@ -242,7 +242,9 @@ describe("card API", () => {
   });
 
   it("stubs the first nextbike sensor for the picker", () => {
-    const ctor = customElements.get("nextbike-austria-card") as unknown as typeof NextbikeAustriaCard;
+    const ctor = customElements.get(
+      "nextbike-austria-card",
+    ) as unknown as typeof NextbikeAustriaCard;
     expect(ctor.getStubConfig(hass({ "sensor.nb_a": ["3", FULL] }))).toEqual({
       entities: [{ entity: "sensor.nb_a" }],
     });
@@ -250,7 +252,9 @@ describe("card API", () => {
   });
 
   it("hands HA the registered editor element", async () => {
-    const ctor = customElements.get("nextbike-austria-card") as unknown as typeof NextbikeAustriaCard;
+    const ctor = customElements.get(
+      "nextbike-austria-card",
+    ) as unknown as typeof NextbikeAustriaCard;
     expect((await ctor.getConfigElement()).tagName.toLowerCase()).toBe(
       "nextbike-austria-card-editor",
     );
@@ -315,13 +319,19 @@ describe("station resolution", () => {
   });
 
   it("shows the default attribution when no station carries one", async () => {
-    const el = await mount({ entities: ["sensor.nb_min"] }, hass({ "sensor.nb_min": ["1", MINIMAL] }));
+    const el = await mount(
+      { entities: ["sensor.nb_min"] },
+      hass({ "sensor.nb_min": ["1", MINIMAL] }),
+    );
     expect(root(el).querySelector(".attr")?.textContent).toBe("Data: nextbike GmbH, CC0-1.0");
   });
 
   it("treats a malformed or negative bike count as zero", async () => {
     for (const state of ["unavailable", "-3"]) {
-      const el = await mount({ entities: ["sensor.nb_a"] }, hass({ "sensor.nb_a": [state, MINIMAL] }));
+      const el = await mount(
+        { entities: ["sensor.nb_a"] },
+        hass({ "sensor.nb_a": [state, MINIMAL] }),
+      );
       expect(root(el).querySelector(".metric-num")?.textContent).toBe("0");
     }
   });
@@ -335,7 +345,10 @@ describe("re-render gate", () => {
     const el = await mount({ entities: ["sensor.nb_a"] }, h);
     const spy = vi.spyOn(el as unknown as { render(): unknown }, "render");
 
-    el.hass = { ...h, states: { ...h.states, "sensor.unrelated": { state: "off", attributes: {} } } };
+    el.hass = {
+      ...h,
+      states: { ...h.states, "sensor.unrelated": { state: "off", attributes: {} } },
+    };
     await el.updateComplete;
     expect(spy).not.toHaveBeenCalled();
 
@@ -357,7 +370,10 @@ describe("re-render gate", () => {
 
 describe("version banner", () => {
   it("appears when the backend runs a different version", async () => {
-    const h = { ...hass({ "sensor.nb_a": ["3", FULL] }), callWS: async <T>() => ({ version: "9.9.9" }) as T };
+    const h = {
+      ...hass({ "sensor.nb_a": ["3", FULL] }),
+      callWS: async <T>() => ({ version: "9.9.9" }) as T,
+    };
     const el = await mount({ entities: ["sensor.nb_a"] }, h);
     await settle(el);
     expect(root(el).querySelector(".banner")?.textContent).toContain("9.9.9");
@@ -386,7 +402,8 @@ describe("tab layout", () => {
     "sensor.nb_c": ["2", { ...OVERFLOW }],
   });
   const tabs = (el: Card) => [...root(el).querySelectorAll<HTMLButtonElement>('[role="tab"]')];
-  const selected = (el: Card) => tabs(el).findIndex((b) => b.getAttribute("aria-selected") === "true");
+  const selected = (el: Card) =>
+    tabs(el).findIndex((b) => b.getAttribute("aria-selected") === "true");
   const press = async (el: Card, index: number, key: string): Promise<KeyboardEvent> => {
     const ev = new KeyboardEvent("keydown", { key, cancelable: true, bubbles: true });
     tabs(el)[index]!.dispatchEvent(ev);
@@ -465,13 +482,14 @@ describe("accessibility", () => {
       { entities: ["sensor.nb_a", "sensor.nb_b"], layout: "tabs" },
       hass({ "sensor.nb_a": ["3", FULL], "sensor.nb_b": ["12", OVERFLOW] }),
     );
-    expect(root(el).querySelector('[role="tablist"]')?.getAttribute("aria-label")).toBe(
-      "Stations",
-    );
+    expect(root(el).querySelector('[role="tablist"]')?.getAttribute("aria-label")).toBe("Stations");
   });
 
   it("spells out the rack's +N for screen readers", async () => {
-    const el = await mount({ entities: ["sensor.nb_b"] }, hass({ "sensor.nb_b": ["12", OVERFLOW] }));
+    const el = await mount(
+      { entities: ["sensor.nb_b"] },
+      hass({ "sensor.nb_b": ["12", OVERFLOW] }),
+    );
     const note = root(el).querySelector(".rack-note")!;
     expect(note.querySelector('[aria-hidden="true"]')?.textContent).toBe("+4");
     expect(note.querySelector(".visually-hidden")?.textContent).toBe("4 more bikes than docks");
@@ -587,7 +605,10 @@ describe("rendered markup", () => {
   });
 
   it("a station with almost no data", async () => {
-    const el = await mount({ entities: ["sensor.nb_min"] }, hass({ "sensor.nb_min": ["1", MINIMAL] }));
+    const el = await mount(
+      { entities: ["sensor.nb_min"] },
+      hass({ "sensor.nb_min": ["1", MINIMAL] }),
+    );
     expect(markup(el)).toMatchSnapshot();
   });
 

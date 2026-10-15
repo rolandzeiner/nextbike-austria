@@ -1,24 +1,29 @@
 {
   "name": "nextbike-austria-card",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "description": "Lovelace custom card for the Nextbike Austria HA integration",
   "type": "module",
   "scripts": {
-    "build": "rolldown -c",
-    "dev": "rolldown -c -w",
+    "build": "vp build",
+    "dev": "vp build --watch --mode development",
     "build:push": "./scripts/dev-push.sh --quiet",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=json --coverage.include=src/**/*.ts --coverage.exclude=src/**/*.test.ts"
-  },
-  "devDependencies": {
-    "@vitest/coverage-v8": "5.0.2",
-    "happy-dom": "20.14.5",
-    "rolldown": "1.2.11",
-    "typescript": "7.0.2",
-    "vitest": "5.0.2"
+    "test": "vp test run",
+    "test:coverage": "vp test run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=json --coverage.include=src/**/*.ts --coverage.exclude=src/**/*.test.ts",
+    "check": "vp check"
   },
   "dependencies": {
     "lit": "^3.3.3"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "5.0.4",
+    "happy-dom": "20.14.5",
+    "typescript": "7.0.2",
+    "vite-plus": "1.2.0",
+    "vitest": "5.0.4"
+  },
+  "overrides": {
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.2.0",
+    "vitest": "5.0.4"
   }
 }
