@@ -58,10 +58,7 @@ function reloadAfterCacheWipe(forVersion?: string | null): void {
   }
   if (forVersion) {
     try {
-      window.sessionStorage?.setItem(
-        `nb-reload-attempted-${forVersion}`,
-        "1",
-      );
+      window.sessionStorage?.setItem(`nb-reload-attempted-${forVersion}`, "1");
     } catch {
       // sessionStorage may be disabled (Safari private mode etc.) —
       // fall through; worst case the user gets the regular reload
@@ -83,10 +80,7 @@ function reloadAfterCacheWipe(forVersion?: string | null): void {
 function wasReloadAttemptedFor(version: string | null): boolean {
   if (!version) return false;
   try {
-    return (
-      window.sessionStorage?.getItem(`nb-reload-attempted-${version}`) ===
-      "1"
-    );
+    return window.sessionStorage?.getItem(`nb-reload-attempted-${version}`) === "1";
   } catch {
     return false;
   }

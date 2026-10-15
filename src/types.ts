@@ -233,10 +233,7 @@ export interface HaFormExpandableSchema {
   schema: ReadonlyArray<HaFormSchema>;
 }
 
-export type HaFormSchema =
-  | HaFormSelectorSchema
-  | HaFormGridSchema
-  | HaFormExpandableSchema;
+export type HaFormSchema = HaFormSelectorSchema | HaFormGridSchema | HaFormExpandableSchema;
 
 // `<ha-form>` element shape — mirror the props the editor sets so
 // `tsc --noEmit` validates the template at compile time.
