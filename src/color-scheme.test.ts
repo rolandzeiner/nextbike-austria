@@ -14,7 +14,7 @@
  * Node does no styling, so the guard is on the CSS text.
  */
 import type { CSSResult } from "lit";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { cardStyles } from "./card-styles";
 import { editorStyles } from "./editor-styles";

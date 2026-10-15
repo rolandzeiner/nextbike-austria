@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import type { HassEntityAttributes, HomeAssistant, RackInputs } from "./types";
 import { SYSTEM_ACCENT } from "./const";
@@ -54,23 +54,16 @@ describe("getEbikeIds — live set from the coordinator, fallback otherwise", ()
 });
 
 describe("safeHttpsUri — href trust boundary", () => {
-  it.each(["https://nextbike.at/app", "http://example.org", "HTTPS://X.AT"])(
-    "keeps %s",
+  it.each(["https://nextbike.at/app", "http://example.org", "HTTPS://X.AT"])("keeps %s", (uri) => {
+    expect(safeHttpsUri(uri)).toBe(uri);
+  });
+
+  it.each(["javascript:alert(1)", "data:text/html,<b>x</b>", "//nextbike.at", "", 42, null])(
+    "rejects %s",
     (uri) => {
-      expect(safeHttpsUri(uri)).toBe(uri);
+      expect(safeHttpsUri(uri)).toBe("");
     },
   );
-
-  it.each([
-    "javascript:alert(1)",
-    "data:text/html,<b>x</b>",
-    "//nextbike.at",
-    "",
-    42,
-    null,
-  ])("rejects %s", (uri) => {
-    expect(safeHttpsUri(uri)).toBe("");
-  });
 });
 
 describe("findNextbikeEntities — picker auto-detect", () => {
@@ -231,11 +224,7 @@ describe("expandClassicTypes — one name per classic bike, in feed order", () =
       { vehicle_type_id: "143", count: 4 },
       { vehicle_type_id: "300", count: 1 },
     ];
-    expect(expandClassicTypes(rows, NAMES, EBIKES)).toEqual([
-      "Classic Bike",
-      "Classic Bike",
-      "",
-    ]);
+    expect(expandClassicTypes(rows, NAMES, EBIKES)).toEqual(["Classic Bike", "Classic Bike", ""]);
   });
 
   it("skips empty, negative and non-numeric counts", () => {
@@ -437,9 +426,14 @@ describe("rackLayout — filling the docks", () => {
   };
 
   it("fills bikes, then reserved, then out of service, then empty", () => {
-    expect(
-      counts(rack({ bikes: 4, ebikes: 1, reservedCount: 2, disabledCount: 1 }), 10),
-    ).toEqual({ bikes: 4, ebikes: 1, reserved: 2, disabled: 1, empty: 3, overflow: 0 });
+    expect(counts(rack({ bikes: 4, ebikes: 1, reservedCount: 2, disabledCount: 1 }), 10)).toEqual({
+      bikes: 4,
+      ebikes: 1,
+      reserved: 2,
+      disabled: 1,
+      empty: 3,
+      overflow: 0,
+    });
   });
 
   it("caps bikes at the dock count and carries the rest as overflow", () => {
@@ -483,7 +477,10 @@ describe("rackLayout — filling the docks", () => {
 
   it("shows charge only when enabled and sampled", () => {
     const charged = rack({ batteryPct: 60, batterySamples: 2, batteryList: [{ pct: 60 }] });
-    expect(rackLayout(charged, 4, true)).toMatchObject({ showBattery: true, perBike: [{ pct: 60 }] });
+    expect(rackLayout(charged, 4, true)).toMatchObject({
+      showBattery: true,
+      perBike: [{ pct: 60 }],
+    });
     expect(rackLayout(charged, 4, false)).toMatchObject({ showBattery: false, perBike: [] });
     expect(rackLayout({ ...charged, batterySamples: 0 }, 4, true).showBattery).toBe(false);
     expect(rackLayout({ ...charged, batteryList: null }, 4, true).perBike).toEqual([]);
