@@ -38,14 +38,14 @@ const registered: string[] = [];
 beforeAll(async () => {
   // happy-dom keeps its registry private, so record names as they arrive.
   const realDefine = customElements.define.bind(customElements);
-  customElements.define = ((
+  customElements.define = (
     name: string,
     ctor: CustomElementConstructor,
     options?: ElementDefinitionOptions,
   ) => {
     registered.push(name);
     return realDefine(name, ctor, options);
-  }) as typeof customElements.define;
+  };
   await import("./index");
 });
 
@@ -130,7 +130,7 @@ type Card = NextbikeAustriaCard;
 /** Mount a card, let Lit settle, and hand it back. */
 async function mount(config: Record<string, unknown>, h?: HomeAssistant): Promise<Card> {
   const el = document.createElement("nextbike-austria-card") as unknown as Card;
-  el.setConfig(config as never);
+  el.setConfig(config);
   if (h) el.hass = h;
   document.body.appendChild(el);
   await el.updateComplete;
@@ -536,7 +536,7 @@ describe("rack colours", () => {
 
 describe("legend", () => {
   const keys = (el: Card): string[] =>
-    [...root(el).querySelectorAll(".legend dd")].map((dd) => dd.textContent!.trim());
+    [...root(el).querySelectorAll(".legend dd")].map((dd) => dd.textContent.trim());
 
   it("has no bike key when every bike in the rack is an e-bike", async () => {
     // The operator's red swatch would otherwise explain the low-charge

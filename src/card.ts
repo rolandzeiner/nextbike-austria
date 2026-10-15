@@ -334,18 +334,18 @@ export class NextbikeAustriaCard extends LitElement {
   }
 
   private _renderStation(stopCfg: NextbikeStationEntry, tabIndex?: number): TemplateResult {
-    const state = this.hass?.states[stopCfg.entity];
-    if (!state) {
+    const stateObj = this.hass?.states[stopCfg.entity];
+    if (!stateObj) {
       // Safety net: _resolveEntities only returns stations whose sensor
       // is in this hass, so today this only narrows the type. A picked
       // sensor that disappears falls back to the first nextbike sensor
       // instead of landing here.
       return html`<div class="empty-state" role="status">${this._t("no_entities_unavailable")}</div>`;
     }
-    const a = state.attributes || ({} as HassEntityAttributes);
+    const a = stateObj.attributes || {};
     const accent = systemAccent(a);
     const ink = accentInk(accent);
-    const rack = rackInputs(parseBikeCount(state.state), a);
+    const rack = rackInputs(parseBikeCount(stateObj.state), a);
     const title = resolveDisplayName(a, stopCfg.entity);
 
     // WAI-ARIA tabpanel pattern: when rendered inside the tab strip,

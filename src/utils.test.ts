@@ -134,7 +134,7 @@ describe("normaliseConfig — setConfig's defaults", () => {
   });
 
   it("promotes the legacy scalar entity onto entities", () => {
-    const out = normaliseConfig({ entity: "sensor.nb_one" } as never);
+    const out = normaliseConfig({ entity: "sensor.nb_one" });
     expect(out.entities).toEqual([{ entity: "sensor.nb_one" }]);
     expect("entity" in out).toBe(false);
   });
@@ -143,12 +143,12 @@ describe("normaliseConfig — setConfig's defaults", () => {
     const out = normaliseConfig({
       entity: "sensor.legacy",
       entities: [{ entity: "sensor.kept" }],
-    } as never);
+    });
     expect(out.entities).toEqual([{ entity: "sensor.kept" }]);
   });
 
   it("drops a legacy entity that is not an entity id", () => {
-    expect(normaliseConfig({ entity: "nonsense" } as never).entities).toEqual([]);
+    expect(normaliseConfig({ entity: "nonsense" }).entities).toEqual([]);
   });
 
   it("accepts string and object entries and drops junk", () => {

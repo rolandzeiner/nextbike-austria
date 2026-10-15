@@ -3,8 +3,10 @@ import { describe, expect, it } from "vite-plus/test";
 import type { HomeAssistant } from "../types";
 import { et, t } from "./localize";
 
-const withLang = (language?: string): HomeAssistant =>
-  ({ states: {}, ...(language === undefined ? {} : { language }) }) as HomeAssistant;
+const withLang = (language?: string): HomeAssistant => ({
+  states: {},
+  ...(language === undefined ? {} : { language }),
+});
 
 describe("t — flat card strings", () => {
   it("reads the user's language", () => {

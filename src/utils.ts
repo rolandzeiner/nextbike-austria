@@ -261,8 +261,9 @@ export function contrastRatio(a: string, b: string): number {
     );
     return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
   };
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return ((hi ?? 0) + 0.05) / ((lo ?? 0) + 0.05);
+  const la = luminance(a);
+  const lb = luminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
 /** Dark text for an operator colour too light for white text. */
