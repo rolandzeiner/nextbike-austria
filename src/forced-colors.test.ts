@@ -9,7 +9,7 @@
  * no layout or forced-colours emulation, so the guard is on the CSS text.
  */
 import type { CSSResult } from "lit";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { cardStyles } from "./card-styles";
 
@@ -29,7 +29,13 @@ const forcedBlock = (): string => {
 /** The declarations of the rule whose selector list names `selector`. */
 const declarations = (selector: string): string | undefined => {
   for (const [, selectors, body] of forcedBlock().matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    if (selectors!.split(",").map((s) => s.trim()).includes(selector)) return body;
+    if (
+      selectors!
+        .split(",")
+        .map((s) => s.trim())
+        .includes(selector)
+    )
+      return body;
   }
   return undefined;
 };

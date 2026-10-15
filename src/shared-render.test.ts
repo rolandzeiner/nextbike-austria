@@ -6,7 +6,7 @@
  * loop, which no build or type-check notices.
  */
 import { render } from "lit";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vite-plus/test";
 
 import { checkCardVersionWS, renderVersionBanner } from "./shared-render";
 import type { HomeAssistant } from "./types";
@@ -14,8 +14,7 @@ import type { HomeAssistant } from "./types";
 const hassAnswering = (callWS: HomeAssistant["callWS"]): HomeAssistant =>
   ({ states: {}, callWS }) as HomeAssistant;
 
-const t = (key: string): string =>
-  key === "version_update" ? "updated to v{v}" : key;
+const t = (key: string): string => (key === "version_update" ? "updated to v{v}" : key);
 
 /** Render a banner template into a fresh container. */
 function mount(mismatch: string | null): HTMLElement {
@@ -27,9 +26,7 @@ function mount(mismatch: string | null): HTMLElement {
 describe("checkCardVersionWS", () => {
   it("reports the backend version when it differs from the bundle", async () => {
     const hass = hassAnswering(async <T>() => ({ version: "2.0.0" }) as T);
-    expect(await checkCardVersionWS(hass, "nextbike_austria/card_version", "1.0.0")).toBe(
-      "2.0.0",
-    );
+    expect(await checkCardVersionWS(hass, "nextbike_austria/card_version", "1.0.0")).toBe("2.0.0");
   });
 
   it("stays quiet when the versions match", async () => {
