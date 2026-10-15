@@ -150,8 +150,8 @@ export interface RackLayout {
 // strictly typed. `expandable` + `flatten: true` is non-negotiable —
 // without `flatten`, ha-form scopes inner-schema values under
 // `data[name]` and the card's flat-key reads silently default. The
-// interface declares `flatten?: boolean` explicitly so a future
-// maintainer can't add an expandable that quietly nests its values.
+// interface declares `flatten?: boolean` so the option shows up in
+// autocomplete and review; being optional, it is not enforced.
 
 interface DeviceSelectorFilter {
   integration?: string;

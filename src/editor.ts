@@ -9,8 +9,9 @@
 // * **`expandable` + `flatten: true`** — without ``flatten``, ha-form
 //   scopes inner-schema values under ``data[name]`` and the card's
 //   flat-key reads silently default. The ``HaFormExpandableSchema``
-//   interface in ``types.ts`` declares the field explicitly so a future
-//   maintainer can't add a nested expandable by accident.
+//   interface in ``types.ts`` declares the field so it shows up in
+//   autocomplete; it is optional, so the compiler won't catch a
+//   missing one.
 //
 // * **Storage shape** — saved configs use
 //   ``entities: Array<{ entity: string }>`` (legacy promotion path
@@ -98,9 +99,9 @@ export class NextbikeAustriaCardEditor extends LitElement {
         // `flatten: true` is non-negotiable. Without it, every toggle
         // below would write to `data.display.<name>` and the card's
         // flat config-key reads (`this._config.show_rack`) would
-        // silently default. The HaFormExpandableSchema interface
-        // declares `flatten?: boolean` explicitly so this can't be
-        // forgotten in a future schema edit.
+        // silently default. `flatten?` is optional in
+        // HaFormExpandableSchema, so the compiler won't flag it if a
+        // future schema edit drops it.
         type: "expandable",
         name: "display",
         title: this._t("section_display"),
