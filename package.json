@@ -9,7 +9,6 @@
     "dev": "vp build --watch --mode development",
     "build:push": "./scripts/dev-push.sh --quiet",
     "test": "vp test run",
-    "test:coverage": "vp test run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=json --coverage.include=src/**/*.ts --coverage.exclude=src/**/*.test.ts",
     "check": "vp check"
   },
   "dependencies": {
@@ -21,5 +20,15 @@
   },
   "overrides": {
     "vite": "npm:@voidzero-dev/vite-plus-core@1.2.0"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "npm",
+      "version": ">=11.0.0"
+    },
+    "runtime": {
+      "name": "node",
+      "version": "^24.11.0 || >=26.0.0"
+    }
   }
 }
