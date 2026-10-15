@@ -83,7 +83,7 @@ npm run build
 
 The `compileall` line byte-compiles the package on Python 3.12, the oldest one our users run; `uv` fetches that interpreter if it's missing.
 
-CI runs the same checks plus hassfest and HACS validation, `npm audit` on the card's runtime deps, a check that the committed bundle matches a fresh build, and CodeQL. It also rejects any backtick inside a Lit `css`/`html` template, comments included: a stray backtick ends the template early, and the card then fails at load while the build stays green. Failing locally wastes a push.
+CI runs the same checks plus hassfest and HACS validation, `npm audit` on the card's runtime deps, a check that the committed bundle matches a fresh build, and CodeQL. Watch for a backtick inside a Lit `css`/`html` template, comments included: it ends the template early, and the card then fails at load. The build alone stays green; `vp check` catches it. Failing locally wastes a push.
 
 ## Reporting issues
 
