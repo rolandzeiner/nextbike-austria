@@ -71,6 +71,8 @@ If your city uses nextbike under a different `system_id`, open an issue — addi
 
 [![Add to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rolandzeiner&repository=nextbike-austria&category=integration)
 
+Not in the search yet? In HACS, open ⋮ → **Custom repositories**, add `https://github.com/rolandzeiner/nextbike-austria` with type **Integration**, then search again.
+
 ### Manual
 
 1. Download `nextbike_austria.zip` from the [latest release](https://github.com/rolandzeiner/nextbike-austria/releases/latest).
