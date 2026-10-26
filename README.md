@@ -36,6 +36,7 @@ If your city uses nextbike under a different `system_id`, open an issue — addi
 - **Average e-bike charge on the card**: with battery tracking on, the station's average charge appears next to the e-bike count. *(1.4.0)*
 - **Direct rental link** via the `rental_uri` attribute (`https://nxtb.it/p/{id}` deep-links into the nextbike app).
 - **Station-gone repair flow**: if the operator retires a station mid-operation, a Repairs notification surfaces and clears itself when the station reappears.
+- **Outage notice**: when nextbike's feed fails, you can tell it's their fault, not your setup. After 10 minutes of errors from their side, a Repairs issue names the affected system, and it clears itself once bike counts return. The card shows *Can't reach nextbike* instead of 0 bikes. *(1.5.0)*
 - **Diagnostics download** with redacted coordinates, station / coordinator state summary, and counts derived from the live snapshot. The snapshot body itself stays out, so an issue doesn't reveal the station's current state.
 - **English and German** for the config flow, options, entity names and the card.
 - **Entity-first card picker**: picking one of the integration's sensors when adding a dashboard card suggests the bundled card, already configured. Needs Home Assistant 2026.6; older versions are unaffected. *(1.3.0)*
@@ -242,7 +243,8 @@ card:
 ## Troubleshooting
 
 - **"Cannot connect" during setup.** The `station_information` probe failed. Usually transient; retry. Verify connectivity to `https://gbfs.nextbike.net/maps/gbfs/v2/`.
-- **Sensor state stuck at `unavailable`.** The station may have been retired upstream. Check for a Repairs notification (`station_gone`) — if present, add a different station and delete this entry; the notification disappears with the next restart. Without a Repairs notification, the feed was probably down: polling backs off to once an hour during an outage, so recovery can take up to an hour. Reload the entry to fetch right away.
+- **Sensor state stuck at `unavailable`.** The station may have been retired upstream. Check for a Repairs notification (`station_gone`) — if present, add a different station and delete this entry; the notification disappears with the next restart. If Repairs says nextbike isn't sending station data, the feed is down instead: polling backs off to once an hour during an outage, so recovery can take up to an hour. Reload the entry to fetch right away.
+- **Card says *Can't reach nextbike*.** The sensor is unavailable because its last poll of nextbike failed, or none has worked since Home Assistant started. Check **Settings → Repairs**. If the outage issue for your system is there, the fault is on nextbike's side and bike counts return on their own. If it isn't, check that your Home Assistant host can reach `gbfs.nextbike.net`.
 - **All three sensors read 0 for a Wien or Innsbruck station.** The station is real, it just happens to be empty (or full). Watch for a couple of minutes; city-center stations turn over constantly.
 - **Collecting diagnostics for a bug report.** Settings → Devices & Services → Nextbike Austria → ⋮ → Download diagnostics. Coordinates are redacted automatically; the station name and id stay in so the report makes sense.
 - **Posting a log in an issue.** The integration's own log lines name only the system (the city), never your station. Home Assistant itself can put the station's name into a setup error ("Error setting up entry Hoher Markt for nextbike_austria"), so search the log for it before you post.

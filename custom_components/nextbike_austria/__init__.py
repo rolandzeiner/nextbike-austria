@@ -20,12 +20,13 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import issue_registry as ir
 
 from .card_registration import JSModuleRegistration
-from .const import CARD_VERSION, DOMAIN
+from .const import CARD_VERSION, CONF_SYSTEM_ID, DOMAIN
 from .coordinator import (
     NextbikeAustriaConfigEntry,
     NextbikeStationCoordinator,
     degraded_issue_id,
 )
+from .outage import async_clear_outage
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -220,6 +221,12 @@ async def async_remove_entry(
         for e in hass.config_entries.async_entries(DOMAIN)
         if e.entry_id != entry.entry_id
     ]
+    # Nothing is left to report this system's outage for. Read from the
+    # entry data, not runtime_data: an entry removed mid-outage never
+    # finished setup.
+    system_id = str(entry.data[CONF_SYSTEM_ID])
+    if not any(str(e.data[CONF_SYSTEM_ID]) == system_id for e in remaining):
+        async_clear_outage(hass, system_id)
     if remaining:
         return
     registration = JSModuleRegistration(hass)

@@ -327,13 +327,52 @@ describe("station resolution", () => {
   });
 
   it("treats a malformed or negative bike count as zero", async () => {
-    for (const state of ["unavailable", "-3"]) {
+    for (const state of ["unknown", "-3"]) {
       const el = await mount(
         { entities: ["sensor.nb_a"] },
         hass({ "sensor.nb_a": [state, MINIMAL] }),
       );
       expect(root(el).querySelector(".metric-num")?.textContent).toBe("0");
     }
+  });
+});
+
+// An outage used to read as "0 bikes", which is what an empty rack says too,
+// so a dead feed looked like a broken install.
+describe("unreachable upstream", () => {
+  const UNAVAILABLE: HassEntityAttributes = { friendly_name: "Hauptbahnhof Bikes available" };
+
+  it("says it can't reach nextbike instead of showing 0 bikes", async () => {
+    const el = await mount(
+      { entities: ["sensor.nb_a"] },
+      hass({ "sensor.nb_a": ["unavailable", UNAVAILABLE] }),
+    );
+    const notice = root(el).querySelector(".empty-state");
+    expect(notice?.querySelector(".empty-title")?.textContent?.trim()).toBe("Can't reach nextbike");
+    expect(notice?.getAttribute("role")).toBe("status");
+    expect(root(el).querySelector(".metric-num")).toBeNull();
+    expect(root(el).querySelector(".rack")).toBeNull();
+    // The header stays, so a stacked card still says which station is out.
+    expect(root(el).querySelector(".title")?.textContent?.trim()).toBe("Hauptbahnhof");
+  });
+
+  it("marks only the unavailable station in a stacked card", async () => {
+    const el = await mount(
+      { entities: ["sensor.nb_a", "sensor.nb_full"] },
+      hass({ "sensor.nb_a": ["unavailable", UNAVAILABLE], "sensor.nb_full": ["6", FULL] }),
+    );
+    expect(root(el).querySelectorAll(".empty-title")).toHaveLength(1);
+    expect(root(el).querySelector(".metric-num")?.textContent).toBe("6");
+  });
+
+  it("follows the dashboard's language", async () => {
+    const el = await mount(
+      { entities: ["sensor.nb_a"] },
+      { ...hass({ "sensor.nb_a": ["unavailable", UNAVAILABLE] }), language: "de" },
+    );
+    expect(root(el).querySelector(".empty-title")?.textContent?.trim()).toBe(
+      "Keine Verbindung zu nextbike",
+    );
   });
 });
 

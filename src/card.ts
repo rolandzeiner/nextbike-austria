@@ -363,16 +363,33 @@ export class NextbikeAustriaCard extends LitElement {
         style=${`--nb-accent:${accent};--nb-accent-ink:${ink};--nb-stripe-edge:${stripeEdge(ink)};`}
       >
         ${this._config.hide_header ? nothing : this._renderHeader(a, title)}
-        ${this._renderHero(rack, numberOr(a.num_docks_available, null))}
         ${
-          this._config.show_rack && rack.capacity !== null && rack.capacity > 0
-            ? this._renderRack(rack, rack.capacity)
-            : nothing
+          // An unavailable sensor carries no counts, so the hero would read
+          // "0 bikes", which is what an empty rack says too and makes an
+          // outage look like a broken install. Doesn't say whose fault it
+          // is; the integration's Repairs issue does that.
+          stateObj.state === "unavailable"
+            ? this._renderUnreachable()
+            : html`
+              ${this._renderHero(rack, numberOr(a.num_docks_available, null))}
+              ${
+                this._config.show_rack && rack.capacity !== null && rack.capacity > 0
+                  ? this._renderRack(rack, rack.capacity)
+                  : nothing
+              }
+              ${this._config.show_flags ? this._renderFlags(a) : nothing}
+              ${this._renderFooter(a, safeHttpsUri(a.rental_uri))}
+            `
         }
-        ${this._config.show_flags ? this._renderFlags(a) : nothing}
-        ${this._renderFooter(a, safeHttpsUri(a.rental_uri))}
       </section>
     `;
+  }
+
+  private _renderUnreachable(): TemplateResult {
+    return html`<div class="empty-state" role="status" aria-live="polite">
+      <div class="empty-title">${this._t("unreachable")}</div>
+      <div class="empty-detail">${this._t("unreachable_detail")}</div>
+    </div>`;
   }
 
   private _renderHeader(a: HassEntityAttributes, title: string): TemplateResult {

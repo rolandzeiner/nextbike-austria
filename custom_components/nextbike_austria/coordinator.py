@@ -61,6 +61,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    AUSTRIAN_SYSTEMS,
     BACKOFF_CAP_SECONDS,
     BATTERY_FETCH_TTL_SECONDS,
     CONF_STATION_ID,
@@ -75,6 +76,7 @@ from .const import (
     gbfs_feed_url,
 )
 from .http import base_request_headers
+from .outage import Fault, async_note_fault, classify
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -138,6 +140,14 @@ class GBFSError(RuntimeError):
         copy.placeholders = dict(self.placeholders)
         copy.args = self.args
         return copy
+
+
+def _system_name(system_id: str) -> str:
+    """The picker label for a system, as the outage issue names it."""
+    for system in AUSTRIAN_SYSTEMS:
+        if system["id"] == system_id:
+            return system["name"]
+    return system_id
 
 
 def _retry_after_seconds(headers: Mapping[str, str] | None) -> float | None:
@@ -450,14 +460,25 @@ class SharedSystemClient:
                 and (now - self._last_fetch) < _GBFS_TTL_SECONDS
             ):
                 return False
+            # The one place a real station request goes out, setup retries
+            # included, and so the only feed for the outage tracker: the
+            # replay above, the TTL short-circuit, the sibling fan-out and
+            # the battery fetch make no request, and must not count.
             try:
                 await self._refresh(now)
             except GBFSError as err:
+                async_note_fault(
+                    self._hass,
+                    classify(err),
+                    self._system_id,
+                    {"system": _system_name(self._system_id)},
+                )
                 self._last_error = err
                 self._blocked_until = now + max(
                     _GBFS_TTL_SECONDS, err.retry_after or 0.0
                 )
                 raise
+            async_note_fault(self._hass, Fault.ANSWERED, self._system_id)
             self._last_error = None
             return True
 

@@ -78,6 +78,10 @@
     "station_gone": {
       "title": "Nextbike Austria — station missing",
       "description": "Station **{station_id}** is no longer published by the {system_id} nextbike system tracked by **{entry_title}**. The operator may have retired it. Either the station will come back on its own, or you can remove this entry and pick a different station."
+    },
+    "upstream_unavailable": {
+      "title": "nextbike isn't sending station data for {system}",
+      "description": "nextbike's station feed for **{system}** has been answering with errors for more than 10 minutes. The fault is on nextbike's side: your Home Assistant setup and your stations are fine, and there's nothing you need to change. Bike counts come back on their own as soon as the feed works again, and this message goes away with them."
     }
   }
 }

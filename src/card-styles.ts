@@ -648,6 +648,16 @@ export const cardStyles: CSSResultGroup = css`
     color: var(--secondary-text-color);
     font-size: 0.875rem;
   }
+  /* "Can't reach nextbike": a headline the eye can find above the quieter
+     detail line. */
+  .empty-title {
+    color: var(--primary-text-color);
+    font-weight: 500;
+  }
+  .empty-detail {
+    margin-block-start: var(--ha-space-1, 4px);
+    font-size: 0.875em;
+  }
 
   /* ── Responsive density tiers (container queries, not viewport) ──── */
   /* Tokens are retuned on ha-card, never on :host. :host is the nbcard
