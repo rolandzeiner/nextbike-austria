@@ -42,10 +42,26 @@ export function safeHttpsUri(raw: unknown): string {
   return /^https?:\/\//i.test(raw) ? raw : "";
 }
 
+// sensor.py gives each station three sensors; the card draws the
+// bikes-available one, which also carries the station attributes.
+const STATION_TRANSLATION_KEY = "bikes_available";
+
+// Find all nextbike station sensors.
+//
+// The entity registry (`hass.entities`) comes first because it survives
+// unavailability: HA drops a sensor's extra attributes while it is
+// unavailable, so attribute sniffing alone would report "no sensors"
+// during an outage instead of letting the card show its unreachable
+// notice. Attribute sniffing stays as the fallback for a frontend that
+// doesn't expose `hass.entities`.
 export function findNextbikeEntities(hass: HomeAssistant | undefined): string[] {
   if (!hass || !hass.states) return [];
   return Object.keys(hass.states).filter((eid) => {
     if (!eid.startsWith("sensor.")) return false;
+    const entry = hass.entities?.[eid];
+    if (entry?.platform === "nextbike_austria") {
+      return entry.translation_key === STATION_TRANSLATION_KEY;
+    }
     const st = hass.states[eid];
     if (!st) return false;
     const a = st.attributes;

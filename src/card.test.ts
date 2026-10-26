@@ -365,6 +365,32 @@ describe("unreachable upstream", () => {
     expect(root(el).querySelector(".metric-num")?.textContent).toBe("6");
   });
 
+  // With no entities configured the card discovers the station itself, and
+  // an unavailable sensor has no attributes to be discovered by.
+  const REGISTRY = {
+    "sensor.nb_a": { platform: "nextbike_austria", translation_key: "bikes_available" },
+  };
+
+  it("finds an unavailable station with no entities configured", async () => {
+    const el = await mount(
+      { entities: [] },
+      { ...hass({ "sensor.nb_a": ["unavailable", UNAVAILABLE] }), entities: REGISTRY },
+    );
+    expect(root(el).querySelector(".empty-title")?.textContent?.trim()).toBe(
+      "Can't reach nextbike",
+    );
+    expect(root(el).querySelector(".title")?.textContent?.trim()).toBe("Hauptbahnhof");
+  });
+
+  it("shows an available station with no entities configured", async () => {
+    const el = await mount(
+      { entities: [] },
+      { ...hass({ "sensor.nb_a": ["6", FULL] }), entities: REGISTRY },
+    );
+    expect(root(el).querySelector(".empty-state")).toBeNull();
+    expect(root(el).querySelector(".metric-num")?.textContent).toBe("6");
+  });
+
   it("follows the dashboard's language", async () => {
     const el = await mount(
       { entities: ["sensor.nb_a"] },
