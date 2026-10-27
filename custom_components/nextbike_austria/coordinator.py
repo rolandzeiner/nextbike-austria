@@ -42,15 +42,11 @@ therefore exempt and there is no 401/403 branch here.
 from __future__ import annotations
 
 import asyncio
-import email.utils
-import json
 import logging
 import time
-from collections.abc import Mapping
-from datetime import UTC, timedelta
+from datetime import timedelta
 from typing import Any
 
-import aiohttp
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
@@ -58,8 +54,15 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
 
+from .api import (
+    NextbikeConnectionError,
+    NextbikeError,
+    NextbikeHttpError,
+    NextbikePayloadError,
+    NextbikeTimeoutError,
+    fetch_feed,
+)
 from .const import (
     AUSTRIAN_SYSTEMS,
     BACKOFF_CAP_SECONDS,
@@ -73,9 +76,7 @@ from .const import (
     STATION_INFO_TTL_SECONDS,
     SYSTEM_IDS,
     USER_AGENT,
-    gbfs_feed_url,
 )
-from .http import base_request_headers
 from .outage import Fault, async_note_fault, classify
 
 _LOGGER = logging.getLogger(__name__)
@@ -98,16 +99,11 @@ type NextbikeAustriaConfigEntry = ConfigEntry["NextbikeStationCoordinator"]
 # The second covers the timer jitter and the 0.45 s spread between two
 # entries' phases, and still keeps consecutive fetches at least 59 s apart.
 _GBFS_TTL_SECONDS = 59.0
-_HTTP_TIMEOUT = aiohttp.ClientTimeout(total=15)
 
 # A vehicle-type fetch that failed is retried this often instead of on every
 # tick. The feed is tiny and near-static; the e-bike sensor reads 0 until it
 # loads.
 _VEHICLE_TYPES_RETRY_SECONDS = 600.0
-
-# Longest Retry-After taken at face value. A day covers any real maintenance
-# window; past that, a bogus header would freeze polling indefinitely.
-_RETRY_AFTER_MAX_SECONDS = 86400.0
 
 
 class GBFSError(RuntimeError):
@@ -150,22 +146,30 @@ def _system_name(system_id: str) -> str:
     return system_id
 
 
-def _retry_after_seconds(headers: Mapping[str, str] | None) -> float | None:
-    """Read a Retry-After header: delay-seconds or an HTTP-date (RFC 9110)."""
-    value = (headers or {}).get("Retry-After", "").strip()
-    if not value:
-        return None
-    if value.isdigit():
-        seconds = float(value)
-    else:
-        try:
-            when = email.utils.parsedate_to_datetime(value)
-        except (TypeError, ValueError):
-            return None
-        if when.tzinfo is None:
-            when = when.replace(tzinfo=UTC)
-        seconds = (when - dt_util.utcnow()).total_seconds()
-    return min(max(seconds, 0.0), _RETRY_AFTER_MAX_SECONDS)
+def _gbfs_error(err: NextbikeError) -> GBFSError:
+    """Translate an API error into the GBFSError the coordinator works with."""
+    match err:
+        case NextbikeTimeoutError():
+            return GBFSError("api_timeout", seconds=f"{err.seconds:g}")
+        case NextbikeHttpError():
+            return GBFSError(
+                "api_http_error",
+                retry_after=err.retry_after,
+                status=str(err.status),
+                reason=err.reason,
+            )
+        case NextbikeConnectionError():
+            return GBFSError(
+                "api_connection_error", error_type=err.error_type, error=err.error
+            )
+        case NextbikePayloadError():
+            return GBFSError(
+                "api_invalid_response", status=str(err.status), error=err.error
+            )
+        case _:
+            return GBFSError(
+                "api_connection_error", error_type=type(err).__name__, error=str(err)
+            )
 
 
 class SharedSystemClient:
@@ -588,63 +592,18 @@ class SharedSystemClient:
         self._ebike_type_ids = frozenset(ebike_ids)
 
     async def _fetch_json(self, feed: str) -> dict[str, Any]:
-        """Fetch one sub-feed and return the parsed JSON body.
+        """Fetch one sub-feed through the HA-free client in ``api.py``.
 
-        No conditional GET: every feed regenerates its ``Last-Modified``
-        each minute, so a validator never matches at our intervals (see the
-        measurement block in const.py).
-
-        GBFS bodies from nextbike occasionally include stray control
-        characters (e.g. raw CRLF in vehicle-type descriptions). We parse
-        with ``strict=False`` to survive those — the alternative is the
-        whole feed being unusable for a single escaping bug.
+        The one translation point from the client's errors to ``GBFSError``,
+        whose keys and placeholders `outage.classify`, the coordinator and the
+        `exceptions` block in strings.json all read.
         """
-        url = gbfs_feed_url(self._system_id, feed)
-        status: int | None = None
-        text: str | None = None
         try:
-            async with self._session.get(
-                url, headers=base_request_headers(USER_AGENT), timeout=_HTTP_TIMEOUT
-            ) as resp:
-                status = resp.status
-                resp.raise_for_status()
-                text = await resp.text()
-        except TimeoutError as err:
-            raise GBFSError("api_timeout", seconds="15") from err
-        except aiohttp.ClientResponseError as err:
-            # 429 and 503 may say how long to stay away (RFC 9110); the
-            # shared client's failure window honours it.
-            retry_after = (
-                _retry_after_seconds(err.headers) if err.status in (429, 503) else None
+            return await fetch_feed(
+                self._session, self._system_id, feed, user_agent=USER_AGENT
             )
-            raise GBFSError(
-                "api_http_error",
-                retry_after=retry_after,
-                status=str(err.status),
-                reason=err.message or "",
-            ) from err
-        except aiohttp.ClientError as err:
-            # Covers ClientPayloadError / ClientConnectionError raised
-            # mid-body as well as connect-time failures.
-            raise GBFSError(
-                "api_connection_error",
-                error_type=type(err).__name__,
-                error=str(err),
-            ) from err
-
-        try:
-            parsed = json.loads(text, strict=False)
-        except ValueError as err:
-            raise GBFSError(
-                "api_invalid_response", status=str(status), error=str(err)
-            ) from err
-        if not isinstance(parsed, dict):
-            raise GBFSError(
-                "api_invalid_response",
-                status=str(status),
-                error=f"expected dict, got {type(parsed).__name__}",
-            )
-        return parsed
+        except NextbikeError as err:
+            raise _gbfs_error(err) from err
 
 
 def _get_shared_client(hass: HomeAssistant, system_id: str) -> SharedSystemClient:

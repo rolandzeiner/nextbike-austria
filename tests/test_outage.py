@@ -19,12 +19,12 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import (
     AiohttpClientMocker,
 )
 
+from custom_components.nextbike_austria.api import gbfs_feed_url
 from custom_components.nextbike_austria.const import (
     CONF_STATION_ID,
     CONF_STATION_NAME,
     CONF_SYSTEM_ID,
     DOMAIN,
-    gbfs_feed_url,
 )
 from custom_components.nextbike_austria.coordinator import (
     GBFSError,

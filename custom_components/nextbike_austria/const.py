@@ -1,9 +1,9 @@
 """Constants for Nextbike Austria.
 
 Every registered Austrian nextbike system publishes a GBFS 2.3 discovery
-document at `{GBFS_BASE}/{system_id}/gbfs.json`. The per-feed URLs under it
-follow a fixed pattern, so `gbfs_feed_url` builds them directly and the
-discovery document is never fetched.
+document at `{api.GBFS_BASE}/{system_id}/gbfs.json`. The per-feed URLs under
+it follow a fixed pattern, so `api.gbfs_feed_url` builds them directly and
+the discovery document is never fetched.
 """
 
 from __future__ import annotations
@@ -123,10 +123,6 @@ BATTERY_FETCH_TTL_SECONDS: Final = 1200
 # is cosmetic and self-heals.
 STATION_INFO_TTL_SECONDS: Final = 21600
 
-# GBFS endpoint base. Each Austrian system (see AUSTRIAN_SYSTEMS below)
-# publishes at `{GBFS_BASE}/{system_id}/{lang}/{feed}.json`.
-GBFS_BASE: Final = "https://gbfs.nextbike.net/maps/gbfs/v2"
-
 # --- Upstream capabilities, measured 2026-09-29 against nextbike_wr --------
 #   station_status        67.8 KB -> 3.2 KB on the wire (gzip, 21.0x)
 #   station_information   84.6 KB -> 11.2 KB (gzip, 7.6x)
@@ -143,9 +139,6 @@ GBFS_BASE: Final = "https://gbfs.nextbike.net/maps/gbfs/v2"
 #   systems, which sets the 60 s floor.
 # ---------------------------------------------------------------------------
 
-# Language segment in the per-feed GBFS URL path (see `gbfs_feed_url`).
-GBFS_LANG: Final = "en"
-
 
 class SystemInfo(TypedDict):
     """Static metadata for a supported Austrian nextbike system."""
@@ -157,7 +150,7 @@ class SystemInfo(TypedDict):
 
 # Known Austrian nextbike systems, in the order they appear in the picker.
 # To add a new system:
-#   1. Confirm its GBFS feed exists at `{GBFS_BASE}/{system_id}/gbfs.json`.
+#   1. Confirm its GBFS feed exists at `{api.GBFS_BASE}/{system_id}/gbfs.json`.
 #   2. Append a SystemInfo entry here. `name` is the picker label as is
 #      (it isn't translated); `region` becomes the sensor's `system_label`.
 #   3. Add the system to `SYSTEM_ACCENT` in src/const.ts for the card's
@@ -173,15 +166,6 @@ AUSTRIAN_SYSTEMS: Final[tuple[SystemInfo, ...]] = (
 )
 
 SYSTEM_IDS: Final = tuple(s["id"] for s in AUSTRIAN_SYSTEMS)
-
-
-def gbfs_feed_url(system_id: str, feed: str) -> str:
-    """Return the URL for a single GBFS feed under a system.
-
-    ``feed`` is one of: ``station_information``, ``station_status``,
-    ``vehicle_types``, ``system_information``, ``free_bike_status`` (etc.).
-    """
-    return f"{GBFS_BASE}/{system_id}/{GBFS_LANG}/{feed}.json"
 
 
 # Vehicle-type heuristic. GBFS 2.3 reports `propulsion_type` per vehicle
