@@ -423,6 +423,17 @@ describe("re-render gate", () => {
     expect(root(el).querySelector(".metric-num")?.textContent).toBe("7");
   });
 
+  it("re-renders on a language switch that touched no station", async () => {
+    // A profile language switch leaves every state object as it was.
+    const h = hass({ "sensor.nb_a": ["unavailable", { friendly_name: "Hauptbahnhof" }] });
+    const el = await mount({ entities: ["sensor.nb_a"] }, h);
+    el.hass = { ...h, language: "de" };
+    await el.updateComplete;
+    expect(root(el).querySelector(".empty-title")?.textContent?.trim()).toBe(
+      "Keine Verbindung zu nextbike",
+    );
+  });
+
   it("re-renders when the config changes", async () => {
     const el = await mount({ entities: ["sensor.nb_a"] }, hass({ "sensor.nb_a": ["3", FULL] }));
     el.setConfig({ entities: ["sensor.nb_a"], hide_attribution: true } as never);

@@ -136,6 +136,9 @@ export class NextbikeAustriaCard extends LitElement {
     const oldHass = changed.get("hass") as HomeAssistant | undefined;
     if (!oldHass) return true; // first hass — render
     if (!this.hass) return false;
+    // A language switch changes no entity state; without this the card keeps
+    // the old language until its sensor next updates.
+    if (oldHass.language !== this.hass.language) return true;
     // memoize=false: this pre-cycle call must neither read nor seed the
     // render-scoped memo. shouldUpdate can return false (no willUpdate,
     // no memo-clear), so a value seeded here would outlive its cycle.
