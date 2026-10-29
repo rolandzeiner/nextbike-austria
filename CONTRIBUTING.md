@@ -13,12 +13,12 @@ npm ci                  # Lovelace card deps (Node ^24.11 or 26+, npm 11+)
 npm run build           # = vp build; produces custom_components/nextbike_austria/www/nextbike-austria-card.js
 ```
 
-The built bundle is committed, because HACS users never run `npm`. Commit it together with every `src/` change: CI rebuilds it and fails if the committed file differs by a single byte. That is also why pre-commit's whitespace hooks skip `www/*.js`.
+The built bundle is committed, because users install through the Marketplace and never run `npm`. Commit it together with every `src/` change: CI rebuilds it and fails if the committed file differs by a single byte. That is also why pre-commit's whitespace hooks skip `www/*.js`.
 
 ## Branching & releases
 
 - Work on `dev`. PRs target `dev`.
-- Releases are tagged from `main` after merging `dev → main`. Publishing a release runs `release.yml`, which attaches `nextbike_austria.zip`, the file HACS downloads.
+- Releases are tagged from `main` after merging `dev → main`. Publishing a release runs `release.yml`, which attaches `nextbike_austria.zip`, the file the Marketplace (HACS) downloads.
 - Conventional commits: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`.
 
 ## Card-version sync
