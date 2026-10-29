@@ -241,6 +241,13 @@ describe("card API", () => {
     expect(el.getGridOptions()).toEqual({ columns: 12, rows: "auto", min_columns: 6, min_rows: 3 });
   });
 
+  it("reflects the layout HA sets, which the grid-cell selectors read", () => {
+    const ctor = customElements.get(
+      "nextbike-austria-card",
+    ) as unknown as typeof NextbikeAustriaCard;
+    expect(ctor.getPropertyOptions("layout").reflect).toBe(true);
+  });
+
   it("stubs the first nextbike sensor for the picker", () => {
     const ctor = customElements.get(
       "nextbike-austria-card",
@@ -316,6 +323,37 @@ describe("station resolution", () => {
       hass({ "sensor.nb_a": ["4", { ...FULL, system_id: "nextbike_wr" }] }),
     );
     expect(root(el).querySelector(".title")?.textContent?.trim()).toBe("Hauptbahnhof");
+  });
+
+  it("names each picked station whose entity is gone", async () => {
+    const el = await mount(
+      { entities: ["sensor.nb_a", "sensor.gone", "sensor.gone_too"] },
+      hass({ "sensor.nb_a": ["3", FULL] }),
+    );
+    const alerts = [...root(el).querySelectorAll("ha-alert")];
+    expect(alerts.map((a) => a.getAttribute("alert-type"))).toEqual(["warning", "warning"]);
+    expect(alerts.map((a) => a.textContent?.trim())).toEqual([
+      "Entity not available: sensor.gone",
+      "Entity not available: sensor.gone_too",
+    ]);
+    expect(root(el).querySelector(".title")?.textContent?.trim()).toBe("Hauptbahnhof");
+  });
+
+  it("says it in German too", async () => {
+    const h = { ...hass({ "sensor.nb_a": ["3", FULL] }), language: "de" };
+    const el = await mount({ entities: ["sensor.gone"] }, h);
+    expect(root(el).querySelector("ha-alert")?.textContent?.trim()).toBe(
+      "Entität nicht verfügbar: sensor.gone",
+    );
+  });
+
+  it("drops the warning once the entity is back", async () => {
+    const h = hass({ "sensor.nb_a": ["3", FULL] });
+    const el = await mount({ entities: ["sensor.nb_a", "sensor.nb_b"] }, h);
+    expect(root(el).querySelector("ha-alert")).not.toBeNull();
+    el.hass = { ...h, states: { ...h.states, "sensor.nb_b": { state: "2", attributes: FULL } } };
+    await el.updateComplete;
+    expect(root(el).querySelector("ha-alert")).toBeNull();
   });
 
   it("shows the default attribution when no station carries one", async () => {
@@ -432,6 +470,13 @@ describe("re-render gate", () => {
     expect(root(el).querySelector(".empty-title")?.textContent?.trim()).toBe(
       "Keine Verbindung zu nextbike",
     );
+  });
+
+  it("reflects a layout change that came without a hass update", async () => {
+    const el = await mount({ entities: ["sensor.nb_a"] }, hass({ "sensor.nb_a": ["3", FULL] }));
+    el.layout = "grid";
+    await el.updateComplete;
+    expect(el.getAttribute("layout")).toBe("grid");
   });
 
   it("re-renders when the config changes", async () => {

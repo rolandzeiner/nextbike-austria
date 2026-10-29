@@ -50,6 +50,10 @@ export class NextbikeAustriaCard extends LitElement {
   static override styles: CSSResultGroup = cardStyles;
 
   @property({ attribute: false }) public hass?: HomeAssistant;
+  /** Set by HA: "grid" in a sections view, "panel" in a panel view, unset in
+   *  the add-card picker. Reflected so card-styles.ts can fill only a cell.
+   *  Not the `layout` config key, which picks stacked or tabbed stations. */
+  @property({ reflect: true }) public layout?: string;
 
   @state() private _config: NextbikeAustriaCardConfig = {
     type: "nextbike-austria-card",
@@ -132,6 +136,10 @@ export class NextbikeAustriaCard extends LitElement {
     ) {
       return true;
     }
+    // Lit reflects attributes inside update(), so returning false here in
+    // the cycle that changes layout leaves the attribute stale and the
+    // grid-cell selectors in card-styles.ts never match.
+    if (changed.has("layout")) return true;
     if (!changed.has("hass")) return false;
     const oldHass = changed.get("hass") as HomeAssistant | undefined;
     if (!oldHass) return true; // first hass — render
@@ -142,7 +150,9 @@ export class NextbikeAustriaCard extends LitElement {
     // memoize=false: this pre-cycle call must neither read nor seed the
     // render-scoped memo. shouldUpdate can return false (no willUpdate,
     // no memo-clear), so a value seeded here would outlive its cycle.
-    const stations = this._resolveEntities(this.hass, false);
+    // The configured entities too: _resolveEntities drops a missing one,
+    // and its return has to clear the warning.
+    const stations = [...this._resolveEntities(this.hass, false), ...this._config.entities];
     return stations.some((s) => oldHass.states[s.entity] !== this.hass!.states[s.entity]);
   }
 
@@ -257,11 +267,27 @@ export class NextbikeAustriaCard extends LitElement {
         ${useTabs ? this._renderTabs(stations) : nothing}
         <div class="wrap">
           ${renderVersionBanner(this._versionMismatch, (k) => this._t(k))}
+          ${this._renderMissing()}
           ${content}
           ${this._config.hide_attribution ? nothing : html`<div class="attr">${attribution}</div>`}
         </div>
       </ha-card>
     `;
+  }
+
+  // A configured station whose entity is gone, named the way HA's own cards
+  // do (hui-warning), so the user knows which id to look up. Every missing
+  // one is listed; _resolveEntities has already dropped them from the body.
+  // ha-alert brings role="alert", so no role here.
+  private _renderMissing(): TemplateResult[] {
+    return this._config.entities
+      .filter((s) => !this.hass?.states[s.entity])
+      .map(
+        (s) =>
+          html`<ha-alert alert-type="warning"
+            >${this._t("entity_unavailable").replace("{entity}", s.entity)}</ha-alert
+          >`,
+      );
   }
 
   // Reached only when no nextbike sensor exists at all: _resolveEntities

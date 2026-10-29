@@ -16,20 +16,6 @@ export const cardStyles: CSSResultGroup = css`
        would hand the choice to the OS setting instead, which is wrong
        whenever the two differ. */
     display: block;
-    /* Fill the grid cell the dashboard gave us.
-       A sections view puts a fixed pixel height on the cell WRAPPER whenever
-       the card's rows are numeric -- which a user also causes by dragging the
-       row handle, since a stored grid_options overrides what getGridOptions()
-       returns -- and styles nothing inside that wrapper.
-       This host is display: block, so IT is the containing block for the
-       ha-card below, and a percentage height against a containing block whose
-       own height is auto computes to auto. Without this line ha-card therefore
-       sizes to its content, overflows a cell too short for it, and is painted
-       over the card underneath. Taking the cell's height here is what gives
-       ha-card's 100% something to resolve against.
-       In an auto-height cell it resolves to auto -- the height it already had
-       -- so it costs nothing there. */
-    block-size: 100%;
     container-type: inline-size;
     container-name: nbcard;
 
@@ -87,21 +73,49 @@ export const cardStyles: CSSResultGroup = css`
     --nb-slot-gap: 4px;
     --nb-tile-size: 40px;
   }
-  ha-card {
-    /* Resolves against the height :host just took from the cell, so
-       overflow: hidden clips inside the card rather than the card spilling
-       past its own cell. The two declarations only work as a pair: core cards
-       that set this one alone leave :host at its default inline display, where
-       the cell wrapper is ha-card's containing block instead. */
+  /* Fill the grid cell the dashboard gave us.
+     A sections view puts a fixed pixel height on the cell WRAPPER whenever
+     the card's rows are numeric -- which a user also causes by dragging the
+     row handle, since a stored grid_options overrides what getGridOptions()
+     returns -- and styles nothing inside that wrapper.
+     :host is display: block, so IT is the containing block for ha-card, and
+     a percentage height against a containing block whose own height is auto
+     computes to auto. Without this rule ha-card therefore sizes to its
+     content, overflows a cell too short for it, and is painted over the card
+     underneath. Taking the cell's height here is what gives ha-card's 100%
+     something to resolve against.
+     Gated on the layout HA sets on the card: "grid" in a sections view and
+     its edit dialog, "panel" in a panel view. The add-card picker sets none
+     and centres each preview in a tile as tall as the tallest one in its
+     row; an ungated 100% resolved against that tile and stretched the card. */
+  :host([layout="grid"]),
+  :host([layout="panel"]) {
     block-size: 100%;
-
+  }
+  /* Resolves against the height :host just took from the cell, so
+     overflow: hidden clips inside the card rather than the card spilling
+     past its own cell. The two declarations only work as a pair: core cards
+     that set this one alone leave :host at its default inline display, where
+     the cell wrapper is ha-card's containing block instead. */
+  :host([layout="grid"]) ha-card,
+  :host([layout="panel"]) ha-card {
+    block-size: 100%;
+  }
+  ha-card {
     overflow: hidden;
+    /* A column, so in a cell shorter than the content the tabs keep their
+       place and .wrap scrolls instead of being cut off. In an auto-height
+       cell it stacks exactly as a block would. */
+    display: flex;
+    flex-direction: column;
   }
   .wrap {
     padding: var(--nb-pad-y) var(--nb-pad-x);
     display: flex;
     flex-direction: column;
     gap: var(--nb-row-gap);
+    min-block-size: 0;
+    overflow-y: auto;
   }
 
   /* ── Banner ─────────────────────────────────────────────────────── */
@@ -137,6 +151,7 @@ export const cardStyles: CSSResultGroup = css`
        flush with the card edges with no negative-margin escape. .wrap's
        own top padding provides breathing room to the first station. */
     display: flex;
+    flex-shrink: 0;
     border-bottom: 1px solid var(--divider-color, rgba(127, 127, 127, 0.18));
     overflow-x: auto;
     scrollbar-width: none;

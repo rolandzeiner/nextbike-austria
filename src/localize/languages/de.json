@@ -1,6 +1,7 @@
 {
   "no_entities_available": "Keine Nextbike-Sensoren gefunden",
   "no_entities_unavailable": "Ausgewählte Station ist gerade nicht verfügbar",
+  "entity_unavailable": "Entität nicht verfügbar: {entity}",
   "unreachable": "Keine Verbindung zu nextbike",
   "unreachable_detail": "Die Radzahlen erscheinen von selbst wieder, sobald die Verbindung funktioniert.",
   "rack_summary": "Radständer: {available} von {capacity} Rädern verfügbar",
