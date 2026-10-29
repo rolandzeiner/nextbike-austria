@@ -1,4 +1,4 @@
-# Nextbike Austria
+# <img src="https://raw.githubusercontent.com/rolandzeiner/nextbike-austria/main/custom_components/nextbike_austria/brand/icon.png" width="40" height="40" alt="" align="absmiddle"> Nextbike Austria
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 [![HA min version](https://img.shields.io/badge/Home%20Assistant-%3E%3D2025.1-blue.svg)](https://www.home-assistant.io/)
