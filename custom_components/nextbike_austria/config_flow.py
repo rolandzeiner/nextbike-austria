@@ -20,7 +20,6 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import aiohttp
 import voluptuous as vol
 from homeassistant.config_entries import (
     ConfigEntry,
@@ -42,6 +41,7 @@ from homeassistant.helpers.selector import (
     TextSelector,
 )
 
+from .api import CATALOGUE_TIMEOUT_SECONDS, NextbikeError, fetch_feed
 from .const import (
     AUSTRIAN_SYSTEMS,
     CONF_SEARCH_QUERY,
@@ -55,16 +55,13 @@ from .const import (
     MIN_POLL_SECONDS,
     SYSTEM_IDS,
     USER_AGENT,
-    gbfs_feed_url,
 )
-from .http import base_request_headers
 
 _LOGGER = logging.getLogger(__name__)
 
 # Minimum fragment length for the station search. Station names are short
 # ("Oper", "Hoher Markt") so 2 chars already narrows the list usefully.
 _MIN_QUERY_LENGTH = 2
-_HTTP_TIMEOUT = aiohttp.ClientTimeout(total=10)
 
 
 def _scan_interval_field(default: int) -> dict[Any, Any]:
@@ -94,21 +91,19 @@ async def _fetch_stations(hass: HomeAssistant, system_id: str) -> list[dict[str,
 
     Returns the list of station dicts as delivered by GBFS. Empty list on
     any failure — the caller surfaces a `cannot_connect` error in the UI.
+    Goes through the same client as the coordinator, so a feed the
+    coordinator can parse never fails setup.
     """
-    session = async_get_clientsession(hass)
-    url = gbfs_feed_url(system_id, "station_information")
     try:
-        async with session.get(
-            url,
-            headers=base_request_headers(USER_AGENT),
-            timeout=_HTTP_TIMEOUT,
-        ) as resp:
-            resp.raise_for_status()
-            body = await resp.json(content_type=None)
-    except (TimeoutError, aiohttp.ClientError, ValueError) as err:
+        body = await fetch_feed(
+            async_get_clientsession(hass),
+            system_id,
+            "station_information",
+            user_agent=USER_AGENT,
+            timeout_seconds=CATALOGUE_TIMEOUT_SECONDS,
+        )
+    except NextbikeError as err:
         _LOGGER.warning("Station-catalogue fetch failed for %s: %s", system_id, err)
-        return []
-    if not isinstance(body, dict):
         return []
     stations = body.get("data", {}).get("stations") or []
     return [s for s in stations if isinstance(s, dict) and s.get("station_id")]

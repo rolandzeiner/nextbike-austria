@@ -190,7 +190,7 @@ describe("custom element registration", () => {
     expect(entry.getEntitySuggestion?.(h, "light.nb")).toBeNull();
   });
 
-  const reactive = ["hass", "_config", "_activeTab", "_versionMismatch", "_tickKey"];
+  const reactive = ["hass", "_config", "_activeTab", "_versionMismatch", "_tickKey", "preview"];
 
   it("keeps Lit's reactive properties through decorator lowering", () => {
     const ctor = customElements.get("nextbike-austria-card") as unknown as {
@@ -239,6 +239,13 @@ describe("card API", () => {
   it("asks sections view for a full-width, auto-height cell", () => {
     const el = document.createElement("nextbike-austria-card") as unknown as Card;
     expect(el.getGridOptions()).toEqual({ columns: 12, rows: "auto", min_columns: 6, min_rows: 3 });
+  });
+
+  it("reflects the layout HA sets, which the grid-cell selectors read", () => {
+    const ctor = customElements.get(
+      "nextbike-austria-card",
+    ) as unknown as typeof NextbikeAustriaCard;
+    expect(ctor.getPropertyOptions("layout").reflect).toBe(true);
   });
 
   it("stubs the first nextbike sensor for the picker", () => {
@@ -318,6 +325,37 @@ describe("station resolution", () => {
     expect(root(el).querySelector(".title")?.textContent?.trim()).toBe("Hauptbahnhof");
   });
 
+  it("names each picked station whose entity is gone", async () => {
+    const el = await mount(
+      { entities: ["sensor.nb_a", "sensor.gone", "sensor.gone_too"] },
+      hass({ "sensor.nb_a": ["3", FULL] }),
+    );
+    const alerts = [...root(el).querySelectorAll("ha-alert")];
+    expect(alerts.map((a) => a.getAttribute("alert-type"))).toEqual(["warning", "warning"]);
+    expect(alerts.map((a) => a.textContent?.trim())).toEqual([
+      "Entity not available: sensor.gone",
+      "Entity not available: sensor.gone_too",
+    ]);
+    expect(root(el).querySelector(".title")?.textContent?.trim()).toBe("Hauptbahnhof");
+  });
+
+  it("says it in German too", async () => {
+    const h = { ...hass({ "sensor.nb_a": ["3", FULL] }), language: "de" };
+    const el = await mount({ entities: ["sensor.gone"] }, h);
+    expect(root(el).querySelector("ha-alert")?.textContent?.trim()).toBe(
+      "Entität nicht verfügbar: sensor.gone",
+    );
+  });
+
+  it("drops the warning once the entity is back", async () => {
+    const h = hass({ "sensor.nb_a": ["3", FULL] });
+    const el = await mount({ entities: ["sensor.nb_a", "sensor.nb_b"] }, h);
+    expect(root(el).querySelector("ha-alert")).not.toBeNull();
+    el.hass = { ...h, states: { ...h.states, "sensor.nb_b": { state: "2", attributes: FULL } } };
+    await el.updateComplete;
+    expect(root(el).querySelector("ha-alert")).toBeNull();
+  });
+
   it("shows the default attribution when no station carries one", async () => {
     const el = await mount(
       { entities: ["sensor.nb_min"] },
@@ -327,13 +365,78 @@ describe("station resolution", () => {
   });
 
   it("treats a malformed or negative bike count as zero", async () => {
-    for (const state of ["unavailable", "-3"]) {
+    for (const state of ["unknown", "-3"]) {
       const el = await mount(
         { entities: ["sensor.nb_a"] },
         hass({ "sensor.nb_a": [state, MINIMAL] }),
       );
       expect(root(el).querySelector(".metric-num")?.textContent).toBe("0");
     }
+  });
+});
+
+// An outage used to read as "0 bikes", which is what an empty rack says too,
+// so a dead feed looked like a broken install.
+describe("unreachable upstream", () => {
+  const UNAVAILABLE: HassEntityAttributes = { friendly_name: "Hauptbahnhof Bikes available" };
+
+  it("says it can't reach nextbike instead of showing 0 bikes", async () => {
+    const el = await mount(
+      { entities: ["sensor.nb_a"] },
+      hass({ "sensor.nb_a": ["unavailable", UNAVAILABLE] }),
+    );
+    const notice = root(el).querySelector(".empty-state");
+    expect(notice?.querySelector(".empty-title")?.textContent?.trim()).toBe("Can't reach nextbike");
+    expect(notice?.getAttribute("role")).toBe("status");
+    expect(root(el).querySelector(".metric-num")).toBeNull();
+    expect(root(el).querySelector(".rack")).toBeNull();
+    // The header stays, so a stacked card still says which station is out.
+    expect(root(el).querySelector(".title")?.textContent?.trim()).toBe("Hauptbahnhof");
+  });
+
+  it("marks only the unavailable station in a stacked card", async () => {
+    const el = await mount(
+      { entities: ["sensor.nb_a", "sensor.nb_full"] },
+      hass({ "sensor.nb_a": ["unavailable", UNAVAILABLE], "sensor.nb_full": ["6", FULL] }),
+    );
+    expect(root(el).querySelectorAll(".empty-title")).toHaveLength(1);
+    expect(root(el).querySelector(".metric-num")?.textContent).toBe("6");
+  });
+
+  // With no entities configured the card discovers the station itself, and
+  // an unavailable sensor has no attributes to be discovered by.
+  const REGISTRY = {
+    "sensor.nb_a": { platform: "nextbike_austria", translation_key: "bikes_available" },
+  };
+
+  it("finds an unavailable station with no entities configured", async () => {
+    const el = await mount(
+      { entities: [] },
+      { ...hass({ "sensor.nb_a": ["unavailable", UNAVAILABLE] }), entities: REGISTRY },
+    );
+    expect(root(el).querySelector(".empty-title")?.textContent?.trim()).toBe(
+      "Can't reach nextbike",
+    );
+    expect(root(el).querySelector(".title")?.textContent?.trim()).toBe("Hauptbahnhof");
+  });
+
+  it("shows an available station with no entities configured", async () => {
+    const el = await mount(
+      { entities: [] },
+      { ...hass({ "sensor.nb_a": ["6", FULL] }), entities: REGISTRY },
+    );
+    expect(root(el).querySelector(".empty-state")).toBeNull();
+    expect(root(el).querySelector(".metric-num")?.textContent).toBe("6");
+  });
+
+  it("follows the dashboard's language", async () => {
+    const el = await mount(
+      { entities: ["sensor.nb_a"] },
+      { ...hass({ "sensor.nb_a": ["unavailable", UNAVAILABLE] }), language: "de" },
+    );
+    expect(root(el).querySelector(".empty-title")?.textContent?.trim()).toBe(
+      "Keine Verbindung zu nextbike",
+    );
   });
 });
 
@@ -358,6 +461,24 @@ describe("re-render gate", () => {
     expect(root(el).querySelector(".metric-num")?.textContent).toBe("7");
   });
 
+  it("re-renders on a language switch that touched no station", async () => {
+    // A profile language switch leaves every state object as it was.
+    const h = hass({ "sensor.nb_a": ["unavailable", { friendly_name: "Hauptbahnhof" }] });
+    const el = await mount({ entities: ["sensor.nb_a"] }, h);
+    el.hass = { ...h, language: "de" };
+    await el.updateComplete;
+    expect(root(el).querySelector(".empty-title")?.textContent?.trim()).toBe(
+      "Keine Verbindung zu nextbike",
+    );
+  });
+
+  it("reflects a layout change that came without a hass update", async () => {
+    const el = await mount({ entities: ["sensor.nb_a"] }, hass({ "sensor.nb_a": ["3", FULL] }));
+    el.layout = "grid";
+    await el.updateComplete;
+    expect(el.getAttribute("layout")).toBe("grid");
+  });
+
   it("re-renders when the config changes", async () => {
     const el = await mount({ entities: ["sensor.nb_a"] }, hass({ "sensor.nb_a": ["3", FULL] }));
     el.setConfig({ entities: ["sensor.nb_a"], hide_attribution: true } as never);
@@ -377,6 +498,34 @@ describe("version banner", () => {
     const el = await mount({ entities: ["sensor.nb_a"] }, h);
     await settle(el);
     expect(root(el).querySelector(".banner")?.textContent).toContain("9.9.9");
+  });
+
+  it("stays out of the edit dialog's preview, where a reload loses the edit", async () => {
+    const h = {
+      ...hass({ "sensor.nb_a": ["3", FULL] }),
+      callWS: async <T>() => ({ version: "9.9.9" }) as T,
+    };
+    const config: Record<string, unknown> = { entities: ["sensor.nb_a"] };
+    const el = document.createElement("nextbike-austria-card") as unknown as Card;
+    el.preview = true;
+    el.setConfig(config);
+    el.hass = h;
+    document.body.appendChild(el);
+    await settle(el);
+    expect(root(el).querySelector(".banner")).toBeNull();
+  });
+
+  it("drops the banner when HA turns the card into a preview", async () => {
+    const h = {
+      ...hass({ "sensor.nb_a": ["3", FULL] }),
+      callWS: async <T>() => ({ version: "9.9.9" }) as T,
+    };
+    const el = await mount({ entities: ["sensor.nb_a"] }, h);
+    await settle(el);
+    expect(root(el).querySelector(".banner")).not.toBeNull();
+    el.preview = true;
+    await el.updateComplete;
+    expect(root(el).querySelector(".banner")).toBeNull();
   });
 
   it("probes the backend once, not on every hass update", async () => {

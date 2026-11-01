@@ -50,6 +50,13 @@ export class NextbikeAustriaCard extends LitElement {
   static override styles: CSSResultGroup = cardStyles;
 
   @property({ attribute: false }) public hass?: HomeAssistant;
+  /** Set by HA: "grid" in a sections view, "panel" in a panel view, unset in
+   *  the add-card picker. Reflected so card-styles.ts can fill only a cell.
+   *  Not the `layout` config key, which picks stacked or tabbed stations. */
+  @property({ reflect: true }) public layout?: string;
+  /** Set by HA on the edit-card dialog's live preview. The version banner
+   *  stays out of it: its Reload would throw away the unsaved edit. */
+  @property({ type: Boolean }) public preview = false;
 
   @state() private _config: NextbikeAustriaCardConfig = {
     type: "nextbike-austria-card",
@@ -128,18 +135,28 @@ export class NextbikeAustriaCard extends LitElement {
       changed.has("_config") ||
       changed.has("_activeTab") ||
       changed.has("_versionMismatch") ||
-      changed.has("_tickKey")
+      changed.has("_tickKey") ||
+      changed.has("preview")
     ) {
       return true;
     }
+    // Lit reflects attributes inside update(), so returning false here in
+    // the cycle that changes layout leaves the attribute stale and the
+    // grid-cell selectors in card-styles.ts never match.
+    if (changed.has("layout")) return true;
     if (!changed.has("hass")) return false;
     const oldHass = changed.get("hass") as HomeAssistant | undefined;
     if (!oldHass) return true; // first hass — render
     if (!this.hass) return false;
+    // A language switch changes no entity state; without this the card keeps
+    // the old language until its sensor next updates.
+    if (oldHass.language !== this.hass.language) return true;
     // memoize=false: this pre-cycle call must neither read nor seed the
     // render-scoped memo. shouldUpdate can return false (no willUpdate,
     // no memo-clear), so a value seeded here would outlive its cycle.
-    const stations = this._resolveEntities(this.hass, false);
+    // The configured entities too: _resolveEntities drops a missing one,
+    // and its return has to clear the warning.
+    const stations = [...this._resolveEntities(this.hass, false), ...this._config.entities];
     return stations.some((s) => oldHass.states[s.entity] !== this.hass!.states[s.entity]);
   }
 
@@ -253,12 +270,28 @@ export class NextbikeAustriaCard extends LitElement {
       <ha-card>
         ${useTabs ? this._renderTabs(stations) : nothing}
         <div class="wrap">
-          ${renderVersionBanner(this._versionMismatch, (k) => this._t(k))}
+          ${renderVersionBanner(this.preview ? null : this._versionMismatch, (k) => this._t(k))}
+          ${this._renderMissing()}
           ${content}
           ${this._config.hide_attribution ? nothing : html`<div class="attr">${attribution}</div>`}
         </div>
       </ha-card>
     `;
+  }
+
+  // A configured station whose entity is gone, named the way HA's own cards
+  // do (hui-warning), so the user knows which id to look up. Every missing
+  // one is listed; _resolveEntities has already dropped them from the body.
+  // ha-alert brings role="alert", so no role here.
+  private _renderMissing(): TemplateResult[] {
+    return this._config.entities
+      .filter((s) => !this.hass?.states[s.entity])
+      .map(
+        (s) =>
+          html`<ha-alert alert-type="warning"
+            >${this._t("entity_unavailable").replace("{entity}", s.entity)}</ha-alert
+          >`,
+      );
   }
 
   // Reached only when no nextbike sensor exists at all: _resolveEntities
@@ -363,16 +396,33 @@ export class NextbikeAustriaCard extends LitElement {
         style=${`--nb-accent:${accent};--nb-accent-ink:${ink};--nb-stripe-edge:${stripeEdge(ink)};`}
       >
         ${this._config.hide_header ? nothing : this._renderHeader(a, title)}
-        ${this._renderHero(rack, numberOr(a.num_docks_available, null))}
         ${
-          this._config.show_rack && rack.capacity !== null && rack.capacity > 0
-            ? this._renderRack(rack, rack.capacity)
-            : nothing
+          // An unavailable sensor carries no counts, so the hero would read
+          // "0 bikes", which is what an empty rack says too and makes an
+          // outage look like a broken install. Doesn't say whose fault it
+          // is; the integration's Repairs issue does that.
+          stateObj.state === "unavailable"
+            ? this._renderUnreachable()
+            : html`
+              ${this._renderHero(rack, numberOr(a.num_docks_available, null))}
+              ${
+                this._config.show_rack && rack.capacity !== null && rack.capacity > 0
+                  ? this._renderRack(rack, rack.capacity)
+                  : nothing
+              }
+              ${this._config.show_flags ? this._renderFlags(a) : nothing}
+              ${this._renderFooter(a, safeHttpsUri(a.rental_uri))}
+            `
         }
-        ${this._config.show_flags ? this._renderFlags(a) : nothing}
-        ${this._renderFooter(a, safeHttpsUri(a.rental_uri))}
       </section>
     `;
+  }
+
+  private _renderUnreachable(): TemplateResult {
+    return html`<div class="empty-state" role="status" aria-live="polite">
+      <div class="empty-title">${this._t("unreachable")}</div>
+      <div class="empty-detail">${this._t("unreachable_detail")}</div>
+    </div>`;
   }
 
   private _renderHeader(a: HassEntityAttributes, title: string): TemplateResult {

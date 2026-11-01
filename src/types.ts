@@ -54,10 +54,12 @@ export interface HomeAssistant {
   // Entity registry, keyed by entity_id. `platform` is the owning
   // integration's domain — used by the card picker's
   // `getEntitySuggestion` hook to offer this card only for our own
-  // (`nextbike_austria`) entities. custom-card-helpers' HomeAssistant
-  // already carries this; the card's slim local type mirrors just the
-  // field we read.
-  entities?: Record<string, { platform?: string } | undefined>;
+  // (`nextbike_austria`) entities, and by `findNextbikeEntities` to
+  // discover station sensors while they are unavailable, where
+  // `translation_key` tells the bikes sensor from its docks and e-bikes
+  // siblings. custom-card-helpers' HomeAssistant already carries this;
+  // the card's slim local type mirrors just the fields we read.
+  entities?: Record<string, { platform?: string; translation_key?: string } | undefined>;
   language?: string;
   // HA core ships translations for common field names ("entities",
   // "name", "icon", etc.) — the editor's _computeLabel chain queries

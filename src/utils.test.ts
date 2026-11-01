@@ -104,6 +104,43 @@ describe("findNextbikeEntities — picker auto-detect", () => {
   });
 });
 
+// HA drops a sensor's extra attributes while it is unavailable, so only the
+// entity registry still says the sensor is ours.
+describe("findNextbikeEntities — registry discovery", () => {
+  const registry = {
+    "sensor.hbf_bikes": { platform: "nextbike_austria", translation_key: "bikes_available" },
+    "sensor.hbf_docks": { platform: "nextbike_austria", translation_key: "docks_available" },
+    "sensor.hbf_ebikes": { platform: "nextbike_austria", translation_key: "ebikes_available" },
+    "sensor.other": { platform: "citybike_wien", translation_key: "bikes_available" },
+  };
+
+  it("finds an unavailable station sensor that has no attributes", () => {
+    const hass = {
+      entities: registry,
+      states: {
+        "sensor.hbf_bikes": { state: "unavailable", attributes: {} },
+        "sensor.hbf_docks": { state: "unavailable", attributes: {} },
+        "sensor.hbf_ebikes": { state: "unavailable", attributes: {} },
+        "sensor.other": { state: "unavailable", attributes: {} },
+      },
+    } as unknown as HomeAssistant;
+    expect(findNextbikeEntities(hass)).toEqual(["sensor.hbf_bikes"]);
+  });
+
+  it("skips the docks and e-bikes sensors of an available station", () => {
+    const nb = { station_id: "1", system_id: "nextbike_wr", attribution: "Data: nextbike GmbH" };
+    const hass = {
+      entities: registry,
+      states: {
+        "sensor.hbf_bikes": { state: "3", attributes: nb },
+        "sensor.hbf_docks": { state: "5", attributes: { capacity: 8 } },
+        "sensor.hbf_ebikes": { state: "1", attributes: { attribution: nb.attribution } },
+      },
+    } as unknown as HomeAssistant;
+    expect(findNextbikeEntities(hass)).toEqual(["sensor.hbf_bikes"]);
+  });
+});
+
 describe("normaliseConfig — setConfig's defaults", () => {
   it("fills every display default for an empty config", () => {
     expect(normaliseConfig(null)).toEqual({

@@ -364,8 +364,8 @@ async def test_fetch_stations_survives_non_dict_body(
         def raise_for_status(self) -> None:
             return None
 
-        async def json(self, content_type: Any = None) -> Any:
-            return ["not", "a", "dict"]
+        async def text(self) -> str:
+            return '["not", "a", "dict"]'
 
     class _FakeSession:
         def get(self, *args: Any, **kwargs: Any) -> CtxResp:

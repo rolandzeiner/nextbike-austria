@@ -78,6 +78,10 @@
     "station_gone": {
       "title": "Nextbike Austria — Station nicht mehr gefunden",
       "description": "Die Station **{station_id}** wird vom nextbike-System {system_id} nicht mehr veröffentlicht (betrifft **{entry_title}**). Der Betreiber hat die Station möglicherweise stillgelegt. Entweder taucht sie wieder auf, oder du entfernst diesen Eintrag und wählst eine andere Station."
+    },
+    "upstream_unavailable": {
+      "title": "nextbike liefert keine Stationsdaten für {system}",
+      "description": "Der Stationsfeed von nextbike für **{system}** antwortet seit mehr als 10 Minuten mit Fehlern. Der Fehler liegt bei nextbike: Deine Home-Assistant-Einrichtung und deine Stationen sind in Ordnung, du musst nichts ändern. Sobald der Feed wieder funktioniert, erscheinen die Radzahlen von selbst, und diese Meldung verschwindet mit ihnen."
     }
   }
 }

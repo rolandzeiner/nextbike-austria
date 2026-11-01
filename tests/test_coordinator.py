@@ -17,6 +17,7 @@ from homeassistant.helpers.update_coordinator import UpdateFailed
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.nextbike_austria.api import retry_after_seconds
 from custom_components.nextbike_austria.const import (
     CONF_STATION_ID,
     CONF_STATION_NAME,
@@ -28,7 +29,6 @@ from custom_components.nextbike_austria.coordinator import (
     GBFSError,
     NextbikeStationCoordinator,
     SharedSystemClient,
-    _retry_after_seconds,
 )
 
 from ._fakes import CtxResp, FakeClient
@@ -1003,7 +1003,7 @@ async def test_replayed_failure_is_neither_fanned_out_nor_counted(
 )
 def test_retry_after_delay_seconds(header: str, seconds: float | None) -> None:
     """Delay-seconds are taken as is, capped at a day; junk is ignored."""
-    assert _retry_after_seconds({"Retry-After": header}) == seconds
+    assert retry_after_seconds({"Retry-After": header}) == seconds
 
 
 def test_retry_after_http_date() -> None:
@@ -1011,14 +1011,14 @@ def test_retry_after_http_date() -> None:
     soon = email.utils.format_datetime(
         dt_util.utcnow() + timedelta(seconds=300), usegmt=True
     )
-    waited = _retry_after_seconds({"Retry-After": soon})
+    waited = retry_after_seconds({"Retry-After": soon})
     assert waited is not None
     assert 290 <= waited <= 300
     past = email.utils.format_datetime(
         dt_util.utcnow() - timedelta(hours=1), usegmt=True
     )
-    assert _retry_after_seconds({"Retry-After": past}) == 0.0
-    assert _retry_after_seconds(None) is None
+    assert retry_after_seconds({"Retry-After": past}) == 0.0
+    assert retry_after_seconds(None) is None
 
 
 @pytest.mark.parametrize(("status", "retry_after"), [(429, 120.0), (500, None)])

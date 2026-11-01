@@ -40,8 +40,8 @@ export default defineConfig(({ mode }) => {
           codeSplitting: false,
           comments: { legal: true },
           // Set on the Rolldown output, not `build.minify`: Vite's library
-          // mode skips whitespace minification for ES output, which grew the
-          // bundle from 71 kB to 80 kB. Keep console.* (dropConsole: false):
+          // mode skips whitespace minification for ES output, so that alone
+          // ships 82 kB instead of 73 kB. Keep console.* (dropConsole: false):
           // the cards' console calls are their only client-side failure
           // signal, and the console.info banner shows which bundle loaded.
           minify: dev ? false : { compress: { dropConsole: false }, mangle: true, codegen: true },

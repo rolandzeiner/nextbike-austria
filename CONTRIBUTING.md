@@ -13,12 +13,12 @@ npm ci                  # Lovelace card deps (Node ^24.11 or 26+, npm 11+)
 npm run build           # = vp build; produces custom_components/nextbike_austria/www/nextbike-austria-card.js
 ```
 
-The built bundle is committed, because HACS users never run `npm`. Commit it together with every `src/` change: CI rebuilds it and fails if the committed file differs by a single byte. That is also why pre-commit's whitespace hooks skip `www/*.js`.
+The built bundle is committed, because users install through the Marketplace and never run `npm`. Commit it together with every `src/` change: CI rebuilds it and fails if the committed file differs by a single byte. That is also why pre-commit's whitespace hooks skip `www/*.js`.
 
 ## Branching & releases
 
 - Work on `dev`. PRs target `dev`.
-- Releases are tagged from `main` after merging `dev → main`. Publishing a release runs `release.yml`, which attaches `nextbike_austria.zip`, the file HACS downloads.
+- Releases are tagged from `main` after merging `dev → main`. Publishing a release runs `release.yml`, which attaches `nextbike_austria.zip`, the file the Marketplace (HACS) downloads.
 - Conventional commits: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`.
 
 ## Card-version sync
@@ -30,13 +30,13 @@ Python's `CARD_VERSION` is aliased to `INTEGRATION_VERSION` (read from `manifest
 
 `tests/test_card_version.py` enforces byte-identical match. Drift triggers an infinite reload-banner loop on the user side.
 
-Both always carry the clean version (`1.4.1`), never a `-beta-N` suffix. A pre-release uses the same number as the final release; GitHub's pre-release flag tells them apart. The version changes once per release cycle.
+Both always carry the clean version (`1.5.0`), never a `-beta-N` suffix. A pre-release uses the same number as the final release; GitHub's pre-release flag tells them apart. The version changes once per release cycle.
 
 ## Tooling & config
 
 - `vite.config.ts` — the whole card toolchain, run through [Vite+](https://viteplus.dev/) (`vp`): `vp build` (Vite library mode on Rolldown), `vp test` (Vitest), and `vp check` (Oxfmt + Oxlint + type-check). The only card `devDependencies` are `vite-plus` and `happy-dom`. Vitest, Rolldown and the type-checker all ship inside `vite-plus`, and `typescript` is not installed. Five things there fail silently if you change them:
   - The banner must be a **legal** comment — `/*! ... */` — with `comments: { legal: true }`. A `//` banner is stripped by the minifier and nothing tells you; only the built file's first bytes do.
-  - **`minify` lives on `rolldownOptions.output`, with `dropConsole: false`.** Vite's library mode skips whitespace minification for ES output, so `build.minify` alone ships an 80 kB bundle instead of 71 kB. `dropConsole` is all-or-nothing, and most `console.*` calls here sit in `catch` blocks where dropping them turns a caught error into a silent one.
+  - **`minify` lives on `rolldownOptions.output`, with `dropConsole: false`.** Vite's library mode skips whitespace minification for ES output, so `build.minify` alone ships an 82 kB bundle instead of 73 kB. `dropConsole` is all-or-nothing, and most `console.*` calls here sit in `catch` blocks where dropping them turns a caught error into a silent one.
   - **Dev vs prod comes from `--mode development`** (`npm run dev`). A plain `vp build` is production: minified, no sourcemap.
   - **`fmt.embeddedLanguageFormatting` stays `"off"`.** Otherwise Oxfmt reformats Lit `html`/`css` templates and changes the whitespace inside rendered elements, which is a DOM change, not a style change.
   - **Decorators are not configured.** Rolldown reads `tsconfig.json` itself and enables Lit's legacy decorators from it. If that ever regresses, class fields overwrite Lit's accessors and reactivity dies while the build stays green. The decorator checks at the top of `src/card.test.ts` catch it; the tests compile from the same `tsconfig.json`, but they don't run the built bundle.
