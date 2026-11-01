@@ -54,6 +54,9 @@ export class NextbikeAustriaCard extends LitElement {
    *  the add-card picker. Reflected so card-styles.ts can fill only a cell.
    *  Not the `layout` config key, which picks stacked or tabbed stations. */
   @property({ reflect: true }) public layout?: string;
+  /** Set by HA on the edit-card dialog's live preview. The version banner
+   *  stays out of it: its Reload would throw away the unsaved edit. */
+  @property({ type: Boolean }) public preview = false;
 
   @state() private _config: NextbikeAustriaCardConfig = {
     type: "nextbike-austria-card",
@@ -132,7 +135,8 @@ export class NextbikeAustriaCard extends LitElement {
       changed.has("_config") ||
       changed.has("_activeTab") ||
       changed.has("_versionMismatch") ||
-      changed.has("_tickKey")
+      changed.has("_tickKey") ||
+      changed.has("preview")
     ) {
       return true;
     }
@@ -266,7 +270,7 @@ export class NextbikeAustriaCard extends LitElement {
       <ha-card>
         ${useTabs ? this._renderTabs(stations) : nothing}
         <div class="wrap">
-          ${renderVersionBanner(this._versionMismatch, (k) => this._t(k))}
+          ${renderVersionBanner(this.preview ? null : this._versionMismatch, (k) => this._t(k))}
           ${this._renderMissing()}
           ${content}
           ${this._config.hide_attribution ? nothing : html`<div class="attr">${attribution}</div>`}

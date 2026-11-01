@@ -190,7 +190,7 @@ describe("custom element registration", () => {
     expect(entry.getEntitySuggestion?.(h, "light.nb")).toBeNull();
   });
 
-  const reactive = ["hass", "_config", "_activeTab", "_versionMismatch", "_tickKey"];
+  const reactive = ["hass", "_config", "_activeTab", "_versionMismatch", "_tickKey", "preview"];
 
   it("keeps Lit's reactive properties through decorator lowering", () => {
     const ctor = customElements.get("nextbike-austria-card") as unknown as {
@@ -498,6 +498,34 @@ describe("version banner", () => {
     const el = await mount({ entities: ["sensor.nb_a"] }, h);
     await settle(el);
     expect(root(el).querySelector(".banner")?.textContent).toContain("9.9.9");
+  });
+
+  it("stays out of the edit dialog's preview, where a reload loses the edit", async () => {
+    const h = {
+      ...hass({ "sensor.nb_a": ["3", FULL] }),
+      callWS: async <T>() => ({ version: "9.9.9" }) as T,
+    };
+    const config: Record<string, unknown> = { entities: ["sensor.nb_a"] };
+    const el = document.createElement("nextbike-austria-card") as unknown as Card;
+    el.preview = true;
+    el.setConfig(config);
+    el.hass = h;
+    document.body.appendChild(el);
+    await settle(el);
+    expect(root(el).querySelector(".banner")).toBeNull();
+  });
+
+  it("drops the banner when HA turns the card into a preview", async () => {
+    const h = {
+      ...hass({ "sensor.nb_a": ["3", FULL] }),
+      callWS: async <T>() => ({ version: "9.9.9" }) as T,
+    };
+    const el = await mount({ entities: ["sensor.nb_a"] }, h);
+    await settle(el);
+    expect(root(el).querySelector(".banner")).not.toBeNull();
+    el.preview = true;
+    await el.updateComplete;
+    expect(root(el).querySelector(".banner")).toBeNull();
   });
 
   it("probes the backend once, not on every hass update", async () => {
