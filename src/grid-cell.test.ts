@@ -54,6 +54,11 @@ describe("the grid cell", () => {
     expect(rule(".tabs")).toMatch(/flex-shrink:\s*0/);
   });
 
+  it("draws the tab focus ring inside the tab, where the tab strip can't clip it", () => {
+    expect(rule(".tabs")).toMatch(/overflow-x:\s*auto/);
+    expect(rule(".tab:focus-visible")).toMatch(/outline-offset:\s*-2px/);
+  });
+
   it("never fills ungated, so the picker preview keeps its own height", () => {
     expect(rule(":host")).not.toMatch(/block-size/);
     expect(rule("ha-card")).not.toMatch(/block-size/);

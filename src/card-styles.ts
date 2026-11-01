@@ -732,6 +732,12 @@ export const cardStyles: CSSResultGroup = css`
   .btn-primary:focus-visible {
     outline-offset: 3px;
   }
+  /* The tab strip scrolls sideways, which clips it on every side, and a tab
+     fills its full height, so a ring outside the tab is cut off. Draw it
+     inside instead. */
+  .tab:focus-visible {
+    outline-offset: -2px;
+  }
 
   /* Read by screen readers, not drawn: the words behind a visual
      shorthand such as the rack's "+N". */
