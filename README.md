@@ -164,7 +164,7 @@ Point `entities` at **Bikes available** sensors: they carry the station details 
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `entities` | list | first station found | The stations to show. A station whose sensor is gone falls back to the first one found. |
+| `entities` | list | first station found | The stations to show. A station whose sensor is gone is named in a warning. When none of them is left, the card shows the first station it finds. |
 | `layout` | `stacked` or `tabs` | `stacked` | `stacked` shows every station in one column. `tabs` adds a tab strip once two or more stations are picked. |
 | `show_rack` | boolean | `true` | The bike rack, one slot per dock. Only for stations that publish a capacity. |
 | `show_legend` | boolean | `true` | The key under the rack. |
