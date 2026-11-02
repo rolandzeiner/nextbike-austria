@@ -560,17 +560,24 @@ describe("operator colours meet WCAG contrast", () => {
     expect(accentInk("var(--primary-color)")).toBe("var(--text-primary-color, #fff)");
   });
 
-  it.each(accents)("the e-bike stripe on %s stands out at 3:1", (_system, accent) => {
-    const edge = stripeEdge(accentInk(accent));
-    if (edge === ACCENT_INK_DARK) {
-      // A dark band sits between the accent and the amber.
-      expect(contrastRatio(edge, accent)).toBeGreaterThanOrEqual(3);
-      expect(contrastRatio(edge, AMBER)).toBeGreaterThanOrEqual(3);
-    } else {
-      // No band: the amber meets the accent directly.
-      expect(edge).toBe("var(--nb-ebike-amber)");
-      expect(contrastRatio(AMBER, accent)).toBeGreaterThanOrEqual(3);
-    }
+  // Accents split by what stripeEdge() picks for them: a dark band between
+  // the accent and the amber, or the amber meeting the accent directly.
+  const banded = accents.filter(([, accent]) => stripeEdge(accentInk(accent)) === ACCENT_INK_DARK);
+  const direct = accents.filter(([, accent]) => stripeEdge(accentInk(accent)) !== ACCENT_INK_DARK);
+
+  it("has accents of both stripe kinds", () => {
+    expect(banded.length).toBeGreaterThan(0);
+    expect(direct.length).toBeGreaterThan(0);
+  });
+
+  it.each(banded)("the dark band on %s separates accent and amber at 3:1", (_system, accent) => {
+    expect(contrastRatio(ACCENT_INK_DARK, accent)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(ACCENT_INK_DARK, AMBER)).toBeGreaterThanOrEqual(3);
+  });
+
+  it.each(direct)("the amber stripe on %s stands out at 3:1", (_system, accent) => {
+    expect(stripeEdge(accentInk(accent))).toBe("var(--nb-ebike-amber)");
+    expect(contrastRatio(AMBER, accent)).toBeGreaterThanOrEqual(3);
   });
 });
 
