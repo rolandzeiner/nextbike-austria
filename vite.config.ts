@@ -1,6 +1,6 @@
 // One config for the whole card toolchain under Vite+ (`vp`): build (Vite 8
 // library mode on Rolldown), test (Vitest), lint + type-check (Oxlint with
-// tsgolint) and format (Oxfmt). Replaces rolldown.config.mjs.
+// tsgolint) and format (Oxfmt).
 //
 // Decorators are deliberately not configured here. Rolldown reads
 // tsconfig.json itself and turns on Lit's legacy (experimental) decorators
@@ -35,8 +35,8 @@ export default defineConfig(({ mode }) => {
       rolldownOptions: {
         output: {
           banner,
-          // HACS users get a single .js file, not a chunked dist/. The
-          // editor's dynamic import (getConfigElement) is inlined.
+          // HACS users get a single .js file, not a chunked dist/; the editor
+          // is in it through card.ts's static import.
           codeSplitting: false,
           comments: { legal: true },
           // Set on the Rolldown output, not `build.minify`: Vite's library
@@ -50,8 +50,7 @@ export default defineConfig(({ mode }) => {
     },
     fmt: {
       // Leave Lit html/css templates alone. Formatting them rewrites the
-      // whitespace inside rendered elements, which changes the DOM (and broke
-      // a markup snapshot on the first try).
+      // whitespace inside rendered elements, which changes the DOM.
       embeddedLanguageFormatting: "off",
       // Format the card source only. The bundle is build output; Markdown,
       // YAML and TOML keep their hand formatting.
@@ -76,7 +75,7 @@ export default defineConfig(({ mode }) => {
         "typescript/no-unnecessary-type-assertion": "error",
         "eslint/no-shadow": "error",
         "unicorn/no-array-sort": "error",
-        // Test hygiene, from the vitest plugin enabled below: a committed
+        // Test hygiene, from the vitest plugin enabled above: a committed
         // .only or .skip quietly drops tests, a test without an assertion
         // passes whatever the code does, and a duplicate title makes a
         // failure ambiguous to read.
