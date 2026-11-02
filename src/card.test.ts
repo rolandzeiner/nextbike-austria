@@ -258,13 +258,11 @@ describe("card API", () => {
     expect(ctor.getStubConfig(hass({}))).toEqual({ entities: [] });
   });
 
-  it("hands HA the registered editor element", async () => {
+  it("hands HA the registered editor element", () => {
     const ctor = customElements.get(
       "nextbike-austria-card",
     ) as unknown as typeof NextbikeAustriaCard;
-    expect((await ctor.getConfigElement()).tagName.toLowerCase()).toBe(
-      "nextbike-austria-card-editor",
-    );
+    expect(ctor.getConfigElement().tagName.toLowerCase()).toBe("nextbike-austria-card-editor");
   });
 });
 

@@ -36,7 +36,7 @@ import { normaliseConfig } from "./utils";
 /** `bubbles: true` + `composed: true` are required so the event
  *  crosses our shadow boundary and reaches the dashboard's
  *  card-editor listener. */
-function fireEvent<T>(node: HTMLElement, type: string, detail: T): void {
+function fireEvent(node: HTMLElement, type: string, detail: unknown): void {
   const event = new CustomEvent(type, {
     detail,
     bubbles: true,

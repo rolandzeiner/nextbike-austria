@@ -183,10 +183,9 @@ export class NextbikeAustriaCard extends LitElement {
     };
   }
 
-  public static async getConfigElement(): Promise<HTMLElement> {
-    // Editor element is registered via the top-level `import "./editor"`
-    // above. No await needed here, but keep the async signature so HA
-    // treats the return as a Promise uniformly.
+  public static getConfigElement(): HTMLElement {
+    // The editor element is registered by the top-level `import "./editor"`
+    // above, so `customElements.define` has run by the time HA calls this.
     return document.createElement("nextbike-austria-card-editor");
   }
 
