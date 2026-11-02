@@ -80,7 +80,7 @@ rules:
     comment: Nextbike's GBFS feeds are fully unauthenticated (no API key, no login). There is no credential that could expire, so HA can never raise ConfigEntryAuthFailed against this integration.
   test-coverage:
     status: done
-    comment: 97% total coverage across 32 tests. Remaining uncovered lines are defensive edge branches (selector-protected fallbacks, property getters, teardown races).
+    comment: 96% total coverage, gate enforced at 95% via pytest.ini --cov-fail-under. Remaining uncovered lines are defensive edge branches (selector-protected fallbacks, property getters, teardown races).
 
   # Gold
   devices:

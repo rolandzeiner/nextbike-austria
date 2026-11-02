@@ -49,7 +49,7 @@ def test_card_version_matches_manifest_and_ts() -> None:
     text = _SRC_CONST_TS.read_text(encoding="utf-8")
     match = _RX.search(text)
     assert match, f"CARD_VERSION literal not found in {_SRC_CONST_TS} — regex stale?"
-    assert INTEGRATION_VERSION == manifest_version, (
+    assert manifest_version == INTEGRATION_VERSION, (
         "Python INTEGRATION_VERSION drifted from manifest.json; "
         f"got INTEGRATION_VERSION={INTEGRATION_VERSION!r}, "
         f"manifest={manifest_version!r}. Bump both in the same commit."

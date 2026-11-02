@@ -1,25 +1,3 @@
-// Gotchas:
-//
-// * **Editor `_config` lifecycle** — custom-card editors do NOT
-//   receive a re-`setConfig()` after dispatching `config-changed`.
-//   The form-handler must set ``this._config = next`` *before*
-//   firing the event; otherwise the next render reads stale state
-//   and the form reverts to the pre-change value.
-//
-// * **`expandable` + `flatten: true`** — without ``flatten``, ha-form
-//   scopes inner-schema values under ``data[name]`` and the card's
-//   flat-key reads silently default. The ``HaFormExpandableSchema``
-//   interface in ``types.ts`` declares the field so it shows up in
-//   autocomplete; it is optional, so the compiler won't catch a
-//   missing one.
-//
-// * **Storage shape** — saved configs use
-//   ``entities: Array<{ entity: string }>`` (legacy promotion path
-//   from the original scalar ``entity`` form). ha-form's entity
-//   selector with ``multiple: true`` emits a flat ``string[]``; we
-//   translate at the value-changed boundary to keep the on-disk shape
-//   backwards-compatible with existing dashboards.
-
 import { LitElement, html, nothing, type TemplateResult, type CSSResultGroup } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
@@ -36,7 +14,7 @@ import { normaliseConfig } from "./utils";
 /** `bubbles: true` + `composed: true` are required so the event
  *  crosses our shadow boundary and reaches the dashboard's
  *  card-editor listener. */
-function fireEvent<T>(node: HTMLElement, type: string, detail: T): void {
+function fireEvent(node: HTMLElement, type: string, detail: unknown): void {
   const event = new CustomEvent(type, {
     detail,
     bubbles: true,
