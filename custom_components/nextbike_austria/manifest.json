@@ -2,6 +2,7 @@
   "domain": "nextbike_austria",
   "name": "Nextbike Austria",
   "after_dependencies": ["frontend", "http", "lovelace"],
+  "categories": ["vehicles_transport.bikes_scooters"],
   "codeowners": ["@rolandzeiner"],
   "config_flow": true,
   "dependencies": [],

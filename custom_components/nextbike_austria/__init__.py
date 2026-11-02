@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import logging
 from typing import Any
@@ -81,12 +82,10 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     # contract.
     domain_data = hass.data[DOMAIN]
     if not domain_data.get("ws_registered"):
-        try:
+        # ValueError: HA core internals already have a handler under our
+        # key — treat as success and move on.
+        with contextlib.suppress(ValueError):
             async_register_command(hass, _websocket_card_version)
-        except ValueError:
-            # HA core internals already have a handler under our key —
-            # treat as success and move on.
-            pass
         domain_data["ws_registered"] = True
 
     registration = JSModuleRegistration(hass)
