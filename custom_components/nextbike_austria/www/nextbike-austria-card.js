@@ -925,19 +925,19 @@ let{kind:r,metadata:i}=n,a=globalThis.litPropertyMetadata.get(i);if(a===void 0&&
             >${this._t(`entity_unavailable`).replace(`{entity}`,e.entity)}</ha-alert
           >`)}_renderEmpty(){return N`<div class="empty-state" role="status">${this._t(`no_entities_available`)}</div>`}_renderTabs(e){return N`
       <div class="tabs" role="tablist" aria-label=${this._t(`stations`)}>
-        ${e.map((t,n)=>{let r=this.hass?.states[t.entity]?.attributes||{},i=typeof r.friendly_name==`string`&&r.friendly_name.length>0,a=qe(r,t.entity),o=n===this._activeTab;return N`
+        ${e.map((t,n)=>{let r=qe(this.hass?.states[t.entity]?.attributes||{},t.entity),i=r!==t.entity,a=n===this._activeTab;return N`
             <button
               type="button"
               role="tab"
               id=${`nbtab-${n}`}
               aria-controls=${`nbpanel-${n}`}
-              class="tab ${o?`active`:``}"
-              aria-selected=${o?`true`:`false`}
-              tabindex=${o?`0`:`-1`}
+              class="tab ${a?`active`:``}"
+              aria-selected=${a?`true`:`false`}
+              tabindex=${a?`0`:`-1`}
               @click=${()=>this._setActiveTab(n)}
               @keydown=${t=>this._onTabKeydown(t,n,e.length)}
             >
-              ${i?N`<span lang="de">${a}</span>`:a}
+              ${i?N`<span lang="de">${r}</span>`:r}
             </button>
           `})}
       </div>

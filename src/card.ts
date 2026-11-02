@@ -304,15 +304,14 @@ export class NextbikeAustriaCard extends LitElement {
       <div class="tabs" role="tablist" aria-label=${this._t("stations")}>
         ${stations.map((s, i) => {
           const a = this.hass?.states[s.entity]?.attributes || {};
-          const hasFriendlyName = typeof a.friendly_name === "string" && a.friendly_name.length > 0;
-          const displayName = resolveDisplayName(a, s.entity);
-          const label = displayName;
-          const selected = i === this._activeTab;
+          const label = resolveDisplayName(a, s.entity);
           // WCAG 3.1.2 Language of Parts: station names come from the
           // nextbike API in German. Wrap in lang="de" so screen readers
-          // on non-German dashboards switch pronunciation. Fallback
-          // entity-ID strings (when friendly_name is missing) stay
-          // unwrapped since they're ASCII slugs.
+          // on non-German dashboards switch pronunciation. The entity-id
+          // fallback, used when the sensor carries no name, stays
+          // unwrapped: it is an ASCII slug.
+          const isStationName = label !== s.entity;
+          const selected = i === this._activeTab;
           return html`
             <button
               type="button"
@@ -325,7 +324,7 @@ export class NextbikeAustriaCard extends LitElement {
               @click=${() => this._setActiveTab(i)}
               @keydown=${(ev: KeyboardEvent) => this._onTabKeydown(ev, i, stations.length)}
             >
-              ${hasFriendlyName ? html`<span lang="de">${label}</span>` : label}
+              ${isStationName ? html`<span lang="de">${label}</span>` : label}
             </button>
           `;
         })}

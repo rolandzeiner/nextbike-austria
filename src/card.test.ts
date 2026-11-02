@@ -142,7 +142,7 @@ const root = (el: Card): ShadowRoot => el.shadowRoot!;
 /** The card's markup without Lit's comment markers, with whitespace runs
  *  squeezed to one space and none left between tags. The markers are
  *  removed as DOM nodes from a clone, not by pattern-matching the HTML
- *  string, which CodeQL rightly flags as incomplete sanitisation. */
+ *  string, which would be incomplete sanitisation. */
 function markup(el: Card): string {
   const card = root(el).querySelector("ha-card");
   if (!card) return "";
@@ -373,8 +373,8 @@ describe("station resolution", () => {
   });
 });
 
-// An outage used to read as "0 bikes", which is what an empty rack says too,
-// so a dead feed looked like a broken install.
+// An outage must not read as "0 bikes", which is what an empty rack says
+// too, or a dead feed looks like a broken install.
 describe("unreachable upstream", () => {
   const UNAVAILABLE: HassEntityAttributes = { friendly_name: "Hauptbahnhof Bikes available" };
 
@@ -559,6 +559,20 @@ describe("tab layout", () => {
   };
   const mountTabs = () =>
     mount({ layout: "tabs", entities: ["sensor.nb_a", "sensor.nb_b", "sensor.nb_c"] }, three);
+
+  it("marks station names as German and leaves an entity-id fallback unwrapped", async () => {
+    const el = await mount(
+      { layout: "tabs", entities: ["sensor.nb_a", "sensor.nb_b"] },
+      hass({
+        "sensor.nb_a": ["3", { station_display_name: "Hauptbahnhof" }],
+        "sensor.nb_b": ["2", {}],
+      }),
+    );
+    const [a, b] = tabs(el);
+    expect(a!.querySelector('[lang="de"]')?.textContent?.trim()).toBe("Hauptbahnhof");
+    expect(b!.querySelector('[lang="de"]')).toBeNull();
+    expect(b!.textContent?.trim()).toBe("sensor.nb_b");
+  });
 
   it("stacks instead when only one station resolves", async () => {
     const el = await mount({ layout: "tabs", entities: ["sensor.nb_a"] }, three);
